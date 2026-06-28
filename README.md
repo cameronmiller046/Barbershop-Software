@@ -62,9 +62,11 @@ Default seeded logins (override via env before seeding):
    - *(optional)* `RESEND_API_KEY`, `EMAIL_FROM` — real emails; otherwise emails
      are logged to the server console.
 4. **Build & start** are already configured:
-   - Build: `prisma generate && prisma migrate deploy && next build`
-   - Start: `next start` (respects Railway's `$PORT`)
-   - See `railway.json`.
+   - Build: `prisma generate && next build`
+   - Start: `prisma migrate deploy && next start` (respects Railway's `$PORT`)
+   - Migrations run at **start**, not build — Railway's private database network
+     (`*.railway.internal`) is only reachable at runtime, so running
+     `migrate deploy` during the build fails to connect. See `railway.json`.
 5. **Seed once** after the first deploy (Railway shell or a one-off command):
    ```bash
    npm run db:seed
