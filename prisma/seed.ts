@@ -23,21 +23,15 @@ async function main() {
   });
   console.log(`✓ Platform admin: ${primaryEmail} / ${primaryPass}`);
 
-  // Second platform user. Logs in with username "Admin123" (stored lowercased).
-  await prisma.user.upsert({
-    where: { email: "admin123" },
-    update: { role: "PLATFORM_ADMIN", passwordHash: await bcrypt.hash("Admin123", 10), tenantId: null },
-    create: { email: "admin123", name: "Admin123", role: "PLATFORM_ADMIN", passwordHash: await bcrypt.hash("Admin123", 10) },
-  });
-  console.log(`✓ Platform admin: Admin123 / Admin123`);
-
-  // ── Demo tenant: Professional Barbershop (public, no login required) ──
+  // ── Demo tenant: Professional Barbershop & Salon (public, no login required) ──
+  // Note: "Admin123 / Admin123" is seeded below as a BARBER of THIS shop (not a
+  // platform admin) so the shop's portal can be demoed from the storefront footer.
   const tenant = await prisma.tenant.upsert({
     where: { slug: DEMO_SLUG },
-    update: { status: "ACTIVE" },
+    update: { status: "ACTIVE", name: "Professional Barbershop & Salon" },
     create: {
       slug: DEMO_SLUG,
-      name: "Professional Barbershop",
+      name: "Professional Barbershop & Salon",
       status: "ACTIVE",
       plan: "PRO",
       tagline: "Precision cuts in a classic chair.",
@@ -70,19 +64,24 @@ async function main() {
   });
 
   // Barbers (these appear on the public Team page).
+  // "Admin123" is a real barber on this shop — its login (admin123 / Admin123) is
+  // how the shop's portal is demoed from the "Powered by The Chair" footer link.
   const barbersData = [
-    { email: "deion@professionalbarbershop.com", name: "Deion Carter", bio: "Fades and beard sculpting specialist.", instagramHandle: "deioncuts", avatarUrl: "https://i.pravatar.cc/240?img=12" },
-    { email: "luis@professionalbarbershop.com", name: "Luis Romero", bio: "Classic scissor work and hot-towel shaves.", instagramHandle: "luistrim", avatarUrl: "https://i.pravatar.cc/240?img=33" },
-    { email: "andre@professionalbarbershop.com", name: "Andre Wallace", bio: "Tapers, kids' cuts, and a steady hand.", instagramHandle: "andrethebarber", avatarUrl: "https://i.pravatar.cc/240?img=15" },
-    { email: "sofia@professionalbarbershop.com", name: "Sofia Nguyen", bio: "Modern styles, color, and hair design.", instagramHandle: "sofiacuts", avatarUrl: "https://i.pravatar.cc/240?img=47" },
+    { email: "deion@professionalbarbershop.com", name: "Deion Carter", bio: "Fades and beard sculpting specialist.", instagramHandle: "deioncuts", avatarUrl: "https://i.pravatar.cc/240?img=12", password: "demo1234" },
+    { email: "luis@professionalbarbershop.com", name: "Luis Romero", bio: "Classic scissor work and hot-towel shaves.", instagramHandle: "luistrim", avatarUrl: "https://i.pravatar.cc/240?img=33", password: "demo1234" },
+    { email: "andre@professionalbarbershop.com", name: "Andre Wallace", bio: "Tapers, kids' cuts, and a steady hand.", instagramHandle: "andrethebarber", avatarUrl: "https://i.pravatar.cc/240?img=15", password: "demo1234" },
+    { email: "sofia@professionalbarbershop.com", name: "Sofia Nguyen", bio: "Modern styles, color, and hair design.", instagramHandle: "sofiacuts", avatarUrl: "https://i.pravatar.cc/240?img=47", password: "demo1234" },
+    { email: "admin123", name: "Admin123", bio: "Senior barber & shop manager.", instagramHandle: "professionalbarbershop", avatarUrl: "https://i.pravatar.cc/240?img=53", password: "Admin123" },
   ];
   const barbers: User[] = [];
   for (const b of barbersData) {
+    const passwordHash = await bcrypt.hash(b.password, 10);
     barbers.push(
       await prisma.user.upsert({
         where: { email: b.email },
-        update: { tenantId: tenant.id, role: "BARBER", bio: b.bio, instagramHandle: b.instagramHandle, avatarUrl: b.avatarUrl, active: true },
-        create: { tenantId: tenant.id, email: b.email, name: b.name, role: "BARBER", passwordHash: await bcrypt.hash("demo1234", 10), bio: b.bio, instagramHandle: b.instagramHandle, avatarUrl: b.avatarUrl },
+        // Convert any prior account (e.g. a former platform admin) into this shop's barber.
+        update: { tenantId: tenant.id, role: "BARBER", name: b.name, bio: b.bio, instagramHandle: b.instagramHandle, avatarUrl: b.avatarUrl, active: true, passwordHash },
+        create: { tenantId: tenant.id, email: b.email, name: b.name, role: "BARBER", passwordHash, bio: b.bio, instagramHandle: b.instagramHandle, avatarUrl: b.avatarUrl },
       }),
     );
   }
@@ -165,6 +164,16 @@ async function main() {
   await apptAt(1, 10, 0, 0, 3, "CONFIRMED");
   await apptAt(1, 13, 1, 3, 4, "CONFIRMED");
   await apptAt(2, 15, 3, 5, 0, "CONFIRMED");
+
+  // Admin123's own book — so logging into the shop portal as this barber shows a
+  // full day, upcoming appointments, and history (the barber dashboard is per-barber).
+  await apptAt(0, 10, 4, 0, 1, "CONFIRMED"); // today
+  await apptAt(0, 12, 4, 3, 2, "CONFIRMED"); // today
+  await apptAt(0, 15, 4, 2, 0, "CONFIRMED"); // today
+  await apptAt(1, 11, 4, 1, 3, "CONFIRMED"); // tomorrow
+  await apptAt(3, 14, 4, 4, 4, "CONFIRMED"); // upcoming
+  await apptAt(-3, 13, 4, 0, 0, "COMPLETED"); // history
+  await apptAt(-6, 16, 4, 3, 2, "COMPLETED"); // history
 
   // Social planner content (visible in the owner's portal).
   await prisma.socialPost.createMany({
