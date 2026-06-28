@@ -49,8 +49,8 @@ export default async function LoginPage({
           )}
           <input type="hidden" name="from" value={sp.from ?? ""} />
           <div>
-            <label className="label">Email</label>
-            <input name="email" type="email" required className="input" />
+            <label className="label">Email or username</label>
+            <input name="email" type="text" autoCapitalize="none" autoComplete="username" required className="input" />
           </div>
           <div>
             <label className="label">Password</label>

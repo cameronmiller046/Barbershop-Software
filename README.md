@@ -47,9 +47,13 @@ npm run db:seed             # platform admin + demo tenant
 npm run dev
 ```
 
-Default seeded logins (override via env before seeding):
-- Platform admin → `admin@thechair.app` / `admin1234` → `/admin`
-- Demo owner → `owner@professionalbarbershop.com` / `demo1234` → `/portal`
+Default seeded platform-admin logins (override the primary via env before seeding):
+- `cameronmiller046@gmail.com` / `Ieokkz7` → `/admin`
+- `Admin123` / `Admin123` → `/admin`
+
+The demo shop (`/t/professional-barbershop`) is **public** — anyone can browse and
+book without logging in. Login is only for platform admins (and shop staff via
+onboarding).
 
 ## Deploy to Railway
 
