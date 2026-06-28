@@ -1,6 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { setTenantStatus, toggleFeature } from "@/app/admin/actions";
+import { setTenantStatus, toggleFeature, createStore } from "@/app/admin/actions";
 import { appUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,22 @@ export default async function TenantsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl">Tenants</h1>
+      <h1 className="font-display text-3xl">Stores</h1>
+
+      <details className="card mt-6">
+        <summary className="cursor-pointer font-display text-lg">+ Create a store (onboard a customer)</summary>
+        <p className="mt-1 text-xs text-cream/50">
+          Provisions a branded store, an Admin (owner) account with a temporary password,
+          starter services, and weekday hours — and emails the owner their credentials.
+        </p>
+        <form action={createStore} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div><label className="label">Business name</label><input name="businessName" required className="input" /></div>
+          <div><label className="label">Owner name</label><input name="ownerName" required className="input" /></div>
+          <div><label className="label">Owner email</label><input name="ownerEmail" type="email" required className="input" /></div>
+          <div><label className="label">Phone (optional)</label><input name="phone" className="input" /></div>
+          <div className="sm:col-span-2"><button className="btn-primary">Create store</button></div>
+        </form>
+      </details>
 
       {tenants.length === 0 ? (
         <div className="card mt-6 text-cream/60">No tenants yet. Approve a beta application to create one.</div>

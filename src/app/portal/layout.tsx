@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PortalNav } from "@/components/PortalNav";
 import { signOut } from "@/lib/auth";
 import { appUrl } from "@/lib/utils";
+import { roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function PortalLayout({ children }: { children: React.React
             <span className="font-display text-lg">{tenant?.name ?? "Portal"}</span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-cream/50 sm:inline">{user.name} · {user.role}</span>
+            <span className="hidden text-cream/50 sm:inline">{user.name} · {roleLabel(user.role)}</span>
             <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
               <button className="btn-ghost">Sign out</button>
             </form>

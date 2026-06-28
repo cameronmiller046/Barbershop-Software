@@ -6,26 +6,28 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminOverview() {
   await requirePlatformAdmin();
-  const [tenants, activeTenants, pendingApps, appointments, recentLogs] = await Promise.all([
+  const [tenants, activeTenants, users, pendingApps, appointments, recentLogs] = await Promise.all([
     prisma.tenant.count(),
     prisma.tenant.count({ where: { status: "ACTIVE" } }),
+    prisma.user.count(),
     prisma.betaApplication.count({ where: { status: "PENDING" } }),
     prisma.appointment.count(),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
   const stats = [
-    { label: "Total tenants", value: tenants },
-    { label: "Active tenants", value: activeTenants },
+    { label: "Stores", value: tenants, href: "/admin/tenants" },
+    { label: "Active stores", value: activeTenants, href: "/admin/tenants" },
+    { label: "User accounts", value: users, href: "/admin/users" },
     { label: "Pending applications", value: pendingApps, href: "/admin/applications" },
-    { label: "Appointments booked", value: appointments },
+    { label: "Appointments booked", value: appointments, href: "/admin/tenants" },
   ];
 
   return (
     <div>
-      <h1 className="font-display text-3xl">Platform overview</h1>
+      <h1 className="font-display text-3xl">Superadmin overview</h1>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s) => (
           <Link key={s.label} href={s.href ?? "#"} className="stat block">
             <div className="text-3xl font-bold text-brass">{s.value}</div>

@@ -129,6 +129,18 @@ export async function toggleBarber(id: string, active: boolean) {
   revalidatePath("/portal/team");
 }
 
+// Admin (owner) edits a standard user's level within their own shop.
+export async function setStaffRole(id: string, role: "BARBER" | "RECEPTIONIST") {
+  const user = await requireTenantStaff();
+  if (user.role !== "OWNER") return;
+  await prisma.user.updateMany({
+    where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
+    data: { role },
+  });
+  await audit({ action: "team.role", tenantId: user.tenantId, userId: user.id, target: id, meta: { role } });
+  revalidatePath("/portal/team");
+}
+
 // ── Settings (owner only) ──
 export async function updateTenant(formData: FormData) {
   const user = await requireTenantStaff();

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireTenantStaff } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { createBarber, toggleBarber } from "@/app/portal/actions";
+import { createBarber, toggleBarber, setStaffRole } from "@/app/portal/actions";
+import { roleLabel } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +25,21 @@ export default async function TeamPage() {
             <div className="card text-cream/60">No staff yet — add your first barber.</div>
           ) : (
             team.map((m) => (
-              <div key={m.id} className="card flex items-center justify-between gap-3">
+              <div key={m.id} className="card flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="font-medium">{m.name} {!m.active && <span className="chip ml-1">inactive</span>}</div>
-                  <div className="text-sm text-cream/50">{m.email} · {m.role}</div>
+                  <div className="text-sm text-cream/50">{m.email} · {roleLabel(m.role)}</div>
                 </div>
-                <form action={toggleBarber.bind(null, m.id, !m.active)}>
-                  <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
-                </form>
+                <div className="flex items-center gap-2">
+                  <form action={setStaffRole.bind(null, m.id, m.role === "BARBER" ? "RECEPTIONIST" : "BARBER")}>
+                    <button className="btn-ghost px-3 py-1.5 text-xs">
+                      Make {m.role === "BARBER" ? "front desk" : "barber"}
+                    </button>
+                  </form>
+                  <form action={toggleBarber.bind(null, m.id, !m.active)}>
+                    <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
+                  </form>
+                </div>
               </div>
             ))
           )}

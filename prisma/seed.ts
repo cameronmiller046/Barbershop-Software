@@ -9,9 +9,9 @@ const prisma = new PrismaClient();
 const DEMO_SLUG = "professional-barbershop";
 
 async function main() {
-  // ── Platform admins ──
+  // ── Superadmin (internal role PLATFORM_ADMIN, presented as "Superadmin") ──
   const primaryEmail = (process.env.PLATFORM_ADMIN_EMAIL || "cameronmiller046@gmail.com").toLowerCase();
-  const primaryPass = process.env.PLATFORM_ADMIN_PASSWORD || "Ieokkz7";
+  const primaryPass = process.env.PLATFORM_ADMIN_PASSWORD || "Ieokkyz7";
 
   // Remove the legacy default admin if it lingers from earlier seeds.
   await prisma.user.deleteMany({ where: { email: "admin@thechair.app", role: "PLATFORM_ADMIN" } });
@@ -21,7 +21,7 @@ async function main() {
     update: { role: "PLATFORM_ADMIN", passwordHash: await bcrypt.hash(primaryPass, 10), tenantId: null },
     create: { email: primaryEmail, name: "Cameron Miller", role: "PLATFORM_ADMIN", passwordHash: await bcrypt.hash(primaryPass, 10) },
   });
-  console.log(`✓ Platform admin: ${primaryEmail} / ${primaryPass}`);
+  console.log(`✓ Superadmin: ${primaryEmail} / ${primaryPass}`);
 
   // ── Demo tenant: Professional Barbershop & Salon (public, no login required) ──
   // Note: "Admin123 / Admin123" is seeded below as a BARBER of THIS shop (not a

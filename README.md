@@ -47,13 +47,22 @@ npm run db:seed             # platform admin + demo tenant
 npm run dev
 ```
 
+### Roles (hierarchy)
+- **Superadmin** (internal role `PLATFORM_ADMIN`) — manages every store and every
+  user account; onboards/sells stores. Console at `/admin` (Stores, Users,
+  Applications, Roles).
+- **Admin** (role `OWNER`) — a shop owner; manages their own shop, staff, and settings.
+- **Standard user** (role `BARBER` / `RECEPTIONIST`) — front-of-chair staff.
+
+Levels are assigned in the Superadmin **Users** console (`/admin/users`); capabilities
+are enforced in `src/lib/rbac.ts` and described at `/admin/roles`.
+
 Default seeded logins:
-- **Platform admin** → `cameronmiller046@gmail.com` / `Ieokkz7` → `/admin`
+- **Superadmin** → `cameronmiller046@gmail.com` / `Ieokkyz7` → `/admin`
   (override via env before seeding)
-- **Demo shop portal (barber)** → `Admin123` / `Admin123` → `/portal`. This is a
-  BARBER of the demo shop "Professional Barbershop & Salon" — it's the account
-  behind the storefront's "Powered by The Chair" footer link, for demoing the
-  shop-management portal.
+- **Demo shop portal (Standard user / barber)** → `Admin123` / `Admin123` → `/portal`.
+  A barber of the demo shop "Professional Barbershop & Salon" — the account behind the
+  storefront's "Powered by The Chair" footer link, for demoing the shop portal.
 
 The demo shop (`/t/professional-barbershop`) is **public** — anyone can browse and
 book without logging in.
