@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import type { User, Client } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { addDays, subDays, setHours, setMinutes, startOfDay } from "date-fns";
+import { seedPlatform } from "./seed-platform";
 
 const prisma = new PrismaClient();
 
@@ -176,6 +177,9 @@ async function main() {
   });
 
   console.log(`✓ Demo tenant ready (public): /t/${tenant.slug} — ${services.length} services, ${barbers.length} barbers`);
+
+  // Populate the Platform Admin view with additional tenants, applications, and activity.
+  await seedPlatform(prisma);
 }
 
 main()
