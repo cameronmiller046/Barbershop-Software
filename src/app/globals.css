@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --brand: #c9a24b;
+  --brand-fg: #0f0f10;
+}
+
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #1d1d22 0%, #0f0f10 55%);
+  min-height: 100vh;
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-5;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition;
+  }
+  .btn-primary {
+    @apply btn text-[var(--brand-fg)];
+    background: var(--brand);
+  }
+  .btn-primary:hover {
+    filter: brightness(0.92);
+  }
+  .btn-ghost {
+    @apply btn border border-white/15 text-cream hover:bg-white/5;
+  }
+  .card {
+    @apply rounded-2xl border border-white/10 bg-charcoal/80 p-5 backdrop-blur;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-cream/60;
+  }
+  .input {
+    @apply w-full rounded-lg border border-white/10 bg-smoke px-3 py-2 text-cream outline-none placeholder:text-cream/30;
+  }
+  .input:focus {
+    border-color: var(--brand);
+  }
+  .chip {
+    @apply rounded-full border border-white/10 px-3 py-1 text-xs text-cream/70;
+  }
+  .badge {
+    @apply rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .stat {
+    @apply rounded-2xl border border-white/10 bg-charcoal/80 p-5;
+  }
+}

@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum Role {
+  PLATFORM_ADMIN // runs the whole SaaS; tenantId is null
+  OWNER          // shop owner
+  BARBER         // staff who takes appointments
+  RECEPTIONIST   // front desk
+  CUSTOMER       // end client (self-serve)
+}
+
+enum TenantStatus {
+  PENDING    // provisioned but not yet live
+  ACTIVE
+  SUSPENDED
+}
+
+enum Plan {
+  TRIAL
+  STARTER
+  PRO
+}
+
+enum BetaStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+  X
+}
+
+enum SocialStatus {
+  IDEA
+  DRAFT
+  SCHEDULED
+  POSTED
+}
+
+// ───────────────────────── Tenancy ─────────────────────────
+
+// A Tenant is one barbershop (or, later, any appointment business).
+// Every business record below carries tenantId for hard isolation.
+model Tenant {
+  id     String       @id @default(cuid())
+  slug   String       @unique // used in /t/<slug> routing
+  name   String
+  status TenantStatus @default(PENDING)
+  plan   Plan         @default(TRIAL)
+
+  // Branding
+  tagline      String?
+  primaryColor String  @default("#c9a24b")
+  logoUrl      String?
+  heroImageUrl String?
+
+  // Contact / locale
+  email    String?
+  phone    String?
+  address  String?
+  timezone String  @default("America/New_York")
+
+  // Feature flags (Phase 5 admin toggles)
+  featureSocial    Boolean @default(true)
+  featureAnalytics Boolean @default(true)
+
+  users        User[]
+  services     Service[]
+  clients      Client[]
+  appointments Appointment[]
+  workingHours WorkingHour[]
+  socialPosts  SocialPost[]
+  galleryItems GalleryItem[]
+  reviews      Review[]
+  auditLogs    AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ───────────────────────── Identity ─────────────────────────
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  name         String
+  role         Role    @default(BARBER)
+  active       Boolean @default(true)
+
+  // null for PLATFORM_ADMIN; set for everyone else
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String?
+
+  // Barber profile fields (used when role = BARBER)
+  bio            String?
+  avatarUrl      String?
+  instagramHandle String?
+
+  barberAppointments Appointment[] @relation("BarberAppointments")
+  services           Service[]
+  workingHours       WorkingHour[]
+  socialPosts        SocialPost[]
+  auditLogs          AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, role])
+}
+
+// ───────────────────────── Catalog ─────────────────────────
+
+model Service {
+  id           String  @id @default(cuid())
+  name         String
+  description  String?
+  durationMin  Int     @default(30)
+  priceCents   Int     @default(0)
+  imageUrl     String?
+  active       Boolean @default(true)
+  sortOrder    Int     @default(0)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+
+  // Optional: tie a service to a specific barber
+  barber   User?   @relation(fields: [barberId], references: [id], onDelete: SetNull)
+  barberId String?
+
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+model Client {
+  id    String  @id @default(cuid())
+  name  String
+  email String?
+  phone String?
+  notes String?
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  startTime DateTime
+  endTime   DateTime
+  status    AppointmentStatus @default(CONFIRMED)
+  notes     String?
+
+  // public token for the customer reschedule / cancel link
+  manageToken String @unique @default(cuid())
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  barber    User    @relation("BarberAppointments", fields: [barberId], references: [id], onDelete: Cascade)
+  barberId  String
+  service   Service @relation(fields: [serviceId], references: [id])
+  serviceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, startTime])
+  @@index([barberId, startTime])
+}
+
+// Weekly recurring availability per barber. dayOfWeek 0=Sun .. 6=Sat
+model WorkingHour {
+  id        String @id @default(cuid())
+  dayOfWeek Int
+  startMin  Int // minutes from midnight, 540 = 9:00am
+  endMin    Int
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+  barber   User   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  barberId String
+
+  @@unique([barberId, dayOfWeek])
+  @@index([tenantId])
+}
+
+// ───────────────────────── Tenant site content ─────────────────────────
+
+model GalleryItem {
+  id        String  @id @default(cuid())
+  imageUrl  String
+  caption   String?
+  sortOrder Int     @default(0)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model Review {
+  id         String  @id @default(cuid())
+  authorName String
+  rating     Int     @default(5)
+  body       String
+  published  Boolean @default(true)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, published])
+}
+
+// Social media PLANNING (no live posting in this phase).
+model SocialPost {
+  id           String           @id @default(cuid())
+  caption      String
+  imageUrl     String?
+  platforms    SocialPlatform[]
+  status       SocialStatus     @default(IDEA)
+  scheduledFor DateTime?
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+  barber   User   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  barberId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+// ───────────────────────── Platform ─────────────────────────
+
+model BetaApplication {
+  id           String     @id @default(cuid())
+  businessName String
+  ownerName    String
+  email        String
+  phone        String?
+  message      String?
+  status       BetaStatus @default(PENDING)
+
+  // set once provisioned
+  provisionedTenantId String?
+  reviewedAt          DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+}
+
+// Security: audit trail of sensitive actions.
+model AuditLog {
+  id     String  @id @default(cuid())
+  action String
+  target String?
+  meta   Json?
+
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  tenantId String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
