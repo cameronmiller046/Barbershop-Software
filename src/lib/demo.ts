@@ -56,7 +56,6 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   // Idempotent: clear prior flagship demo content first.
   await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });
   await prisma.client.deleteMany({ where: { tenantId: tenant.id } });
-  await prisma.socialPost.deleteMany({ where: { tenantId: tenant.id } });
   await prisma.workingHour.deleteMany({ where: { tenantId: tenant.id } });
 
   // Manager (runs the shop) + Barber (Admin123 / Admin123).
@@ -129,15 +128,6 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   await appt(-3, 13, 0, 0, "COMPLETED");
   await appt(-6, 16, 3, 2, "COMPLETED");
   await appt(-9, 11, 4, 3, "COMPLETED");
-
-  await prisma.socialPost.createMany({
-    data: [
-      { tenantId: tenant.id, barberId: manager.id, caption: "Fresh fade Friday 💈 Book your spot this weekend!", platforms: ["INSTAGRAM", "FACEBOOK"], status: "SCHEDULED", scheduledFor: addDays(now, 2) },
-      { tenantId: tenant.id, barberId: manager.id, caption: "New silk press results — swipe to see the shine ✨", platforms: ["INSTAGRAM"], status: "DRAFT" },
-      { tenantId: tenant.id, barberId: manager.id, caption: "Father & son cuts all month. Tag a dad!", platforms: ["FACEBOOK"], status: "IDEA" },
-      { tenantId: tenant.id, barberId: manager.id, caption: "Great conversation, clean shop, sharp cuts ♨️", platforms: ["INSTAGRAM", "TIKTOK"], status: "POSTED" },
-    ],
-  });
 }
 
 // ───────────────────────── Extra stores (platform view) ─────────────────────────

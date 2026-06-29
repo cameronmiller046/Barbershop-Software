@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireTenantStaff, requireStaffWithPerms } from "@/lib/rbac";
 import { can, type PermKey } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
-import type { AppointmentStatus, SocialPlatform, SocialStatus } from "@prisma/client";
+import type { AppointmentStatus } from "@prisma/client";
 
 /** Load the acting staff member and confirm they hold a permission, else abort. */
 async function requirePerm(key: PermKey) {
@@ -52,9 +52,19 @@ export async function createService(formData: FormData) {
       durationMin: Math.max(5, Number(formData.get("durationMin") || 30)),
       priceCents: Math.max(0, Math.round(Number(formData.get("price") || 0) * 100)),
       barberId: (String(formData.get("barberId") || "") || null) as string | null,
+      imageUrl: String(formData.get("imageUrl") || "") || null,
     },
   });
   await audit({ action: "service.created", tenantId: user.tenantId, userId: user.id, target: name });
+  revalidatePath("/portal/services");
+}
+
+/** Set or replace a service's photo (uploaded as a compressed data URL). */
+export async function setServiceImage(id: string, formData: FormData) {
+  const user = await requirePerm("shop.services");
+  if (!user) return;
+  const imageUrl = String(formData.get("imageUrl") || "") || null;
+  await prisma.service.updateMany({ where: { id, tenantId: user.tenantId }, data: { imageUrl } });
   revalidatePath("/portal/services");
 }
 
@@ -70,42 +80,6 @@ export async function deleteService(id: string) {
   if (!user) return;
   await prisma.service.deleteMany({ where: { id, tenantId: user.tenantId } });
   revalidatePath("/portal/services");
-}
-
-// ── Social planner ──
-export async function createSocialPost(formData: FormData) {
-  const user = await requirePerm("shop.social");
-  if (!user) return;
-  const caption = String(formData.get("caption") || "").trim();
-  if (!caption) return;
-  const platforms = formData.getAll("platforms").map(String) as SocialPlatform[];
-  const scheduledRaw = String(formData.get("scheduledFor") || "");
-  await prisma.socialPost.create({
-    data: {
-      tenantId: user.tenantId,
-      barberId: user.id,
-      caption,
-      imageUrl: String(formData.get("imageUrl") || "") || null,
-      platforms,
-      status: (String(formData.get("status") || "IDEA")) as SocialStatus,
-      scheduledFor: scheduledRaw ? new Date(scheduledRaw) : null,
-    },
-  });
-  revalidatePath("/portal/social");
-}
-
-export async function setSocialStatus(id: string, status: SocialStatus) {
-  const user = await requirePerm("shop.social");
-  if (!user) return;
-  await prisma.socialPost.updateMany({ where: { id, tenantId: user.tenantId }, data: { status } });
-  revalidatePath("/portal/social");
-}
-
-export async function deleteSocialPost(id: string) {
-  const user = await requirePerm("shop.social");
-  if (!user) return;
-  await prisma.socialPost.deleteMany({ where: { id, tenantId: user.tenantId } });
-  revalidatePath("/portal/social");
 }
 
 // ── Team (requires the shop.team permission) ──

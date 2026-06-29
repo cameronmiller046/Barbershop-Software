@@ -10,7 +10,6 @@ const LINKS: { href: string; label: string; exact?: boolean; perm?: PermKey }[] 
   { href: "/portal/appointments", label: "Appointments" },
   { href: "/portal/clients", label: "Clients", perm: "shop.clients" },
   { href: "/portal/services", label: "Services", perm: "shop.services" },
-  { href: "/portal/social", label: "Social planner", perm: "shop.social" },
   { href: "/portal/team", label: "Team", perm: "shop.team" },
   { href: "/portal/booking", label: "Booking", perm: "shop.settings" },
   { href: "/portal/settings", label: "Settings", perm: "shop.settings" },

@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/rbac";
 import { provisionTenant } from "@/lib/provision";
 import { audit } from "@/lib/audit";
-import { SUPERADMIN_ASSIGNABLE } from "@/lib/roles";
+import { SUPERADMIN_ASSIGNABLE, isMasterAdmin } from "@/lib/roles";
 import { isPermKey, overridesOf } from "@/lib/permissions";
 import { loadDemoData, clearDemoData } from "@/lib/demo";
 import { Prisma } from "@prisma/client";
@@ -89,6 +90,7 @@ export async function changeUserRole(userId: string, formData: FormData) {
 
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return;
+  if (isMasterAdmin(target.email)) return; // the master superadmin can't be changed
 
   // Superadmin has no store; store-scoped roles must belong to a tenant.
   let tenantId: string | null = String(formData.get("tenantId") || "") || target.tenantId;
@@ -103,6 +105,8 @@ export async function changeUserRole(userId: string, formData: FormData) {
 export async function setUserActive(userId: string, active: boolean) {
   const admin = await requirePlatformAdmin();
   if (userId === admin.id) return; // can't deactivate yourself
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (target && isMasterAdmin(target.email)) return; // master can't be deactivated
   await prisma.user.update({ where: { id: userId }, data: { active } });
   await audit({ action: "admin.user.active", userId: admin.id, target: userId, meta: { active } });
   revalidatePath("/admin/users");
@@ -111,9 +115,10 @@ export async function setUserActive(userId: string, active: boolean) {
 export async function deleteUser(userId: string) {
   const admin = await requirePlatformAdmin();
   if (userId === admin.id) return;
-  // Don't delete the last Superadmin.
   const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (target?.role === "PLATFORM_ADMIN") {
+  if (!target || isMasterAdmin(target.email)) return; // master can't be deleted
+  // Don't delete the last Superadmin.
+  if (target.role === "PLATFORM_ADMIN") {
     const supers = await prisma.user.count({ where: { role: "PLATFORM_ADMIN" } });
     if (supers <= 1) return;
   }
@@ -122,7 +127,7 @@ export async function deleteUser(userId: string) {
   revalidatePath("/admin/users");
 }
 
-/** Create any account: a new Superadmin, or a store-scoped Admin / Standard user. */
+/** Create any account: a new Superadmin, or a store-scoped Manager / Barber. */
 export async function createUserAccount(formData: FormData) {
   const admin = await requirePlatformAdmin();
   const email = String(formData.get("email") || "").toLowerCase().trim();
@@ -131,11 +136,12 @@ export async function createUserAccount(formData: FormData) {
   const role = String(formData.get("role") || "") as Role;
   let tenantId: string | null = String(formData.get("tenantId") || "") || null;
 
-  if (!email || !name || password.length < 6 || !SUPERADMIN_ASSIGNABLE.includes(role)) return;
+  if (!email || !name || password.length < 6) redirect("/admin/users?err=fields");
+  if (!SUPERADMIN_ASSIGNABLE.includes(role)) redirect("/admin/users?err=level");
   if (role === "PLATFORM_ADMIN") tenantId = null;
-  else if (!tenantId) return;
+  else if (!tenantId) redirect("/admin/users?err=store");
 
-  if (await prisma.user.findUnique({ where: { email } })) return; // email taken
+  if (await prisma.user.findUnique({ where: { email } })) redirect("/admin/users?err=email");
 
   const user = await prisma.user.create({
     data: { email, name, role, tenantId, passwordHash: await bcrypt.hash(password, 10) },
@@ -147,7 +153,7 @@ export async function createUserAccount(formData: FormData) {
     });
   }
   await audit({ action: "admin.user.created", userId: admin.id, target: email, meta: { role, tenantId } });
-  revalidatePath("/admin/users");
+  redirect(`/admin/users?created=${role === "PLATFORM_ADMIN" ? "superadmin" : "1"}`);
 }
 
 /**

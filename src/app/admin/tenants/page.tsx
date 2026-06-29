@@ -65,9 +65,6 @@ export default async function TenantsPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <form action={toggleFeature.bind(null, t.id, "featureSocial", !t.featureSocial)}>
-                      <button className={`rounded-full px-3 py-1 ${t.featureSocial ? "bg-brass/20 text-brass" : "bg-white/5 text-cream/40"}`}>Social</button>
-                    </form>
                     <form action={toggleFeature.bind(null, t.id, "featureAnalytics", !t.featureAnalytics)}>
                       <button className={`rounded-full px-3 py-1 ${t.featureAnalytics ? "bg-brass/20 text-brass" : "bg-white/5 text-cream/40"}`}>Analytics</button>
                     </form>

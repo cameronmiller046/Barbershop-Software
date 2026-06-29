@@ -5,7 +5,6 @@ export type PermKey =
   | "shop.viewAll"
   | "shop.clients"
   | "shop.services"
-  | "shop.social"
   | "shop.team"
   | "shop.settings";
 
@@ -13,7 +12,6 @@ export const PERMISSIONS: { key: PermKey; label: string; desc: string }[] = [
   { key: "shop.viewAll", label: "Whole-shop schedule & revenue", desc: "See every barber's appointments and shop metrics — not just their own." },
   { key: "shop.clients", label: "Clients", desc: "View and edit the shop's client list and notes." },
   { key: "shop.services", label: "Services", desc: "Add, edit, hide, and remove services." },
-  { key: "shop.social", label: "Social planner", desc: "Create and manage social posts." },
   { key: "shop.team", label: "Manage team", desc: "Add staff and change their levels." },
   { key: "shop.settings", label: "Shop settings", desc: "Edit branding, contact info, and shop details." },
 ];
@@ -23,18 +21,18 @@ export const PERM_KEYS = PERMISSIONS.map((p) => p.key);
 // Default capability set per role.
 const ALL_TRUE: Record<PermKey, boolean> = {
   "shop.viewAll": true, "shop.clients": true, "shop.services": true,
-  "shop.social": true, "shop.team": true, "shop.settings": true,
+  "shop.team": true, "shop.settings": true,
 };
 const ALL_FALSE: Record<PermKey, boolean> = {
   "shop.viewAll": false, "shop.clients": false, "shop.services": false,
-  "shop.social": false, "shop.team": false, "shop.settings": false,
+  "shop.team": false, "shop.settings": false,
 };
 
 const DEFAULTS: Record<Role, Record<PermKey, boolean>> = {
   PLATFORM_ADMIN: { ...ALL_TRUE },
   OWNER: { ...ALL_TRUE },
-  RECEPTIONIST: { "shop.viewAll": true, "shop.clients": true, "shop.services": true, "shop.social": true, "shop.team": false, "shop.settings": false },
-  BARBER: { "shop.viewAll": false, "shop.clients": true, "shop.services": true, "shop.social": true, "shop.team": false, "shop.settings": false },
+  RECEPTIONIST: { "shop.viewAll": true, "shop.clients": true, "shop.services": true, "shop.team": false, "shop.settings": false },
+  BARBER: { "shop.viewAll": false, "shop.clients": true, "shop.services": true, "shop.team": false, "shop.settings": false },
   CUSTOMER: { ...ALL_FALSE },
 };
 

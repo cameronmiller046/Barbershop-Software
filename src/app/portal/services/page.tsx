@@ -3,7 +3,9 @@ import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { formatMoney, formatDuration } from "@/lib/utils";
 import { can } from "@/lib/permissions";
-import { createService, toggleService, deleteService } from "@/app/portal/actions";
+import { toggleService, deleteService, createService, setServiceImage } from "@/app/portal/actions";
+import { AddServiceForm } from "@/components/AddServiceForm";
+import { ServicePhotoForm } from "@/components/ServicePhotoForm";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +28,22 @@ export default async function ServicesPage() {
           ) : (
             services.map((s) => (
               <div key={s.id} className="card flex items-center justify-between gap-3">
-                <div>
-                  <div className="font-medium">{s.name} {!s.active && <span className="chip ml-1">hidden</span>}</div>
-                  <div className="text-sm text-cream/50">
-                    {formatMoney(s.priceCents)} · {formatDuration(s.durationMin)}{s.barber ? ` · ${s.barber.name}` : ""}
+                <div className="flex items-center gap-3">
+                  {s.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.imageUrl} alt={s.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                  ) : (
+                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-smoke text-xl text-brass/40">✂</div>
+                  )}
+                  <div>
+                    <div className="font-medium">{s.name} {!s.active && <span className="chip ml-1">hidden</span>}</div>
+                    <div className="text-sm text-cream/50">
+                      {formatMoney(s.priceCents)} · {formatDuration(s.durationMin)}{s.barber ? ` · ${s.barber.name}` : ""}
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ServicePhotoForm action={setServiceImage.bind(null, s.id)} hasImage={!!s.imageUrl} />
                   <form action={toggleService.bind(null, s.id, !s.active)}>
                     <button className="btn-ghost px-3 py-1.5 text-xs">{s.active ? "Hide" : "Show"}</button>
                   </form>
@@ -47,22 +58,7 @@ export default async function ServicesPage() {
 
         <aside className="card h-max">
           <h2 className="font-display text-xl">Add a service</h2>
-          <form action={createService} className="mt-4 space-y-3">
-            <div><label className="label">Name</label><input name="name" required className="input" /></div>
-            <div><label className="label">Description</label><input name="description" className="input" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Price ($)</label><input name="price" type="number" step="0.01" min="0" defaultValue="35" className="input" /></div>
-              <div><label className="label">Minutes</label><input name="durationMin" type="number" min="5" step="5" defaultValue="30" className="input" /></div>
-            </div>
-            <div>
-              <label className="label">Barber (optional)</label>
-              <select name="barberId" className="input">
-                <option value="">Any barber</option>
-                {barbers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
-            <button className="btn-primary w-full">Add service</button>
-          </form>
+          <AddServiceForm action={createService} barbers={barbers} />
         </aside>
       </div>
     </div>
