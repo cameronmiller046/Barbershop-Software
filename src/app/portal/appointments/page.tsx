@@ -1,6 +1,7 @@
-import { requireTenantStaff } from "@/lib/rbac";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/utils";
+import { can } from "@/lib/permissions";
 import { setAppointmentStatus } from "@/app/portal/actions";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +14,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default async function AppointmentsPage() {
-  const user = await requireTenantStaff();
-  const barberScope = user.role === "BARBER" ? { barberId: user.id } : {};
+  const user = await requireStaffWithPerms();
+  const seesAll = can(user, "shop.viewAll");
+  const barberScope = seesAll ? {} : { barberId: user.id };
 
   const appointments = await prisma.appointment.findMany({
     where: { tenantId: user.tenantId, ...barberScope },
@@ -36,7 +38,7 @@ export default async function AppointmentsPage() {
       ) : (
         <div className="mt-3 space-y-2">
           {upcoming.map((a) => (
-            <Row key={a.id} a={a} showBarber={user.role !== "BARBER"} actionable />
+            <Row key={a.id} a={a} showBarber={seesAll} actionable />
           ))}
         </div>
       )}
@@ -47,7 +49,7 @@ export default async function AppointmentsPage() {
       ) : (
         <div className="mt-3 space-y-2">
           {past.slice(0, 50).map((a) => (
-            <Row key={a.id} a={a} showBarber={user.role !== "BARBER"} actionable={false} />
+            <Row key={a.id} a={a} showBarber={seesAll} actionable={false} />
           ))}
         </div>
       )}

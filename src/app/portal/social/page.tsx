@@ -1,5 +1,7 @@
-import { requireTenantStaff } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
 import { createSocialPost, setSocialStatus, deleteSocialPost } from "@/app/portal/actions";
 import type { SocialStatus } from "@prisma/client";
 
@@ -15,7 +17,8 @@ const COLUMNS: { key: SocialStatus; label: string; next?: SocialStatus }[] = [
 const PLATFORMS = ["INSTAGRAM", "FACEBOOK", "TIKTOK", "X"] as const;
 
 export default async function SocialPage() {
-  const user = await requireTenantStaff();
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.social")) redirect("/portal");
   const posts = await prisma.socialPost.findMany({
     where: { tenantId: user.tenantId },
     orderBy: { createdAt: "desc" },

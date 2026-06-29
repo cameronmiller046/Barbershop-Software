@@ -3,9 +3,17 @@
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireTenantStaff } from "@/lib/rbac";
+import { requireTenantStaff, requireStaffWithPerms } from "@/lib/rbac";
+import { can, type PermKey } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
 import type { AppointmentStatus, SocialPlatform, SocialStatus } from "@prisma/client";
+
+/** Load the acting staff member and confirm they hold a permission, else abort. */
+async function requirePerm(key: PermKey) {
+  const user = await requireStaffWithPerms();
+  if (!can(user, key)) return null;
+  return user;
+}
 
 // ── Appointments ──
 export async function setAppointmentStatus(id: string, status: AppointmentStatus) {
@@ -22,7 +30,8 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
 
 // ── Clients ──
 export async function saveClientNotes(id: string, formData: FormData) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.clients");
+  if (!user) return;
   const notes = String(formData.get("notes") || "");
   await prisma.client.updateMany({ where: { id, tenantId: user.tenantId }, data: { notes } });
   revalidatePath("/portal/clients");
@@ -30,7 +39,8 @@ export async function saveClientNotes(id: string, formData: FormData) {
 
 // ── Services ──
 export async function createService(formData: FormData) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.services");
+  if (!user) return;
   const name = String(formData.get("name") || "").trim();
   if (!name) return;
   await prisma.service.create({
@@ -48,20 +58,23 @@ export async function createService(formData: FormData) {
 }
 
 export async function toggleService(id: string, active: boolean) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.services");
+  if (!user) return;
   await prisma.service.updateMany({ where: { id, tenantId: user.tenantId }, data: { active } });
   revalidatePath("/portal/services");
 }
 
 export async function deleteService(id: string) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.services");
+  if (!user) return;
   await prisma.service.deleteMany({ where: { id, tenantId: user.tenantId } });
   revalidatePath("/portal/services");
 }
 
 // ── Social planner ──
 export async function createSocialPost(formData: FormData) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.social");
+  if (!user) return;
   const caption = String(formData.get("caption") || "").trim();
   if (!caption) return;
   const platforms = formData.getAll("platforms").map(String) as SocialPlatform[];
@@ -81,21 +94,23 @@ export async function createSocialPost(formData: FormData) {
 }
 
 export async function setSocialStatus(id: string, status: SocialStatus) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.social");
+  if (!user) return;
   await prisma.socialPost.updateMany({ where: { id, tenantId: user.tenantId }, data: { status } });
   revalidatePath("/portal/social");
 }
 
 export async function deleteSocialPost(id: string) {
-  const user = await requireTenantStaff();
+  const user = await requirePerm("shop.social");
+  if (!user) return;
   await prisma.socialPost.deleteMany({ where: { id, tenantId: user.tenantId } });
   revalidatePath("/portal/social");
 }
 
-// ── Team (owner only) ──
+// ── Team (requires the shop.team permission) ──
 export async function createBarber(formData: FormData) {
-  const user = await requireTenantStaff();
-  if (user.role !== "OWNER") return;
+  const user = await requirePerm("shop.team");
+  if (!user) return;
   const email = String(formData.get("email") || "").toLowerCase().trim();
   const name = String(formData.get("name") || "").trim();
   const password = String(formData.get("password") || "");
@@ -123,16 +138,16 @@ export async function createBarber(formData: FormData) {
 }
 
 export async function toggleBarber(id: string, active: boolean) {
-  const user = await requireTenantStaff();
-  if (user.role !== "OWNER") return;
+  const user = await requirePerm("shop.team");
+  if (!user) return;
   await prisma.user.updateMany({ where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } }, data: { active } });
   revalidatePath("/portal/team");
 }
 
-// Admin (owner) edits a standard user's level within their own shop.
+// Edit a standard user's level within the shop (requires shop.team).
 export async function setStaffRole(id: string, role: "BARBER" | "RECEPTIONIST") {
-  const user = await requireTenantStaff();
-  if (user.role !== "OWNER") return;
+  const user = await requirePerm("shop.team");
+  if (!user) return;
   await prisma.user.updateMany({
     where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
     data: { role },
@@ -141,10 +156,10 @@ export async function setStaffRole(id: string, role: "BARBER" | "RECEPTIONIST") 
   revalidatePath("/portal/team");
 }
 
-// ── Settings (owner only) ──
+// ── Settings (requires the shop.settings permission) ──
 export async function updateTenant(formData: FormData) {
-  const user = await requireTenantStaff();
-  if (user.role !== "OWNER") return;
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
   await prisma.tenant.update({
     where: { id: user.tenantId },
     data: {

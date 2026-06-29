@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
-import { requireTenantStaff } from "@/lib/rbac";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { updateTenant } from "@/app/portal/actions";
 import { appUrl } from "@/lib/utils";
+import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const user = await requireTenantStaff();
-  if (user.role !== "OWNER") redirect("/portal");
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.settings")) redirect("/portal");
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
   if (!tenant) redirect("/portal");
 

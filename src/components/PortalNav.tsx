@@ -3,22 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { classNames } from "@/lib/utils";
+import type { PermKey } from "@/lib/permissions";
 
-const LINKS = [
+const LINKS: { href: string; label: string; exact?: boolean; perm?: PermKey }[] = [
   { href: "/portal", label: "Dashboard", exact: true },
   { href: "/portal/appointments", label: "Appointments" },
-  { href: "/portal/clients", label: "Clients" },
-  { href: "/portal/services", label: "Services" },
-  { href: "/portal/social", label: "Social planner" },
-  { href: "/portal/team", label: "Team", ownerOnly: true },
-  { href: "/portal/settings", label: "Settings", ownerOnly: true },
+  { href: "/portal/clients", label: "Clients", perm: "shop.clients" },
+  { href: "/portal/services", label: "Services", perm: "shop.services" },
+  { href: "/portal/social", label: "Social planner", perm: "shop.social" },
+  { href: "/portal/team", label: "Team", perm: "shop.team" },
+  { href: "/portal/settings", label: "Settings", perm: "shop.settings" },
 ];
 
-export function PortalNav({ isOwner, siteUrl }: { isOwner: boolean; siteUrl: string }) {
+export function PortalNav({ perms, siteUrl }: { perms: Record<string, boolean>; siteUrl: string }) {
   const pathname = usePathname();
   return (
     <nav className="space-y-1">
-      {LINKS.filter((l) => !l.ownerOnly || isOwner).map((l) => {
+      {LINKS.filter((l) => !l.perm || perms[l.perm]).map((l) => {
         const active = l.exact ? pathname === l.href : pathname.startsWith(l.href);
         return (
           <Link key={l.href} href={l.href}

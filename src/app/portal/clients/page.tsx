@@ -1,11 +1,14 @@
-import { requireTenantStaff } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
 import { saveClientNotes } from "@/app/portal/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  const user = await requireTenantStaff();
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.clients")) redirect("/portal");
   const clients = await prisma.client.findMany({
     where: { tenantId: user.tenantId },
     include: { _count: { select: { appointments: true } } },

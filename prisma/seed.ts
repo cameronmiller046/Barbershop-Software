@@ -86,6 +86,13 @@ async function main() {
     );
   }
 
+  // Demo of per-user permission overrides: grant the Admin123 barber (a Standard
+  // user) access to Shop settings — without making them an Admin.
+  await prisma.user.update({
+    where: { email: "admin123" },
+    data: { permissionOverrides: { "shop.settings": true } },
+  });
+
   // Working hours: Mon–Sat 9:00–19:00 for the owner + every barber.
   for (const staff of [owner, ...barbers]) {
     for (const dow of [1, 2, 3, 4, 5, 6]) {

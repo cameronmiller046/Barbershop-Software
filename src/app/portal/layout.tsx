@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { requireTenantStaff } from "@/lib/rbac";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { PortalNav } from "@/components/PortalNav";
 import { signOut } from "@/lib/auth";
 import { appUrl } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
+import { permMap } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireTenantStaff();
+  const user = await requireStaffWithPerms();
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
+  const perms = permMap(user);
 
   return (
     <div className="min-h-screen">
@@ -33,7 +35,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
       <div className="container-page grid gap-8 py-8 md:grid-cols-[200px_1fr]">
         <aside className="md:sticky md:top-8 md:self-start">
-          <PortalNav isOwner={user.role === "OWNER"} siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)} />
+          <PortalNav perms={perms} siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)} />
         </aside>
         <main>{children}</main>
       </div>

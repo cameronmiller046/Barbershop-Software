@@ -7,6 +7,8 @@ import { requirePlatformAdmin } from "@/lib/rbac";
 import { provisionTenant } from "@/lib/provision";
 import { audit } from "@/lib/audit";
 import { SUPERADMIN_ASSIGNABLE } from "@/lib/roles";
+import { isPermKey, overridesOf } from "@/lib/permissions";
+import { Prisma } from "@prisma/client";
 import type { TenantStatus, Role } from "@prisma/client";
 
 export async function approveApplication(id: string) {
@@ -126,6 +128,37 @@ export async function createUserAccount(formData: FormData) {
   }
   await audit({ action: "admin.user.created", userId: admin.id, target: email, meta: { role, tenantId } });
   revalidatePath("/admin/users");
+}
+
+/**
+ * Set a single per-user permission override.
+ * value: "allow" | "deny" sets an explicit override; "default" clears it (use role default).
+ */
+export async function setUserPermission(userId: string, key: string, value: "default" | "allow" | "deny") {
+  const admin = await requirePlatformAdmin();
+  if (!isPermKey(key)) return;
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { permissionOverrides: true } });
+  if (!target) return;
+
+  const overrides: Record<string, boolean> = { ...overridesOf({ role: "BARBER", permissionOverrides: target.permissionOverrides }) };
+  if (value === "default") delete overrides[key];
+  else overrides[key] = value === "allow";
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { permissionOverrides: Object.keys(overrides).length ? overrides : Prisma.JsonNull },
+  });
+  await audit({ action: "admin.user.permission", userId: admin.id, target: userId, meta: { key, value } });
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/admin/users");
+}
+
+/** Clear all per-user overrides (reset to role defaults). */
+export async function resetUserPermissions(userId: string) {
+  const admin = await requirePlatformAdmin();
+  await prisma.user.update({ where: { id: userId }, data: { permissionOverrides: Prisma.JsonNull } });
+  await audit({ action: "admin.user.permission.reset", userId: admin.id, target: userId });
+  revalidatePath(`/admin/users/${userId}`);
 }
 
 /** Onboard a paying customer directly: provision a store + owner account. */

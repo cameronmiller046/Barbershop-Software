@@ -1,12 +1,15 @@
-import { requireTenantStaff } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { formatMoney, formatDuration } from "@/lib/utils";
+import { can } from "@/lib/permissions";
 import { createService, toggleService, deleteService } from "@/app/portal/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ServicesPage() {
-  const user = await requireTenantStaff();
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.services")) redirect("/portal");
   const [services, barbers] = await Promise.all([
     prisma.service.findMany({ where: { tenantId: user.tenantId }, include: { barber: { select: { name: true } } }, orderBy: { sortOrder: "asc" } }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, role: "BARBER", active: true }, select: { id: true, name: true } }),

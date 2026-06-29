@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export type SessionUser = {
   id: string;
@@ -8,6 +9,15 @@ export type SessionUser = {
   email?: string | null;
   role?: Role;
   tenantId?: string | null;
+};
+
+export type StaffWithPerms = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  tenantId: string;
+  permissionOverrides: unknown;
 };
 
 /** Require any authenticated user. Redirects to /login otherwise. */
@@ -35,6 +45,20 @@ export async function requireTenantStaff(): Promise<SessionUser & { tenantId: st
   if (user.role === "PLATFORM_ADMIN") redirect("/admin");
   if (!user.tenantId) redirect("/login");
   return user as SessionUser & { tenantId: string };
+}
+
+/**
+ * Like requireTenantStaff but loads the full DB record, including
+ * permissionOverrides, so pages/actions can evaluate per-user permissions.
+ */
+export async function requireStaffWithPerms(): Promise<StaffWithPerms> {
+  const session = await requireTenantStaff();
+  const full = await prisma.user.findUnique({
+    where: { id: session.id, active: true },
+    select: { id: true, name: true, email: true, role: true, tenantId: true, permissionOverrides: true },
+  });
+  if (!full || !full.tenantId) redirect("/login");
+  return { ...full, tenantId: full.tenantId };
 }
 
 const RANK: Record<Role, number> = {

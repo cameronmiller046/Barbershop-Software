@@ -45,7 +45,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{u.name}</span>
+                      <Link href={`/admin/users/${u.id}`} className="font-medium hover:text-brass">{u.name}</Link>
                       <span className={`badge ${u.role === "PLATFORM_ADMIN" ? "bg-brass/20 text-brass" : u.role === "OWNER" ? "bg-blue-500/20 text-blue-200" : "bg-white/10 text-cream/70"}`}>
                         {ROLE_SHORT[u.role]}
                       </span>
@@ -59,6 +59,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
                   {!isSelf && (
                     <div className="flex flex-wrap items-center gap-2">
+                      <Link href={`/admin/users/${u.id}`} className="rounded-md border border-white/10 px-2 py-1.5 text-xs text-cream/70 hover:bg-white/5">Permissions</Link>
                       {/* Change level + store */}
                       <form action={changeUserRole.bind(null, u.id)} className="flex items-center gap-1">
                         <select name="role" defaultValue={u.role} className="input w-36 py-1.5 text-xs">

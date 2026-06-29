@@ -107,6 +107,10 @@ model User {
   role         Role    @default(BARBER)
   active       Boolean @default(true)
 
+  // Per-user permission overrides layered on top of role defaults.
+  // Shape: { "shop.settings": true, "shop.viewAll": false }. Absent key = use role default.
+  permissionOverrides Json?
+
   // null for PLATFORM_ADMIN; set for everyone else
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId String?

@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
-import { requireTenantStaff } from "@/lib/rbac";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { createBarber, toggleBarber, setStaffRole } from "@/app/portal/actions";
 import { roleLabel } from "@/lib/roles";
+import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeamPage() {
-  const user = await requireTenantStaff();
-  if (user.role !== "OWNER") redirect("/portal");
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.team")) redirect("/portal");
 
   const team = await prisma.user.findMany({
     where: { tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },

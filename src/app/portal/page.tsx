@@ -1,15 +1,17 @@
-import { requireTenantStaff } from "@/lib/rbac";
+import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/utils";
+import { can } from "@/lib/permissions";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const user = await requireTenantStaff();
+  const user = await requireStaffWithPerms();
   const tenantId = user.tenantId;
-  // Barbers see their own book; owners/receptionists see the whole shop.
-  const barberScope = user.role === "BARBER" ? { barberId: user.id } : {};
+  // Whole-shop view requires the shop.viewAll permission; otherwise scope to own book.
+  const seesAll = can(user, "shop.viewAll");
+  const barberScope = seesAll ? {} : { barberId: user.id };
 
   const now = new Date();
   const [todays, weekAppts, upcomingCount, clientCount] = await Promise.all([
@@ -58,7 +60,7 @@ export default async function DashboardPage() {
             <div key={a.id} className="card flex items-center justify-between py-3">
               <div>
                 <div className="font-medium">{a.client.name}</div>
-                <div className="text-sm text-cream/50">{a.service.name}{user.role !== "BARBER" ? ` · ${a.barber.name}` : ""}</div>
+                <div className="text-sm text-cream/50">{a.service.name}{seesAll ? ` · ${a.barber.name}` : ""}</div>
               </div>
               <div className="text-right">
                 <div className="text-brass">{new Date(a.startTime).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</div>

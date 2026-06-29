@@ -53,8 +53,10 @@ export default async function RolesPage() {
       </div>
 
       <p className="mt-4 text-xs text-cream/40">
-        Capabilities are enforced server-side (see <code className="text-cream/60">src/lib/rbac.ts</code>);
-        editing a user&apos;s level is the way to grant or revoke them.
+        These are level <i>defaults</i>. You can override any capability for an individual
+        account from their page in the <Link href="/admin/users" className="text-brass">Users console</Link>
+        {" "}(Allow / Deny / Default) — e.g. give one barber Settings access without making them an Admin.
+        Everything is enforced server-side in <code className="text-cream/60">src/lib/permissions.ts</code>.
       </p>
     </div>
   );
