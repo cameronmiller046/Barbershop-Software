@@ -23,7 +23,13 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
       <section className="container-page grid items-center gap-10 py-16 md:grid-cols-2">
         <div>
           <span className="chip">{tenant.address || "Walk-ins welcome"}</span>
-          <h1 className="mt-4 font-display text-5xl leading-tight md:text-6xl">{tenant.name}</h1>
+          <h1 className="mt-4 font-display text-5xl leading-tight md:text-6xl" style={{ color: tenant.primaryColor }}>{tenant.name}</h1>
+          {tenant.googleRating != null && (
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <span style={{ color: tenant.primaryColor }}>{"★".repeat(Math.round(tenant.googleRating))}</span>
+              <span className="text-cream/80">{tenant.googleRating.toFixed(1)} on Google</span>
+            </div>
+          )}
           <p className="mt-4 max-w-md text-cream/70">{tenant.tagline || "Sharp cuts, good company."}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={`/t/${tenant.slug}/book`} className="btn-primary px-7 py-3 text-base">Book an appointment</Link>

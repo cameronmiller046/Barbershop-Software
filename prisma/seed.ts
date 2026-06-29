@@ -28,17 +28,28 @@ async function main() {
   // platform admin) so the shop's portal can be demoed from the storefront footer.
   const tenant = await prisma.tenant.upsert({
     where: { slug: DEMO_SLUG },
-    update: { status: "ACTIVE", name: "Professional Barbershop & Salon" },
+    update: {
+      status: "ACTIVE",
+      name: "Professional Barber & Beauty Salon",
+      tagline: "Barbershop & beauty salon — Stone Mountain, GA.",
+      primaryColor: "#C9A24B", // gold
+      phone: "404-317-5068",
+      address: "4847 Memorial Dr, Stone Mountain, GA 30083",
+      slotIntervalMin: 30,
+      googleRating: 4.6,
+    },
     create: {
       slug: DEMO_SLUG,
-      name: "Professional Barbershop & Salon",
+      name: "Professional Barber & Beauty Salon",
       status: "ACTIVE",
       plan: "PRO",
-      tagline: "Precision cuts in a classic chair.",
-      primaryColor: "#c9a24b",
+      tagline: "Barbershop & beauty salon — Stone Mountain, GA.",
+      primaryColor: "#C9A24B",
       email: "hello@professionalbarbershop.com",
-      phone: "(555) 018-2244",
-      address: "128 Main Street, Downtown",
+      phone: "404-317-5068",
+      address: "4847 Memorial Dr, Stone Mountain, GA 30083",
+      slotIntervalMin: 30,
+      googleRating: 4.6,
     },
   });
 
@@ -63,68 +74,65 @@ async function main() {
     },
   });
 
-  // Barbers (these appear on the public Team page).
-  // "Admin123" is a real barber on this shop — its login (admin123 / Admin123) is
-  // how the shop's portal is demoed from the "Powered by The Chair" footer link.
-  const barbersData = [
-    { email: "deion@professionalbarbershop.com", name: "Deion Carter", bio: "Fades and beard sculpting specialist.", instagramHandle: "deioncuts", avatarUrl: "https://i.pravatar.cc/240?img=12", password: "demo1234" },
-    { email: "luis@professionalbarbershop.com", name: "Luis Romero", bio: "Classic scissor work and hot-towel shaves.", instagramHandle: "luistrim", avatarUrl: "https://i.pravatar.cc/240?img=33", password: "demo1234" },
-    { email: "andre@professionalbarbershop.com", name: "Andre Wallace", bio: "Tapers, kids' cuts, and a steady hand.", instagramHandle: "andrethebarber", avatarUrl: "https://i.pravatar.cc/240?img=15", password: "demo1234" },
-    { email: "sofia@professionalbarbershop.com", name: "Sofia Nguyen", bio: "Modern styles, color, and hair design.", instagramHandle: "sofiacuts", avatarUrl: "https://i.pravatar.cc/240?img=47", password: "demo1234" },
-    { email: "admin123", name: "Admin123", bio: "Senior barber & shop manager.", instagramHandle: "professionalbarbershop", avatarUrl: "https://i.pravatar.cc/240?img=53", password: "Admin123" },
-  ];
-  const barbers: User[] = [];
-  for (const b of barbersData) {
-    const passwordHash = await bcrypt.hash(b.password, 10);
-    barbers.push(
-      await prisma.user.upsert({
-        where: { email: b.email },
-        // Convert any prior account (e.g. a former platform admin) into this shop's barber.
-        update: { tenantId: tenant.id, role: "BARBER", name: b.name, bio: b.bio, instagramHandle: b.instagramHandle, avatarUrl: b.avatarUrl, active: true, passwordHash },
-        create: { tenantId: tenant.id, email: b.email, name: b.name, role: "BARBER", passwordHash, bio: b.bio, instagramHandle: b.instagramHandle, avatarUrl: b.avatarUrl },
-      }),
-    );
-  }
+  // Remove any other barber profiles for this store — only Admin123 remains.
+  await prisma.user.deleteMany({ where: { tenantId: tenant.id, role: "BARBER", email: { not: "admin123" } } });
 
-  // Demo of per-user permission overrides: grant the Admin123 barber (a Standard
-  // user) access to Shop settings — without making them an Admin.
-  await prisma.user.update({
+  // The single barber on this shop: Admin123 (login admin123 / Admin123).
+  const admin123 = await prisma.user.upsert({
     where: { email: "admin123" },
-    data: { permissionOverrides: { "shop.settings": true } },
+    update: {
+      tenantId: tenant.id, role: "BARBER", name: "Admin123", active: true,
+      bio: "Senior barber & shop manager.", instagramHandle: "professionalbarbershop",
+      avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash("Admin123", 10),
+      // HR fields (read-only to the user; admin-managed)
+      hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
+      // Grant Shop settings without making them an Admin (per-user permission override).
+      permissionOverrides: { "shop.settings": true },
+    },
+    create: {
+      tenantId: tenant.id, email: "admin123", name: "Admin123", role: "BARBER",
+      passwordHash: await bcrypt.hash("Admin123", 10), bio: "Senior barber & shop manager.",
+      instagramHandle: "professionalbarbershop", avatarUrl: "https://i.pravatar.cc/240?img=53",
+      hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
+      permissionOverrides: { "shop.settings": true },
+    },
   });
+  const barbers: User[] = [admin123];
 
-  // Working hours: Mon–Sat 9:00–19:00 for the owner + every barber.
-  for (const staff of [owner, ...barbers]) {
-    for (const dow of [1, 2, 3, 4, 5, 6]) {
+  // Store hours (30-min booking intervals are set on the tenant):
+  //   Mon–Fri 10:00–19:30 · Sat 9:00–17:30 · Sun 12:00–18:00
+  const STORE_HOURS: Record<number, [number, number]> = {
+    1: [600, 1170], 2: [600, 1170], 3: [600, 1170], 4: [600, 1170], 5: [600, 1170],
+    6: [540, 1050], 0: [720, 1080],
+  };
+  for (const staff of [owner, admin123]) {
+    for (const [dow, [startMin, endMin]] of Object.entries(STORE_HOURS)) {
       await prisma.workingHour.create({
-        data: { tenantId: tenant.id, barberId: staff.id, dayOfWeek: dow, startMin: 9 * 60, endMin: 19 * 60 },
+        data: { tenantId: tenant.id, barberId: staff.id, dayOfWeek: Number(dow), startMin, endMin },
       });
     }
   }
 
-  // Services (8) — a couple pinned to specific barbers to show that feature.
+  // Services — barber + beauty (all booked with the one barber).
   await prisma.service.createMany({
     data: [
-      { tenantId: tenant.id, name: "Signature Haircut", description: "Consultation, cut, and style.", durationMin: 30, priceCents: 4000, sortOrder: 0, imageUrl: "https://picsum.photos/seed/cut1/600/400" },
-      { tenantId: tenant.id, name: "Skin Fade", description: "Bald fade with crisp lines.", durationMin: 40, priceCents: 4500, sortOrder: 1, barberId: barbers[0].id, imageUrl: "https://picsum.photos/seed/fade2/600/400" },
-      { tenantId: tenant.id, name: "Beard Trim & Shape", description: "Lineup and conditioning.", durationMin: 20, priceCents: 2500, sortOrder: 2, imageUrl: "https://picsum.photos/seed/beard3/600/400" },
-      { tenantId: tenant.id, name: "Cut + Beard Combo", description: "The complete refresh.", durationMin: 50, priceCents: 6000, sortOrder: 3, imageUrl: "https://picsum.photos/seed/combo4/600/400" },
-      { tenantId: tenant.id, name: "Hot Towel Shave", description: "Traditional straight-razor shave.", durationMin: 30, priceCents: 3500, sortOrder: 4, barberId: barbers[1].id, imageUrl: "https://picsum.photos/seed/shave5/600/400" },
-      { tenantId: tenant.id, name: "Kids Cut", description: "Ages 10 and under.", durationMin: 20, priceCents: 2500, sortOrder: 5, imageUrl: "https://picsum.photos/seed/kids6/600/400" },
-      { tenantId: tenant.id, name: "Senior Cut", description: "Classic cut, 65+.", durationMin: 30, priceCents: 3000, sortOrder: 6, imageUrl: "https://picsum.photos/seed/senior7/600/400" },
-      { tenantId: tenant.id, name: "Hair Design / Parting", description: "Custom lines and creative design.", durationMin: 35, priceCents: 5000, sortOrder: 7, barberId: barbers[3].id, imageUrl: "https://picsum.photos/seed/design8/600/400" },
+      { tenantId: tenant.id, name: "Haircut", description: "Consultation, cut, and style.", durationMin: 30, priceCents: 3500, sortOrder: 0, imageUrl: "https://picsum.photos/seed/cut1/600/400" },
+      { tenantId: tenant.id, name: "Skin Fade", description: "Bald fade with crisp lines.", durationMin: 30, priceCents: 4000, sortOrder: 1, imageUrl: "https://picsum.photos/seed/fade2/600/400" },
+      { tenantId: tenant.id, name: "Beard Trim & Shape", description: "Lineup and conditioning.", durationMin: 30, priceCents: 2500, sortOrder: 2, imageUrl: "https://picsum.photos/seed/beard3/600/400" },
+      { tenantId: tenant.id, name: "Cut + Beard Combo", description: "The full refresh.", durationMin: 60, priceCents: 5500, sortOrder: 3, imageUrl: "https://picsum.photos/seed/combo4/600/400" },
+      { tenantId: tenant.id, name: "Women's Cut & Style", description: "Wash, cut, and blow-dry.", durationMin: 60, priceCents: 6500, sortOrder: 4, imageUrl: "https://picsum.photos/seed/style5/600/400" },
+      { tenantId: tenant.id, name: "Silk Press", description: "Smooth, sleek finish.", durationMin: 90, priceCents: 8000, sortOrder: 5, imageUrl: "https://picsum.photos/seed/silk6/600/400" },
+      { tenantId: tenant.id, name: "Kids Cut", description: "Ages 10 and under.", durationMin: 30, priceCents: 2500, sortOrder: 6, imageUrl: "https://picsum.photos/seed/kids7/600/400" },
+      { tenantId: tenant.id, name: "Hair Design / Parting", description: "Custom lines and creative design.", durationMin: 30, priceCents: 4500, sortOrder: 7, imageUrl: "https://picsum.photos/seed/design8/600/400" },
     ],
   });
 
-  // Reviews (6)
+  // Featured reviews (Google rating shown separately = 4.6).
   await prisma.review.createMany({
     data: [
-      { tenantId: tenant.id, authorName: "James T.", rating: 5, body: "Best fade in the city. Deion never misses." },
-      { tenantId: tenant.id, authorName: "Priya R.", rating: 5, body: "Booked online in 30 seconds, in and out, perfect cut." },
-      { tenantId: tenant.id, authorName: "Marcus B.", rating: 5, body: "Luis gives the best hot towel shave I've had. So relaxing." },
-      { tenantId: tenant.id, authorName: "Online customer", rating: 4, body: "Great atmosphere and friendly barbers." },
-      { tenantId: tenant.id, authorName: "Devon W.", rating: 5, body: "Sofia did a custom design for my son — he loved it." },
-      { tenantId: tenant.id, authorName: "Chris L.", rating: 5, body: "Clean shop, easy booking, fair prices. My new spot." },
+      { tenantId: tenant.id, authorName: "Tyrese Artist", rating: 5, body: "Jazmyn always get my husband hair straight — best hairstylist I've seen do his hair. Greg did my hair the first time, he did a good job, he's gone be my new barber. This place is good, always great conversation an clean environment, keep up the good work. And Mike crazy self be having me dying laughing — he keep the energy going in the shop." },
+      { tenantId: tenant.id, authorName: "Shurea Richardson", rating: 5, body: "My hair stylist took great care of me. Talked me through everything she was doing. Had great conversation and I really loved my hair in the end!!!" },
+      { tenantId: tenant.id, authorName: "Zulu Adam", rating: 5, body: "I've been cutting my hair there for years and it's the best place in town, you should go and check it for yourself and you won't regret a thing, a thousand stars 🎶 ✨" },
     ],
   });
 
@@ -163,36 +171,29 @@ async function main() {
       },
     });
   }
-  // Past (completed) for revenue/metrics
-  await apptAt(-7, 11, 0, 1, 0, "COMPLETED");
-  await apptAt(-5, 14, 1, 4, 1, "COMPLETED");
-  await apptAt(-2, 10, 3, 7, 2, "COMPLETED");
-  // Upcoming (confirmed)
-  await apptAt(1, 10, 0, 0, 3, "CONFIRMED");
-  await apptAt(1, 13, 1, 3, 4, "CONFIRMED");
-  await apptAt(2, 15, 3, 5, 0, "CONFIRMED");
+  // Admin123's book (the only barber) — today, upcoming, and history so the
+  // portal dashboard + calendar look alive.
+  await apptAt(0, 10, 0, 0, 1, "CONFIRMED"); // today
+  await apptAt(0, 12, 0, 3, 2, "CONFIRMED"); // today
+  await apptAt(0, 15, 0, 4, 0, "CONFIRMED"); // today
+  await apptAt(1, 11, 0, 1, 3, "CONFIRMED"); // tomorrow
+  await apptAt(2, 14, 0, 5, 4, "CONFIRMED"); // upcoming
+  await apptAt(4, 16, 0, 2, 1, "CONFIRMED"); // upcoming
+  await apptAt(-3, 13, 0, 0, 0, "COMPLETED"); // history
+  await apptAt(-6, 16, 0, 3, 2, "COMPLETED"); // history
+  await apptAt(-9, 11, 0, 4, 3, "COMPLETED"); // history
 
-  // Admin123's own book — so logging into the shop portal as this barber shows a
-  // full day, upcoming appointments, and history (the barber dashboard is per-barber).
-  await apptAt(0, 10, 4, 0, 1, "CONFIRMED"); // today
-  await apptAt(0, 12, 4, 3, 2, "CONFIRMED"); // today
-  await apptAt(0, 15, 4, 2, 0, "CONFIRMED"); // today
-  await apptAt(1, 11, 4, 1, 3, "CONFIRMED"); // tomorrow
-  await apptAt(3, 14, 4, 4, 4, "CONFIRMED"); // upcoming
-  await apptAt(-3, 13, 4, 0, 0, "COMPLETED"); // history
-  await apptAt(-6, 16, 4, 3, 2, "COMPLETED"); // history
-
-  // Social planner content (visible in the owner's portal).
+  // Social planner content.
   await prisma.socialPost.createMany({
     data: [
       { tenantId: tenant.id, barberId: owner.id, caption: "Fresh fade Friday 💈 Book your spot this weekend!", platforms: ["INSTAGRAM", "FACEBOOK"], status: "SCHEDULED", scheduledFor: addDays(new Date(), 2) },
-      { tenantId: tenant.id, barberId: owner.id, caption: "Behind the chair with Deion — skin fade in 4K 🔥", platforms: ["INSTAGRAM"], status: "DRAFT" },
+      { tenantId: tenant.id, barberId: owner.id, caption: "New silk press results — swipe to see the shine ✨", platforms: ["INSTAGRAM"], status: "DRAFT" },
       { tenantId: tenant.id, barberId: owner.id, caption: "Father & son cuts all month. Tag a dad!", platforms: ["FACEBOOK"], status: "IDEA" },
-      { tenantId: tenant.id, barberId: owner.id, caption: "Hot towel shave appreciation post ♨️", platforms: ["INSTAGRAM", "TIKTOK"], status: "POSTED" },
+      { tenantId: tenant.id, barberId: owner.id, caption: "Great conversation, clean shop, sharp cuts ♨️", platforms: ["INSTAGRAM", "TIKTOK"], status: "POSTED" },
     ],
   });
 
-  console.log(`✓ Demo tenant ready (public): /t/${tenant.slug} — ${services.length} services, ${barbers.length} barbers`);
+  console.log(`✓ Demo tenant ready (public): /t/${tenant.slug} — ${services.length} services, ${barbers.length} barber`);
 
   // Populate the Platform Admin view with additional tenants, applications, and activity.
   await seedPlatform(prisma);

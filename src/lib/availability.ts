@@ -12,6 +12,7 @@ export async function getDaySlots(
   barberId: string,
   serviceDurationMin: number,
   date: Date,
+  stepMin = 15,
 ): Promise<Slot[]> {
   const dayStart = startOfDay(date);
   const dow = dayStart.getDay();
@@ -32,7 +33,7 @@ export async function getDaySlots(
   });
 
   const slots: Slot[] = [];
-  const step = 15;
+  const step = Math.max(5, stepMin);
   const windowStart = addMinutes(dayStart, wh.startMin);
   const windowEnd = addMinutes(dayStart, wh.endMin);
   const now = new Date();
@@ -56,11 +57,12 @@ export async function getUpcomingDays(
   barberId: string,
   serviceDurationMin: number,
   days = 21,
+  stepMin = 15,
 ) {
   const result: { date: string; slots: Slot[] }[] = [];
   for (let i = 0; i < days; i++) {
     const d = addDays(new Date(), i);
-    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d);
+    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin);
     if (slots.length) result.push({ date: startOfDay(d).toISOString(), slots });
   }
   return result;

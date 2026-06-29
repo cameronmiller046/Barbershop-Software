@@ -50,7 +50,7 @@ export function TenantShell({
                 {tenant.name.charAt(0)}
               </span>
             )}
-            <span className="font-display text-lg">{tenant.name}</span>
+            <span className="font-display text-lg" style={{ color: tenant.primaryColor }}>{tenant.name}</span>
           </Link>
           <nav className="hidden items-center gap-5 text-sm text-cream/70 lg:flex">
             {nav.map((n) => (

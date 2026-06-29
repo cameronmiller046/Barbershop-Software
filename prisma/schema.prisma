@@ -79,6 +79,12 @@ model Tenant {
   address  String?
   timezone String  @default("America/New_York")
 
+  // Booking config (Admins can customize in the portal)
+  slotIntervalMin Int @default(15)
+
+  // Social proof
+  googleRating Float?
+
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
   featureAnalytics Boolean @default(true)
@@ -119,6 +125,10 @@ model User {
   bio            String?
   avatarUrl      String?
   instagramHandle String?
+
+  // HR fields — set by admins, read-only to the user themselves
+  hireDate    DateTime?
+  dateOfBirth DateTime?
 
   barberAppointments Appointment[] @relation("BarberAppointments")
   services           Service[]

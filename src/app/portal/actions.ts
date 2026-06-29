@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireTenantStaff, requireStaffWithPerms } from "@/lib/rbac";
@@ -173,4 +174,78 @@ export async function updateTenant(formData: FormData) {
   });
   await audit({ action: "tenant.updated", tenantId: user.tenantId, userId: user.id });
   revalidatePath("/portal/settings");
+}
+
+// ── Account self-service (any signed-in staff edits their OWN account) ──
+export async function updateOwnProfile(formData: FormData) {
+  const user = await requireTenantStaff();
+  const name = String(formData.get("name") || "").trim();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      name: name || undefined, // display name — shown to customers + on booking
+      bio: String(formData.get("bio") || "") || null,
+      avatarUrl: String(formData.get("avatarUrl") || "") || null,
+      instagramHandle: String(formData.get("instagramHandle") || "").replace(/^@/, "").trim() || null,
+    },
+  });
+  await audit({ action: "account.updated", tenantId: user.tenantId, userId: user.id });
+  revalidatePath("/portal/account");
+  redirect("/portal/account?saved=1");
+}
+
+export async function changeOwnPassword(formData: FormData) {
+  const user = await requireTenantStaff();
+  const current = String(formData.get("current") || "");
+  const next = String(formData.get("next") || "");
+  if (next.length < 6) redirect("/portal/account?pw=short");
+
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!dbUser || !(await bcrypt.compare(current, dbUser.passwordHash))) {
+    redirect("/portal/account?pw=bad");
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next, 10) } });
+  await audit({ action: "account.password", tenantId: user.tenantId, userId: user.id });
+  redirect("/portal/account?pw=ok");
+}
+
+// ── Booking customization (Admins, requires shop.settings) ──
+function hhmmToMin(v: string): number | null {
+  if (!/^\d{1,2}:\d{2}$/.test(v)) return null;
+  const [h, m] = v.split(":").map(Number);
+  if (h > 23 || m > 59) return null;
+  return h * 60 + m;
+}
+
+export async function updateBookingInterval(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const v = Math.max(5, Math.min(120, Number(formData.get("slotIntervalMin") || 30)));
+  await prisma.tenant.update({ where: { id: user.tenantId }, data: { slotIntervalMin: v } });
+  await audit({ action: "booking.interval", tenantId: user.tenantId, userId: user.id, meta: { slotIntervalMin: v } });
+  revalidatePath("/portal/booking");
+}
+
+export async function updateBarberHours(barberId: string, formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const barber = await prisma.user.findFirst({ where: { id: barberId, tenantId: user.tenantId } });
+  if (!barber) return;
+
+  for (let dow = 0; dow < 7; dow++) {
+    const closed = formData.get(`closed_${dow}`) === "on";
+    const startMin = hhmmToMin(String(formData.get(`open_${dow}`) || ""));
+    const endMin = hhmmToMin(String(formData.get(`close_${dow}`) || ""));
+    if (closed || startMin == null || endMin == null || endMin <= startMin) {
+      await prisma.workingHour.deleteMany({ where: { barberId, dayOfWeek: dow } });
+    } else {
+      await prisma.workingHour.upsert({
+        where: { barberId_dayOfWeek: { barberId, dayOfWeek: dow } },
+        update: { startMin, endMin, tenantId: user.tenantId },
+        create: { tenantId: user.tenantId, barberId, dayOfWeek: dow, startMin, endMin },
+      });
+    }
+  }
+  await audit({ action: "booking.hours", tenantId: user.tenantId, userId: user.id, target: barberId });
+  revalidatePath("/portal/booking");
 }

@@ -29,6 +29,13 @@ export function classNames(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
 }
 
+// minutes-from-midnight → "HH:MM" (24h), for <input type="time"> values
+export function minutesToHHMM(min: number) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
 export function slugify(input: string) {
   return input
     .toLowerCase()

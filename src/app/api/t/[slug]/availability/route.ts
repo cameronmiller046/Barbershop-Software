@@ -29,6 +29,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   }
   if (!barberId) return NextResponse.json({ barberId: null, days: [] });
 
-  const days = await getUpcomingDays(tenant.id, barberId, service.durationMin);
+  const days = await getUpcomingDays(tenant.id, barberId, service.durationMin, 21, tenant.slotIntervalMin);
   return NextResponse.json({ barberId, durationMin: service.durationMin, days });
 }

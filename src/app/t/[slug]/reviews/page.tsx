@@ -17,11 +17,19 @@ export default async function ReviewsPage({ params }: { params: Promise<{ slug: 
     <TenantShell tenant={tenant} active="reviews">
       <section className="container-page py-14">
         <h1 className="font-display text-4xl">Reviews</h1>
-        {avg && (
+        {tenant.googleRating != null ? (
+          <div className="mt-3 flex items-center gap-3">
+            <span className="font-display text-3xl" style={{ color: tenant.primaryColor }}>{tenant.googleRating.toFixed(1)}</span>
+            <div>
+              <div style={{ color: tenant.primaryColor }}>{"★".repeat(Math.round(tenant.googleRating))}{"☆".repeat(5 - Math.round(tenant.googleRating))}</div>
+              <div className="text-xs text-cream/50">Rated on Google</div>
+            </div>
+          </div>
+        ) : avg ? (
           <p className="mt-2 text-cream/60">
             <span style={{ color: tenant.primaryColor }}>★</span> {avg} average from {reviews.length} reviews
           </p>
-        )}
+        ) : null}
         {reviews.length === 0 ? (
           <div className="card mt-8 text-cream/60">No reviews yet — be the first after your visit!</div>
         ) : (
