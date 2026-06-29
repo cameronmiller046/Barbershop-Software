@@ -1,4 +1,5 @@
 import type { PrismaClient, User, Client, TenantStatus, Plan, AppointmentStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { addDays, subDays, subHours, setHours, setMinutes, startOfDay } from "date-fns";
 
@@ -57,32 +58,46 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });
   await prisma.client.deleteMany({ where: { tenantId: tenant.id } });
   await prisma.workingHour.deleteMany({ where: { tenantId: tenant.id } });
+  // Drop any legacy demo logins from earlier seeds so they don't linger as
+  // orphan staff on the flagship Team page.
+  await prisma.user.deleteMany({
+    where: { email: { in: ["admin123", "owner@professionalbarbershop.com", "barber@professionalbarbershop.com"] } },
+  });
 
-  // Manager (runs the shop) + Barber (Admin123 / Admin123).
+  // Two presentation accounts that show the two store-side roles:
+  //   • Manager (OWNER)  — runs the whole shop; sees every barber + revenue.
+  //   • Barber (BARBER)  — standard staff; sees only their own book.
+  // Easy-to-remember logins: each password is the same as the username.
+  //   test1 / test1  → Manager     test2 / test2  → Barber
+  // No permission overrides on the barber, so the role contrast stays clean.
   const manager = await prisma.user.upsert({
-    where: { email: "owner@professionalbarbershop.com" },
-    update: { tenantId: tenant.id, role: "OWNER", name: "Marcus Reed", active: true },
+    where: { email: "test1" },
+    update: {
+      tenantId: tenant.id, role: "OWNER", name: "Marcus Reed", active: true,
+      bio: "Owner & master barber — runs the shop.", instagramHandle: "marcus.thebarber",
+      avatarUrl: "https://i.pravatar.cc/240?img=12", passwordHash: await bcrypt.hash("test1", 10),
+      permissionOverrides: Prisma.JsonNull,
+    },
     create: {
-      tenantId: tenant.id, email: "owner@professionalbarbershop.com", name: "Marcus Reed",
-      role: "OWNER", passwordHash: await bcrypt.hash("demo1234", 10), bio: "Shop manager.",
+      tenantId: tenant.id, email: "test1", name: "Marcus Reed",
+      role: "OWNER", passwordHash: await bcrypt.hash("test1", 10), bio: "Owner & master barber — runs the shop.",
+      instagramHandle: "marcus.thebarber", avatarUrl: "https://i.pravatar.cc/240?img=12",
       hireDate: new Date("2017-05-01"), dateOfBirth: new Date("1985-11-20"),
     },
   });
   const barber = await prisma.user.upsert({
-    where: { email: "admin123" },
+    where: { email: "test2" },
     update: {
-      tenantId: tenant.id, role: "BARBER", name: "Admin123", active: true,
-      bio: "Senior barber & shop manager.", instagramHandle: "professionalbarbershop",
-      avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash("Admin123", 10),
-      hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
-      permissionOverrides: { "shop.settings": true },
+      tenantId: tenant.id, role: "BARBER", name: "Devon Carter", active: true,
+      bio: "Senior barber — fades & beard work.", instagramHandle: "devoncuts",
+      avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash("test2", 10),
+      permissionOverrides: Prisma.JsonNull,
     },
     create: {
-      tenantId: tenant.id, email: "admin123", name: "Admin123", role: "BARBER",
-      passwordHash: await bcrypt.hash("Admin123", 10), bio: "Senior barber & shop manager.",
-      instagramHandle: "professionalbarbershop", avatarUrl: "https://i.pravatar.cc/240?img=53",
+      tenantId: tenant.id, email: "test2", name: "Devon Carter",
+      role: "BARBER", passwordHash: await bcrypt.hash("test2", 10), bio: "Senior barber — fades & beard work.",
+      instagramHandle: "devoncuts", avatarUrl: "https://i.pravatar.cc/240?img=53",
       hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
-      permissionOverrides: { "shop.settings": true },
     },
   });
 
@@ -108,26 +123,38 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   }
 
   const now = new Date();
-  const appt = (dayOffset: number, hour: number, svcIdx: number, clientIdx: number, status: AppointmentStatus) => {
+  // Appointments are split across both staff so the two roles demo distinctly:
+  //   • the Manager's dashboard shows the WHOLE shop (both columns + combined revenue);
+  //   • the Barber's dashboard shows only Devon's own book — a clear subset.
+  // Each gets bookings today, upcoming, and completed (so revenue stats populate).
+  const appt = (staff: User, dayOffset: number, hour: number, svcIdx: number, clientIdx: number, status: AppointmentStatus) => {
     const svc = services[svcIdx % services.length];
     const base = dayOffset < 0 ? subDays(now, -dayOffset) : addDays(now, dayOffset);
     const start = setMinutes(setHours(startOfDay(base), hour), 0);
     return prisma.appointment.create({
       data: {
-        tenantId: tenant.id, serviceId: svc.id, barberId: barber.id, clientId: clients[clientIdx].id,
+        tenantId: tenant.id, serviceId: svc.id, barberId: staff.id, clientId: clients[clientIdx].id,
         startTime: start, endTime: new Date(start.getTime() + svc.durationMin * 60000), status,
       },
     });
   };
-  await appt(0, 10, 0, 1, "CONFIRMED");
-  await appt(0, 12, 3, 2, "CONFIRMED");
-  await appt(0, 15, 4, 0, "CONFIRMED");
-  await appt(1, 11, 1, 3, "CONFIRMED");
-  await appt(2, 14, 5, 4, "CONFIRMED");
-  await appt(4, 16, 2, 1, "CONFIRMED");
-  await appt(-3, 13, 0, 0, "COMPLETED");
-  await appt(-6, 16, 3, 2, "COMPLETED");
-  await appt(-9, 11, 4, 3, "COMPLETED");
+  // Today — both chairs busy.
+  await appt(barber, 0, 10, 0, 1, "CONFIRMED");
+  await appt(manager, 0, 11, 3, 2, "CONFIRMED");
+  await appt(barber, 0, 15, 4, 0, "CONFIRMED");
+  await appt(manager, 0, 17, 1, 4, "CONFIRMED");
+  // Upcoming this week and beyond.
+  await appt(barber, 1, 11, 1, 3, "CONFIRMED");
+  await appt(manager, 1, 14, 4, 0, "CONFIRMED");
+  await appt(barber, 2, 14, 5, 4, "CONFIRMED");
+  await appt(manager, 3, 12, 2, 1, "CONFIRMED");
+  await appt(barber, 4, 16, 2, 1, "CONFIRMED");
+  // Completed — past revenue for both.
+  await appt(barber, -3, 13, 0, 0, "COMPLETED");
+  await appt(manager, -4, 15, 1, 1, "COMPLETED");
+  await appt(barber, -6, 16, 3, 2, "COMPLETED");
+  await appt(manager, -7, 10, 4, 3, "COMPLETED");
+  await appt(barber, -9, 11, 4, 3, "COMPLETED");
 }
 
 // ───────────────────────── Extra stores (platform view) ─────────────────────────
