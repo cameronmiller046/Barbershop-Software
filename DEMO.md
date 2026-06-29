@@ -12,9 +12,13 @@ npm run db:seed        # superadmin + flagship store (clean baseline)
 npm run dev            # http://localhost:3000
 ```
 
-Then sign in as the **Superadmin** and click **"✨ Try the demo"** (top-left of
-`/admin`) to load all demo data: flagship staff + appointments, 8 extra stores,
-beta applications, and the activity feed. "Clear demo data" resets to baseline.
+After `db:seed`, the three logins below **already work** — `test1`/`test2` are
+permanent flagship accounts that survive "Clear demo data".
+
+To make the dashboards and Reports look full, sign in as the **Superadmin** and
+click **"✨ Try the demo"** (top-left of `/admin`): this loads appointments for
+both staff, 8 extra stores, beta applications, and the activity feed. "Clear
+demo data" resets to baseline but keeps `test1`/`test2` loginable.
 
 ## The three account types
 
@@ -32,11 +36,13 @@ beta applications, and the activity feed. "Clear demo data" resets to baseline.
 ## Suggested flow for the role contrast
 
 1. **Superadmin** → `/admin`: show stores, users, applications, then "Try the demo".
-2. **Manager** (`owner@…`) → `/portal`: dashboard shows **both** Marcus's and
-   Devon's appointments today + this week's combined revenue. Show Team, Services,
-   Settings — full control.
-3. **Barber** (`barber@…`) → `/portal`: same dashboard now shows **only Devon's**
-   appointments, no shop-wide revenue, and the Team/Settings nav items are gone.
+2. **Manager** (`test1`) → `/portal`: dashboard shows **both** Marcus's and
+   Devon's appointments today + this week's combined revenue. Open **Reports**
+   for projected earnings (next 30 days / this week / all upcoming) with a
+   per-barber breakdown. Show Team, Services, Settings — full control.
+3. **Barber** (`test2`) → `/portal`: same dashboard now shows **only Devon's**
+   appointments, no shop-wide revenue, and the Reports/Team/Settings nav items
+   are gone.
 
 The flagship store's public booking site is at `/t/professional-barbershop`.
 

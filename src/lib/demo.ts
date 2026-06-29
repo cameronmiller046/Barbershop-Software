@@ -5,6 +5,11 @@ import { addDays, subDays, subHours, setHours, setMinutes, startOfDay } from "da
 
 export const DEMO_SLUG = "professional-barbershop";
 
+// Permanent flagship demo logins. Easy to remember — password == username.
+//   test1 / test1 → Manager (OWNER)      test2 / test2 → Barber (BARBER)
+export const FLAGSHIP_MANAGER_EMAIL = "test1";
+export const FLAGSHIP_BARBER_EMAIL = "test2";
+
 // Flagship store hours: Mon–Fri 10:00–19:30 · Sat 9:00–17:30 · Sun 12:00–18:00
 const STORE_HOURS: Record<number, [number, number]> = {
   1: [600, 1170], 2: [600, 1170], 3: [600, 1170], 4: [600, 1170], 5: [600, 1170],
@@ -34,12 +39,18 @@ export async function clearDemoData(prisma: PrismaClient) {
     await prisma.workingHour.deleteMany({ where: { tenantId: main.id } });
   }
 
-  // 3) Remove all non-superadmin users.
-  await prisma.user.deleteMany({ where: { role: { not: "PLATFORM_ADMIN" } } });
+  // 3) Remove non-superadmin users, EXCEPT the permanent flagship demo logins.
+  await prisma.user.deleteMany({
+    where: { role: { not: "PLATFORM_ADMIN" }, email: { notIn: [FLAGSHIP_MANAGER_EMAIL, FLAGSHIP_BARBER_EMAIL] } },
+  });
 
   // 4) Clear platform demo artifacts.
   await prisma.betaApplication.deleteMany({});
   await prisma.auditLog.deleteMany({ where: { meta: { path: ["demo"], equals: true } } });
+
+  // 5) Keep the flagship Manager/Barber logins (test1/test2) — so the portal is
+  //    always demoable, even from this clean baseline (step 2 wiped their hours).
+  await ensureFlagshipStaff(prisma);
 }
 
 /** Load a ton of demo data: flagship staff + appointments, plus 8 extra stores. */
@@ -48,64 +59,75 @@ export async function loadDemoData(prisma: PrismaClient) {
   await seedExtraStores(prisma);
 }
 
-// ───────────────────────── Flagship store demo ─────────────────────────
-
-async function seedFlagshipDemo(prisma: PrismaClient) {
+/**
+ * Create (or refresh) the two permanent flagship demo logins and their working
+ * hours. Idempotent, and survives clearDemoData so the portal is always
+ * demoable: test1 / test1 → Manager (OWNER), test2 / test2 → Barber (BARBER).
+ * Returns null if the flagship store hasn't been seeded yet.
+ */
+export async function ensureFlagshipStaff(prisma: PrismaClient) {
   const tenant = await prisma.tenant.findUnique({ where: { slug: DEMO_SLUG } });
-  if (!tenant) return;
+  if (!tenant) return null;
 
-  // Idempotent: clear prior flagship demo content first.
-  await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });
-  await prisma.client.deleteMany({ where: { tenantId: tenant.id } });
-  await prisma.workingHour.deleteMany({ where: { tenantId: tenant.id } });
   // Drop any legacy demo logins from earlier seeds so they don't linger as
   // orphan staff on the flagship Team page.
   await prisma.user.deleteMany({
     where: { email: { in: ["admin123", "owner@professionalbarbershop.com", "barber@professionalbarbershop.com"] } },
   });
 
-  // Two presentation accounts that show the two store-side roles:
-  //   • Manager (OWNER)  — runs the whole shop; sees every barber + revenue.
-  //   • Barber (BARBER)  — standard staff; sees only their own book.
-  // Easy-to-remember logins: each password is the same as the username.
-  //   test1 / test1  → Manager     test2 / test2  → Barber
   // No permission overrides on the barber, so the role contrast stays clean.
   const manager = await prisma.user.upsert({
-    where: { email: "test1" },
+    where: { email: FLAGSHIP_MANAGER_EMAIL },
     update: {
       tenantId: tenant.id, role: "OWNER", name: "Marcus Reed", active: true,
       bio: "Owner & master barber — runs the shop.", instagramHandle: "marcus.thebarber",
-      avatarUrl: "https://i.pravatar.cc/240?img=12", passwordHash: await bcrypt.hash("test1", 10),
+      avatarUrl: "https://i.pravatar.cc/240?img=12", passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10),
       permissionOverrides: Prisma.JsonNull,
     },
     create: {
-      tenantId: tenant.id, email: "test1", name: "Marcus Reed",
-      role: "OWNER", passwordHash: await bcrypt.hash("test1", 10), bio: "Owner & master barber — runs the shop.",
+      tenantId: tenant.id, email: FLAGSHIP_MANAGER_EMAIL, name: "Marcus Reed",
+      role: "OWNER", passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10), bio: "Owner & master barber — runs the shop.",
       instagramHandle: "marcus.thebarber", avatarUrl: "https://i.pravatar.cc/240?img=12",
       hireDate: new Date("2017-05-01"), dateOfBirth: new Date("1985-11-20"),
     },
   });
   const barber = await prisma.user.upsert({
-    where: { email: "test2" },
+    where: { email: FLAGSHIP_BARBER_EMAIL },
     update: {
       tenantId: tenant.id, role: "BARBER", name: "Devon Carter", active: true,
       bio: "Senior barber — fades & beard work.", instagramHandle: "devoncuts",
-      avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash("test2", 10),
+      avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10),
       permissionOverrides: Prisma.JsonNull,
     },
     create: {
-      tenantId: tenant.id, email: "test2", name: "Devon Carter",
-      role: "BARBER", passwordHash: await bcrypt.hash("test2", 10), bio: "Senior barber — fades & beard work.",
+      tenantId: tenant.id, email: FLAGSHIP_BARBER_EMAIL, name: "Devon Carter",
+      role: "BARBER", passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10), bio: "Senior barber — fades & beard work.",
       instagramHandle: "devoncuts", avatarUrl: "https://i.pravatar.cc/240?img=53",
       hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
     },
   });
 
+  // Refresh just these two staff's working hours (idempotent).
+  await prisma.workingHour.deleteMany({ where: { tenantId: tenant.id, barberId: { in: [manager.id, barber.id] } } });
   for (const staff of [manager, barber]) {
     for (const [dow, [startMin, endMin]] of Object.entries(STORE_HOURS)) {
       await prisma.workingHour.create({ data: { tenantId: tenant.id, barberId: staff.id, dayOfWeek: Number(dow), startMin, endMin } });
     }
   }
+  return { tenant, manager, barber };
+}
+
+// ───────────────────────── Flagship store demo ─────────────────────────
+
+async function seedFlagshipDemo(prisma: PrismaClient) {
+  // Ensure the two permanent demo logins exist + have working hours.
+  const staff = await ensureFlagshipStaff(prisma);
+  if (!staff) return;
+  const { tenant, manager, barber } = staff;
+
+  // Idempotent: clear prior flagship demo appointments + clients.
+  await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });
+  await prisma.client.deleteMany({ where: { tenantId: tenant.id } });
 
   const services = await prisma.service.findMany({ where: { tenantId: tenant.id }, orderBy: { sortOrder: "asc" } });
   if (services.length === 0) return;

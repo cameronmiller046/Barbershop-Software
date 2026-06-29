@@ -65,7 +65,9 @@ async function main() {
 
   const stores = await prisma.tenant.count();
   const users = await prisma.user.count();
-  console.log(`✓ Clean baseline: ${stores} store, ${users} user (superadmin). Use "Try the demo" in /admin to load demo data.`);
+  console.log(`✓ Clean baseline: ${stores} store, ${users} users (superadmin + portal logins).`);
+  console.log(`  Portal: test1 / test1 (Manager) · test2 / test2 (Barber).`);
+  console.log(`  Use "Try the demo" in /admin to load appointments + extra stores.`);
 }
 
 main()
