@@ -161,6 +161,26 @@ export async function resetUserPermissions(userId: string) {
   revalidatePath(`/admin/users/${userId}`);
 }
 
+/**
+ * Permanently delete a store and ALL of its data (staff, services, clients,
+ * appointments, etc. cascade). Irreversible. Requires the typed store name to match.
+ */
+export async function deleteStore(tenantId: string, formData: FormData) {
+  const admin = await requirePlatformAdmin();
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } });
+  if (!tenant) return;
+
+  // Safety: the typed confirmation must match the store name exactly.
+  const confirmName = String(formData.get("confirmName") || "").trim();
+  if (confirmName !== tenant.name) return;
+
+  await prisma.tenant.delete({ where: { id: tenantId } });
+  await audit({ action: "admin.store.deleted", userId: admin.id, target: tenant.slug, meta: { name: tenant.name } });
+  revalidatePath("/admin/tenants");
+  revalidatePath("/admin/users");
+  revalidatePath("/admin");
+}
+
 /** Onboard a paying customer directly: provision a store + owner account. */
 export async function createStore(formData: FormData) {
   const admin = await requirePlatformAdmin();

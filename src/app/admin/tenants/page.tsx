@@ -1,6 +1,7 @@
 import { requirePlatformAdmin } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { setTenantStatus, toggleFeature, createStore } from "@/app/admin/actions";
+import { setTenantStatus, toggleFeature, createStore, deleteStore } from "@/app/admin/actions";
+import { DeleteStoreButton } from "@/components/DeleteStoreButton";
 import { appUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,7 @@ export default async function TenantsPage() {
                       <button className={`rounded-full px-3 py-1 ${t.featureAnalytics ? "bg-brass/20 text-brass" : "bg-white/5 text-cream/40"}`}>Analytics</button>
                     </form>
                   </div>
+                  <DeleteStoreButton action={deleteStore.bind(null, t.id)} storeName={t.name} />
                 </div>
               </div>
             </div>
