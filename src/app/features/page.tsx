@@ -7,7 +7,7 @@ export const metadata = { title: "Features — The Chair" };
 const GROUPS = [
   {
     title: "Branded tenant website",
-    items: ["Home, Services, Team, Gallery, Reviews, FAQ, Contact", "Custom brand color and logo", "Printable QR code that links to booking", "Responsive on desktop, tablet, and mobile"],
+    items: ["Home, Services, Reviews, FAQ, Contact", "Custom brand color and logo", "Printable QR code that links to booking", "Responsive on desktop, tablet, and mobile"],
   },
   {
     title: "Booking engine",

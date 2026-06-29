@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { createBarber, toggleBarber, setStaffRole } from "@/app/portal/actions";
+import { createBarber, toggleBarber } from "@/app/portal/actions";
 import { roleLabel } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 
@@ -31,16 +31,9 @@ export default async function TeamPage() {
                   <div className="font-medium">{m.name} {!m.active && <span className="chip ml-1">inactive</span>}</div>
                   <div className="text-sm text-cream/50">{m.email} · {roleLabel(m.role)}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <form action={setStaffRole.bind(null, m.id, m.role === "BARBER" ? "RECEPTIONIST" : "BARBER")}>
-                    <button className="btn-ghost px-3 py-1.5 text-xs">
-                      Make {m.role === "BARBER" ? "front desk" : "barber"}
-                    </button>
-                  </form>
-                  <form action={toggleBarber.bind(null, m.id, !m.active)}>
-                    <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
-                  </form>
-                </div>
+                <form action={toggleBarber.bind(null, m.id, !m.active)}>
+                  <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
+                </form>
               </div>
             ))
           )}
@@ -52,15 +45,8 @@ export default async function TeamPage() {
             <div><label className="label">Name</label><input name="name" required className="input" /></div>
             <div><label className="label">Email</label><input name="email" type="email" required className="input" /></div>
             <div><label className="label">Temporary password</label><input name="password" type="text" required minLength={6} className="input" /></div>
-            <div>
-              <label className="label">Role</label>
-              <select name="role" className="input">
-                <option value="BARBER">Barber</option>
-                <option value="RECEPTIONIST">Receptionist</option>
-              </select>
-            </div>
             <div><label className="label">Bio (optional)</label><input name="bio" className="input" /></div>
-            <button className="btn-primary w-full">Add to team</button>
+            <button className="btn-primary w-full">Add barber</button>
           </form>
         </aside>
       </div>

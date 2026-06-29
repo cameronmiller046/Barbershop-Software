@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 const LEVELS = [
   { key: "superadmin" as const, name: "Superadmin", who: "You — the platform operator", color: "text-brass" },
-  { key: "admin" as const, name: "Admin", who: "Shop owners", color: "text-blue-200" },
-  { key: "standard" as const, name: "Standard user", who: "Barbers & front desk", color: "text-cream/80" },
+  { key: "manager" as const, name: "Manager", who: "Runs a shop", color: "text-blue-200" },
+  { key: "barber" as const, name: "Barber", who: "Shop staff", color: "text-cream/80" },
 ];
 
 export default async function RolesPage() {
@@ -35,8 +35,8 @@ export default async function RolesPage() {
             <tr className="text-left text-cream/50">
               <th className="pb-3 pr-4 font-medium">Capability</th>
               <th className="pb-3 px-3 text-center font-medium text-brass">Superadmin</th>
-              <th className="pb-3 px-3 text-center font-medium text-blue-200">Admin</th>
-              <th className="pb-3 px-3 text-center font-medium">Standard</th>
+              <th className="pb-3 px-3 text-center font-medium text-blue-200">Manager</th>
+              <th className="pb-3 px-3 text-center font-medium">Barber</th>
             </tr>
           </thead>
           <tbody>
@@ -44,8 +44,8 @@ export default async function RolesPage() {
               <tr key={c.area} className="border-t border-white/5">
                 <td className="py-2.5 pr-4 text-cream/80">{c.area}</td>
                 <Cell on={c.superadmin} />
-                <Cell on={c.admin} />
-                <Cell on={c.standard} />
+                <Cell on={c.manager} />
+                <Cell on={c.barber} />
               </tr>
             ))}
           </tbody>
