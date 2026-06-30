@@ -144,10 +144,12 @@ export async function updateTenant(formData: FormData) {
       phone: String(formData.get("phone") || "") || null,
       email: String(formData.get("email") || "") || null,
       address: String(formData.get("address") || "") || null,
+      monthlyGoalCents: Math.max(0, Math.round(Number(formData.get("monthlyGoal") || 0) * 100)),
     },
   });
   await audit({ action: "tenant.updated", tenantId: user.tenantId, userId: user.id });
   revalidatePath("/portal/settings");
+  revalidatePath("/portal/reports");
 }
 
 // ── Account self-service (any signed-in staff edits their OWN account) ──

@@ -29,6 +29,7 @@ async function main() {
     address: "4847 Memorial Dr, Stone Mountain, GA 30083",
     slotIntervalMin: 30,
     googleRating: 4.6,
+    monthlyGoalCents: 300000, // $3,000/mo sales goal — drives the Reports dashboard
   };
   const tenant = await prisma.tenant.upsert({
     where: { slug: DEMO_SLUG },

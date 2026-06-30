@@ -35,6 +35,13 @@ export default async function SettingsPage() {
           <div><label className="label">Email</label><input name="email" defaultValue={tenant.email ?? ""} className="input" /></div>
         </div>
         <div><label className="label">Address</label><input name="address" defaultValue={tenant.address ?? ""} className="input" /></div>
+        <div>
+          <label className="label">Monthly sales goal ($)</label>
+          <input name="monthlyGoal" type="number" min="0" step="50" inputMode="numeric"
+            defaultValue={tenant.monthlyGoalCents ? Math.round(tenant.monthlyGoalCents / 100) : ""}
+            placeholder="e.g. 12000" className="input" />
+          <p className="mt-1 text-xs text-cream/50">Drives the goal & pace tracking on your Reports dashboard. Leave blank to use a suggested target.</p>
+        </div>
         <button className="btn-primary">Save changes</button>
       </form>
     </div>

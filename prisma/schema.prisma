@@ -82,6 +82,9 @@ model Tenant {
   // Booking config (Admins can customize in the portal)
   slotIntervalMin Int @default(15)
 
+  // Sales target — the monthly revenue goal shown on the Reports dashboard.
+  monthlyGoalCents Int @default(0)
+
   // Social proof
   googleRating Float?
 

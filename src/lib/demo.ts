@@ -1,7 +1,7 @@
 import type { PrismaClient, User, Client, TenantStatus, Plan, AppointmentStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { addDays, subDays, subHours, setHours, setMinutes, startOfDay } from "date-fns";
+import { addDays, subDays, subHours, setHours, setMinutes, startOfDay, startOfMonth, subMonths, getDaysInMonth, getDate } from "date-fns";
 
 export const DEMO_SLUG = "professional-barbershop";
 
@@ -171,12 +171,46 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   await appt(barber, 2, 14, 5, 4, "CONFIRMED");
   await appt(manager, 3, 12, 2, 1, "CONFIRMED");
   await appt(barber, 4, 16, 2, 1, "CONFIRMED");
-  // Completed — past revenue for both.
-  await appt(barber, -3, 13, 0, 0, "COMPLETED");
-  await appt(manager, -4, 15, 1, 1, "COMPLETED");
-  await appt(barber, -6, 16, 3, 2, "COMPLETED");
-  await appt(manager, -7, 10, 4, 3, "COMPLETED");
-  await appt(barber, -9, 11, 4, 3, "COMPLETED");
+  // ── Realized history: ~12 months of completed appointments so the Reports
+  //    dashboard (12-month chart, monthly table, daily trend) looks like a real,
+  //    growing shop. Built in bulk via createMany. ──
+  const staffPair = [manager, barber];
+  const hist: Prisma.AppointmentCreateManyInput[] = [];
+  const pushCompleted = (start: Date, svcIdx: number, staffIdx: number, clientIdx: number) => {
+    const svc = services[svcIdx % services.length];
+    hist.push({
+      tenantId: tenant.id, serviceId: svc.id, barberId: staffPair[staffIdx % staffPair.length].id,
+      clientId: clients[clientIdx % clients.length].id, startTime: start,
+      endTime: new Date(start.getTime() + svc.durationMin * 60000), status: "COMPLETED",
+    });
+  };
+
+  // Full past months (1–11 months ago), volume trending up toward the present.
+  for (let m = 11; m >= 1; m--) {
+    const monthStart = startOfMonth(subMonths(now, m));
+    const dim = getDaysInMonth(monthStart);
+    const count = 38 + (12 - m) * 2; // ~40 → ~60 cuts/month
+    for (let i = 0; i < count; i++) {
+      const day = 1 + ((i * 5 + m * 3) % dim);
+      const hour = 10 + (i % 8);
+      const start = setMinutes(setHours(startOfDay(addDays(monthStart, day - 1)), hour), (i % 2) * 30);
+      pushCompleted(start, i + m, i, i * 3 + m);
+    }
+  }
+  // Current month, days already elapsed (up to yesterday), ~1–2 cuts/day.
+  const thisMonthStart = startOfMonth(now);
+  const today = getDate(now);
+  let c = 0;
+  for (let day = 1; day < today; day++) {
+    const per = day % 3 === 0 ? 2 : 1;
+    for (let k = 0; k < per; k++) {
+      const hour = 10 + (c % 8);
+      const start = setMinutes(setHours(startOfDay(addDays(thisMonthStart, day - 1)), hour), (k % 2) * 30);
+      pushCompleted(start, c, c, c * 2);
+      c++;
+    }
+  }
+  if (hist.length) await prisma.appointment.createMany({ data: hist });
 }
 
 // ───────────────────────── Extra stores (platform view) ─────────────────────────

@@ -38,8 +38,11 @@ demo data" resets to baseline but keeps `test1`/`test2` loginable.
 1. **Superadmin** → `/admin`: show stores, users, applications, then "Try the demo".
 2. **Manager** (`test1`) → `/portal`: dashboard shows **both** Marcus's and
    Devon's appointments today + this week's combined revenue. Open **Reports**
-   for projected earnings (next 30 days / this week / all upcoming) with a
-   per-barber breakdown. Show Team, Services, Settings — full control.
+   for the CRM-style sales dashboard — last month vs this month, projected
+   end-of-month, a monthly **goal + pace** tracker, a daily **trend chart**, a
+   **12-month revenue graph**, a month-by-month table, and a per-barber
+   breakdown. The monthly goal is set in **Settings** (seeded at $3,000).
+   Show Team, Services, Settings — full control.
 3. **Barber** (`test2`) → `/portal`: same dashboard now shows **only Devon's**
    appointments, no shop-wide revenue, and the Reports/Team/Settings nav items
    are gone.
