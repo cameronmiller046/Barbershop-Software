@@ -8,7 +8,7 @@ export function TrendChart({
   goalCents: number[]; // pace target per day, length = daysInMonth
   format: (n: number) => string;
 }) {
-  const W = 720, H = 260, padL = 56, padR = 10, padT = 12, padB = 34;
+  const W = 960, H = 420, padL = 96, padR = 28, padT = 28, padB = 56;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   const n = Math.max(1, days.length);
@@ -27,34 +27,37 @@ export function TrendChart({
     : "";
 
   const gridVals = [0, 0.25, 0.5, 0.75, 1].map((f) => max * f);
+  // X ticks: 1, 5, 10, … plus the last day, de-duplicated and in range.
+  const tickDays = [...new Set([1, 5, 10, 15, 20, 25, n])].filter((d) => d >= 1 && d <= n);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Monthly sales trend">
       {/* horizontal gridlines + y labels */}
       {gridVals.map((v, i) => (
         <g key={i}>
-          <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#ffffff" strokeOpacity={0.07} />
-          <text x={padL - 8} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#f5f1e8" fillOpacity={0.4}>
+          <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#ffffff" strokeOpacity={0.08} />
+          <text x={padL - 12} y={y(v) + 5} textAnchor="end" fontSize={15} fill="#f5f1e8" fillOpacity={0.45}>
             {format(v)}
           </text>
         </g>
       ))}
 
       {/* goal pace line (dashed) */}
-      <polyline points={goalPts} fill="none" stroke="#f5f1e8" strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="5 4" />
+      <polyline points={goalPts} fill="none" stroke="#f5f1e8" strokeOpacity={0.4} strokeWidth={2} strokeDasharray="7 5" />
 
       {/* actual: area + line + endpoint */}
-      {areaPts && <polygon points={areaPts} fill="#c9a24b" fillOpacity={0.14} />}
+      {areaPts && <polygon points={areaPts} fill="#c9a24b" fillOpacity={0.16} />}
       {actualPtsArr.length > 1 && (
-        <polyline points={actualPts} fill="none" stroke="#c9a24b" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+        <polyline points={actualPts} fill="none" stroke="#c9a24b" strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
       )}
       {last && (
         <>
           <line x1={last[0]} x2={last[0]} y1={padT} y2={baseY} stroke="#c9a24b" strokeOpacity={0.25} />
-          <circle cx={last[0]} cy={last[1]} r={4} fill="#c9a24b" />
+          <circle cx={last[0]} cy={last[1]} r={6} fill="#c9a24b" />
           <text
-            x={Math.min(last[0], W - padR - 60)} y={Math.max(last[1] - 10, padT + 10)}
-            fontSize={11} fontWeight={600} fill="#c9a24b"
+            x={Math.min(last[0] + 10, W - padR - 4)} y={Math.max(last[1] - 16, padT + 14)}
+            textAnchor={last[0] > W - padR - 90 ? "end" : "start"}
+            fontSize={17} fontWeight={700} fill="#c9a24b"
           >
             {format(actualCents[actualCents.length - 1] ?? 0)}
           </text>
@@ -62,16 +65,21 @@ export function TrendChart({
       )}
 
       {/* x-axis day labels */}
-      {[0, Math.floor((n - 1) / 2), n - 1].map((i, k) => (
-        <text key={k} x={x(i)} y={H - 12} textAnchor="middle" fontSize={10} fill="#f5f1e8" fillOpacity={0.4}>
-          {days[i]}
+      {tickDays.map((d) => (
+        <text key={d} x={x(d - 1)} y={H - 24} textAnchor="middle" fontSize={14} fill="#f5f1e8" fillOpacity={0.45}>
+          {d}
         </text>
       ))}
+      <text x={(padL + W - padR) / 2} y={H - 6} textAnchor="middle" fontSize={13} fill="#f5f1e8" fillOpacity={0.35}>
+        Day of month
+      </text>
 
       {/* legend */}
-      <g transform={`translate(${padL}, ${H - 4})`}>
-        <text fontSize={10} fill="#c9a24b">━ Actual</text>
-        <text x={70} fontSize={10} fill="#f5f1e8" fillOpacity={0.5}>┄ Goal pace</text>
+      <g transform={`translate(${padL}, ${padT - 8})`}>
+        <line x1={0} x2={26} y1={-4} y2={-4} stroke="#c9a24b" strokeWidth={3.5} />
+        <text x={32} y={0} fontSize={14} fill="#c9a24b">Actual</text>
+        <line x1={110} x2={136} y1={-4} y2={-4} stroke="#f5f1e8" strokeOpacity={0.4} strokeWidth={2} strokeDasharray="7 5" />
+        <text x={142} y={0} fontSize={14} fill="#f5f1e8" fillOpacity={0.55}>Goal pace</text>
       </g>
     </svg>
   );

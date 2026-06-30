@@ -124,33 +124,32 @@ export default async function ReportsPage() {
         ))}
       </div>
 
-      {/* Goal + trend, side by side on wide screens */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl">Monthly goal</h2>
-            {!goalIsSet && goalCents > 0 && <span className="text-xs text-cream/40">suggested target</span>}
-          </div>
-          <div className="mt-4">
-            <GoalBar earnedCents={thisMonthEarned} goalCents={goalCents} projectedCents={projectedEndOfMonth} format={formatMoney} />
-          </div>
-          {goalCents > 0 && (
-            <p className="mt-4 text-sm text-cream/60">
-              {paceDiff >= 0 ? (
-                <>You&apos;re <span className="text-emerald-400">{formatMoney(paceDiff)} ahead</span> of the pace needed to hit goal by month-end.</>
-              ) : (
-                <>You&apos;re <span className="text-red-400">{formatMoney(-paceDiff)} behind</span> the pace needed — about {formatMoney(Math.max(0, goalCents - thisMonthEarned))} still to earn.</>
-              )}
-            </p>
-          )}
+      {/* Monthly goal */}
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-xl">Monthly goal</h2>
+          {!goalIsSet && goalCents > 0 && <span className="text-xs text-cream/40">suggested target</span>}
         </div>
+        <div className="mt-4">
+          <GoalBar earnedCents={thisMonthEarned} goalCents={goalCents} projectedCents={projectedEndOfMonth} format={formatMoney} />
+        </div>
+        {goalCents > 0 && (
+          <p className="mt-4 text-sm text-cream/60">
+            {paceDiff >= 0 ? (
+              <>You&apos;re <span className="text-emerald-400">{formatMoney(paceDiff)} ahead</span> of the pace needed to hit goal by month-end.</>
+            ) : (
+              <>You&apos;re <span className="text-red-400">{formatMoney(-paceDiff)} behind</span> the pace needed — about {formatMoney(Math.max(0, goalCents - thisMonthEarned))} still to earn.</>
+            )}
+          </p>
+        )}
+      </div>
 
-        <div className="card">
-          <h2 className="font-display text-xl">This month&apos;s trend</h2>
-          <p className="mt-1 text-xs text-cream/50">Cumulative earnings vs. goal pace, day by day.</p>
-          <div className="mt-3">
-            <TrendChart days={days} actualCents={daily.map((d) => d.cumCents)} goalCents={pace} format={formatMoney} />
-          </div>
+      {/* This month's trend — full width for readability */}
+      <div className="card">
+        <h2 className="font-display text-2xl">This month&apos;s trend</h2>
+        <p className="mt-1 text-sm text-cream/50">Cumulative earnings vs. goal pace, day by day.</p>
+        <div className="mt-4">
+          <TrendChart days={days} actualCents={daily.map((d) => d.cumCents)} goalCents={pace} format={formatMoney} />
         </div>
       </div>
 
