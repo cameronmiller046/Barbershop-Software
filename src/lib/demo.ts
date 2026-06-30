@@ -47,6 +47,7 @@ export async function clearDemoData(prisma: PrismaClient) {
   // 4) Clear platform demo artifacts.
   await prisma.betaApplication.deleteMany({});
   await prisma.auditLog.deleteMany({ where: { meta: { path: ["demo"], equals: true } } });
+  await prisma.pageView.deleteMany({});
 
   // 5) Keep the flagship Manager/Barber logins (test1/test2) — so the portal is
   //    always demoable, even from this clean baseline (step 2 wiped their hours).
@@ -57,6 +58,45 @@ export async function clearDemoData(prisma: PrismaClient) {
 export async function loadDemoData(prisma: PrismaClient) {
   await seedFlagshipDemo(prisma);
   await seedExtraStores(prisma);
+  await seedTraffic(prisma);
+}
+
+/** Anonymous demo traffic (~30 days) so the admin Analytics dashboard is alive. */
+async function seedTraffic(prisma: PrismaClient) {
+  await prisma.pageView.deleteMany({});
+  const tenants = await prisma.tenant.findMany({ where: { status: "ACTIVE" }, select: { id: true, slug: true } });
+  if (tenants.length === 0) return;
+
+  const now = new Date();
+  const subpages = ["services", "book", "reviews", "contact", "faq"];
+  const sources = ["google", "google", "instagram", "instagram", "direct", "direct", "direct", "facebook", "referral", "yelp"];
+  const devices = ["mobile", "mobile", "mobile", "desktop", "desktop", "tablet"]; // mobile-heavy
+  const rows: Prisma.PageViewCreateManyInput[] = [];
+
+  for (let d = 29; d >= 0; d--) {
+    const day = subDays(now, d);
+    for (let ti = 0; ti < tenants.length; ti++) {
+      const t = tenants[ti];
+      const sessions = 4 + ((29 - d) % 5) + (ti % 4); // grows slightly toward present
+      for (let s = 0; s < sessions; s++) {
+        const seed = d * 131 + ti * 17 + s * 7;
+        const device = devices[seed % devices.length];
+        const source = sources[(seed >> 1) % sources.length];
+        const visitorHash = `demo-${d}-${ti}-${s}`; // unique per session/day → realistic visitor counts
+        const depth = 1 + (seed % 3); // 1–3 pageviews along the funnel
+        for (let p = 0; p < depth; p++) {
+          const page = p === 0 ? "home" : subpages[(seed + p) % subpages.length];
+          const path = page === "home" ? `/t/${t.slug}` : `/t/${t.slug}/${page}`;
+          const createdAt = setMinutes(setHours(startOfDay(day), 9 + ((seed + p) % 12)), (seed + p * 13) % 60);
+          rows.push({ tenantId: t.id, path, page, source, device, visitorHash, createdAt });
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < rows.length; i += 1000) {
+    await prisma.pageView.createMany({ data: rows.slice(i, i + 1000) });
+  }
 }
 
 /**

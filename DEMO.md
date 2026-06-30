@@ -36,6 +36,10 @@ demo data" resets to baseline but keeps `test1`/`test2` loginable.
 ## Suggested flow for the role contrast
 
 1. **Superadmin** → `/admin`: show stores, users, applications, then "Try the demo".
+   Open **Analytics** for the team dashboard — platform business metrics
+   (shops, bookings, revenue, onboarding funnel) plus **anonymous** traffic
+   (visitors, top shops, sources, devices). Cookieless, no IPs stored, visitors
+   hashed with a daily-rotating salt — no customer PII anywhere.
 2. **Manager** (`test1`) → `/portal`: dashboard shows **both** Marcus's and
    Devon's appointments today + this week's combined revenue. Open **Reports**
    for the CRM-style sales dashboard — last month vs this month, projected

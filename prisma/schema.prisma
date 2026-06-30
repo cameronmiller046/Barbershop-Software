@@ -321,3 +321,22 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
 }
+
+// Privacy-first web analytics (Plausible-style): cookieless, no IPs stored.
+// A visitor is a daily-salted hash, so the same person can't be tracked across
+// days. Rows are aggregate-only — no names, emails, or personal data.
+model PageView {
+  id          String  @id @default(cuid())
+  tenantId    String? // which shop's public site (null = marketing pages)
+  path        String // requested path, e.g. /t/king-cuts/book
+  page        String // normalized page type: home|services|book|reviews|...
+  source      String // referrer bucket: direct|google|instagram|facebook|...
+  device      String // mobile|tablet|desktop
+  visitorHash String // anonymous, daily-rotating visitor id (no IP/PII)
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tenantId, createdAt])
+  @@index([visitorHash])
+}
