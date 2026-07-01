@@ -6,6 +6,7 @@ import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { ImageUpload } from "@/components/ImageUpload";
 import { HeroFocusPicker } from "@/components/HeroFocusPicker";
+import { SiteColors } from "@/components/SiteColors";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,9 @@ export default async function SettingsPage() {
       <form action={updateTenant} className="card mt-6 space-y-4">
         <div><label className="label">Shop name</label><input name="name" defaultValue={tenant.name} className="input" /></div>
         <div><label className="label">Tagline</label><input name="tagline" defaultValue={tenant.tagline ?? ""} className="input" /></div>
-        <div className="flex items-center gap-3">
-          <div>
-            <label className="label">Brand color</label>
-            <input name="primaryColor" type="color" defaultValue={tenant.primaryColor} className="h-11 w-16 rounded-lg border border-white/10 bg-smoke" />
-          </div>
-          <p className="text-sm text-cream/50">Recolors your whole site &amp; booking buttons.</p>
+        <div className="border-t border-white/10 pt-4">
+          <label className="label">Site colors</label>
+          <SiteColors initialPrimary={tenant.primaryColor} initialSecondary={tenant.secondaryColor} />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div><label className="label">Phone</label><input name="phone" defaultValue={tenant.phone ?? ""} className="input" /></div>

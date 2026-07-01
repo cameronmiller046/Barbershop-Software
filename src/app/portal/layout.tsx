@@ -17,6 +17,7 @@ export default async function PortalLayout({ children }: { children: React.React
   // Apply the store's own brand to their portal (accent + neutral black base),
   // so each shop's portal matches their public site.
   const brand = tenant?.primaryColor || "#d1233a";
+  const accent = tenant?.secondaryColor || brand;
 
   return (
     <div
@@ -24,7 +25,7 @@ export default async function PortalLayout({ children }: { children: React.React
       style={{
         "--brand": brand,
         "--brand-fg": readableOn(brand),
-        "--brass": hexToRgbTriple(brand),
+        "--brass": hexToRgbTriple(accent),
         background: "radial-gradient(1100px 520px at 50% -10%, #1a1a1e 0%, #0f0f10 60%)",
       } as React.CSSProperties}
     >

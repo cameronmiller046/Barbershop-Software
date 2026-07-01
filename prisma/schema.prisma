@@ -69,7 +69,8 @@ model Tenant {
 
   // Branding
   tagline      String?
-  primaryColor String  @default("#c9a24b")
+  primaryColor String  @default("#c9a24b") // main accent: buttons, CTAs, prices
+  secondaryColor String @default("#c9a24b") // accent: headings, highlights, labels
   logoUrl      String?
   heroImageUrl String?
   // CSS object-position for the hero photo, e.g. "50% 30%". Lets admins pick

@@ -177,12 +177,18 @@ export async function setStaffRole(id: string, role: "BARBER" | "RECEPTIONIST") 
 export async function updateTenant(formData: FormData) {
   const user = await requirePerm("shop.settings");
   if (!user) return;
+  const hex = (v: FormDataEntryValue | null, fallback: string) => {
+    const s = String(v || "").trim();
+    return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s) ? s : fallback;
+  };
+  const primary = hex(formData.get("primaryColor"), "#c9a24b");
   await prisma.tenant.update({
     where: { id: user.tenantId },
     data: {
       name: String(formData.get("name") || "").trim() || undefined,
       tagline: String(formData.get("tagline") || "") || null,
-      primaryColor: String(formData.get("primaryColor") || "#c9a24b"),
+      primaryColor: primary,
+      secondaryColor: hex(formData.get("secondaryColor"), primary),
       phone: String(formData.get("phone") || "") || null,
       email: String(formData.get("email") || "") || null,
       address: String(formData.get("address") || "") || null,
