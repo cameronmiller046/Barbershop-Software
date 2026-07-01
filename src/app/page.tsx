@@ -10,6 +10,7 @@ import {
   BrowserFrame, BookingScreen, DashboardScreen, ReportsPreview, TrendPreview, AnalyticsPreview,
 } from "@/components/marketing/Previews";
 import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
+import { FEATURES, type FeatureIcon } from "@/lib/featureContent";
 
 export const metadata = { title: { absolute: "The Chair — Barbershop booking software 💈" } };
 
@@ -29,12 +30,9 @@ async function demoLogin(formData: FormData) {
   }
 }
 
-const FEATURES = [
-  { Icon: ScissorsIcon, title: "Branded shop website", body: "Every shop gets its own site — services, team, a photo gallery, and a booking page." },
-  { Icon: RazorIcon, title: "Online booking + QR", body: "Customers book, reschedule, and cancel themselves. Print a QR for the front desk." },
-  { Icon: CombIcon, title: "Chair-side portal", body: "Dashboards, appointments, clients, and per-barber schedules in one place." },
-  { Icon: PoleIcon, title: "Multi-location ready", body: "One platform, many shops. Each shop's data is fully isolated and secure." },
-];
+const FEATURE_ICONS: Record<FeatureIcon, typeof ScissorsIcon> = {
+  scissors: ScissorsIcon, razor: RazorIcon, comb: CombIcon, pole: PoleIcon,
+};
 
 // A spinning barber pole.
 function Pole({ className = "" }: { className?: string }) {
@@ -198,14 +196,19 @@ export default function Home() {
       {/* Quick feature grid */}
       <section className="container-page py-12">
         <h2 className="font-display text-3xl">Everything a shop needs</h2>
+        <p className="mt-2 text-cream/60">Tap any feature to see it in detail. 👇</p>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map(({ Icon, title, body }) => (
-            <div key={title} className="card">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-barber/20 text-flame"><Icon size={22} /></span>
-              <h3 className="mt-4 font-display text-lg text-brass">{title}</h3>
-              <p className="mt-2 text-sm text-cream/70">{body}</p>
-            </div>
-          ))}
+          {FEATURES.map((f) => {
+            const Icon = FEATURE_ICONS[f.icon];
+            return (
+              <Link key={f.slug} href={`/features/${f.slug}`} className="card card-hover group block">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-barber/20 text-flame"><Icon size={22} /></span>
+                <h3 className="mt-4 font-display text-lg text-brass">{f.emoji} {f.title}</h3>
+                <p className="mt-2 text-sm text-cream/70">{f.blurb}</p>
+                <span className="mt-3 inline-block text-sm text-flame group-hover:underline">Learn more →</span>
+              </Link>
+            );
+          })}
         </div>
         <div className="mt-8">
           <Link href="/features" className="btn-ghost">See all features →</Link>

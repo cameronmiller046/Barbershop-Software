@@ -242,7 +242,7 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
   for (let m = 11; m >= 1; m--) {
     const monthStart = startOfMonth(subMonths(now, m));
     const dim = getDaysInMonth(monthStart);
-    const count = 160 + (12 - m) * 10; // ~170 → ~280 cuts/month (busy shop, trending up)
+    const count = 320 + (12 - m) * 20; // ~340 → ~560 cuts/month (very busy shop, trending up)
     for (let i = 0; i < count; i++) {
       const day = 1 + ((i * 5 + m * 3) % dim);
       const hour = 10 + (i % 8);
@@ -255,7 +255,7 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
   const today = getDate(now);
   let c = 0;
   for (let day = 1; day < today; day++) {
-    const per = 6 + (day % 3); // ~6–8 cuts/day so far this month
+    const per = 12 + (day % 3) * 2; // ~12–16 cuts/day so far this month
     for (let k = 0; k < per; k++) {
       const hour = 10 + (c % 8);
       const start = setMinutes(setHours(startOfDay(addDays(thisMonthStart, day - 1)), hour), (k % 2) * 30);

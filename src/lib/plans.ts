@@ -14,7 +14,7 @@ export type PlanLimits = {
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   SOLO: {
-    label: "Solo", price: "$0",
+    label: "Solo", price: "$29",
     maxBarbers: 1, reports: false, reviews: false, noShowTracking: false, multiLocation: false, prioritySupport: false,
   },
   PRO: {

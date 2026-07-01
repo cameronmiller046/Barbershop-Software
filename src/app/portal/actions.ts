@@ -64,6 +64,15 @@ export async function rescheduleAppointment(id: string, startISO: string, reason
   revalidateAppointments();
 }
 
+/** Undo — put an appointment back to CONFIRMED (reverses Done / Cancel / No-show / Remove). */
+export async function reopenAppointment(id: string) {
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx) return;
+  await prisma.appointment.update({ where: { id }, data: { status: "CONFIRMED", active: true, statusReason: null } });
+  await audit({ action: "appointment.reopened", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
+  revalidateAppointments();
+}
+
 /** Cancel (or mark no-show) with a required reason. */
 export async function cancelAppointment(id: string, reason: string) {
   if (!(CANCEL_REASONS as readonly string[]).includes(reason)) return;

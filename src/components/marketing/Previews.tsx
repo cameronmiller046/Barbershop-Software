@@ -121,6 +121,94 @@ export function TrendPreview() {
   return <TrendChart days={days} actualCents={actual} goalCents={pace} format={formatMoney} />;
 }
 
+/* ───────── Photo gallery ───────── */
+export function GalleryScreen() {
+  const tiles = ["from-brass/40 to-navy/40", "from-barber/40 to-ink", "from-navy/40 to-brass/30", "from-flame/30 to-ink", "from-brass/30 to-barber/30", "from-navy/50 to-flame/20"];
+  return (
+    <div>
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-cream/40">Our work</div>
+      <div className="grid grid-cols-3 gap-2">
+        {tiles.map((t, i) => <div key={i} className={`aspect-[4/5] rounded-lg bg-gradient-to-br ${t}`} />)}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Services list ───────── */
+export function ServicesScreen() {
+  const services = [
+    { name: "Haircut", dur: "30 min", price: "$35" },
+    { name: "Skin Fade", dur: "30 min", price: "$40" },
+    { name: "Beard Trim & Shape", dur: "30 min", price: "$25" },
+    { name: "Cut + Beard Combo", dur: "60 min", price: "$55" },
+  ];
+  return (
+    <div className="space-y-2">
+      {services.map((s) => (
+        <div key={s.name} className="flex items-center justify-between rounded-lg border border-white/10 bg-ink/50 px-3 py-2.5">
+          <div>
+            <div className="text-sm font-medium">{s.name}</div>
+            <div className="text-[11px] text-cream/40">{s.dur} · {s.price}</div>
+          </div>
+          <span className="rounded-full bg-brass px-3 py-1 text-xs font-semibold text-ink">Book</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ───────── Calendar / time picker ───────── */
+export function CalendarScreen() {
+  const open = new Set([3, 4, 7, 9, 10, 12, 15, 16, 18, 21, 22, 24]);
+  return (
+    <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+      <div className="w-full max-w-[220px]">
+        <div className="mb-2 text-center text-sm font-medium">July 2026</div>
+        <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-cream/40">
+          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i}>{d}</div>)}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {Array.from({ length: 26 }, (_, i) => i + 1).map((d) => (
+            <div key={d} className={`grid aspect-square place-items-center rounded-md text-[10px] ${d === 9 ? "bg-brass text-ink" : open.has(d) ? "border border-white/15 text-cream/80" : "text-cream/25"}`}>{d}</div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-cream/40">Wed, Jul 9</div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {["9:30", "10:00", "11:15", "1:00", "2:30", "4:00"].map((t, i) => (
+            <div key={t} className={`rounded-lg border px-2 py-2 text-center text-xs ${i === 1 ? "border-brass bg-brass/20 text-brass" : "border-white/12 text-cream/70"}`}>{t}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Clients + history ───────── */
+export function ClientsScreen() {
+  const clients = [
+    { name: "Jordan Smith", visits: 14, last: "Completed" },
+    { name: "Andre Foster", visits: 9, last: "No show" },
+    { name: "Malik Bryant", visits: 22, last: "Completed" },
+    { name: "Devon Carter", visits: 5, last: "Cancelled" },
+  ];
+  const tone: Record<string, string> = { Completed: "bg-emerald-500/20 text-emerald-200", "No show": "bg-zinc-500/25 text-zinc-200", Cancelled: "bg-red-500/20 text-red-200" };
+  return (
+    <div className="space-y-1.5">
+      {clients.map((c) => (
+        <div key={c.name} className="flex items-center justify-between rounded-lg border border-white/10 bg-ink/50 px-3 py-2 text-sm">
+          <div>
+            <span className="font-medium">{c.name}</span>
+            <span className="ml-2 text-[11px] text-cream/40">{c.visits} visits</span>
+          </div>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] ${tone[c.last]}`}>{c.last}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ───────── Admin analytics (anonymous traffic) ───────── */
 export function AnalyticsPreview() {
   const pv = [42, 55, 48, 61, 58, 72, 80, 66, 74, 88, 79, 95].map((v, i) => ({ label: String(i + 1), value: v }));

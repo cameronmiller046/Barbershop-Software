@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import {
-  setAppointmentStatus, rescheduleAppointment, cancelAppointment, deleteAppointment,
+  setAppointmentStatus, rescheduleAppointment, cancelAppointment, deleteAppointment, reopenAppointment,
 } from "@/app/portal/actions";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS } from "@/lib/appointmentReasons";
 
@@ -22,12 +22,14 @@ export function AppointmentActions({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {status === "CONFIRMED" && (
+      {status === "CONFIRMED" ? (
         <>
           <ActionBtn onClick={() => run(() => setAppointmentStatus(id, "COMPLETED"))} tone="good">Done</ActionBtn>
           <ActionBtn onClick={() => setModal("reschedule")}>Reschedule</ActionBtn>
           <ActionBtn onClick={() => setModal("cancel")} tone="warn">Cancel</ActionBtn>
         </>
+      ) : (
+        <ActionBtn onClick={() => run(() => reopenAppointment(id))} title="Undo — set back to confirmed">↩ Undo</ActionBtn>
       )}
       <ActionBtn onClick={() => setModal("delete")} tone="bad" title="Delete">🗑</ActionBtn>
 

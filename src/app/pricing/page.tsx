@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 const TIERS = [
-  { name: "🪑 Solo", price: "$0", note: "free forever · 1 chair", features: ["Branded booking page", "Online booking + QR code", "Chair-side portal", "Email confirmations"], cta: "Start free", highlight: false },
+  { name: "🪑 Solo", price: "$29", note: "per shop / month · 1 chair", features: ["Branded booking page", "Online booking + QR code", "Chair-side portal", "Email confirmations"], cta: "Start 14-day trial", highlight: false },
   { name: "✂️ Pro", price: "$39", note: "per shop / month", features: ["Everything in Solo", "Up to 6 barbers", "Owner reports & sales goals", "Reviews & photo gallery", "No-show tracking"], cta: "Start 14-day trial", highlight: true },
   { name: "🏢 Enterprise", price: "$129", note: "per shop / month", features: ["Everything in Pro", "Unlimited barbers", "Multi-location dashboard", "Advanced analytics", "Dedicated support & onboarding"], cta: "Talk to sales", highlight: false },
 ];
