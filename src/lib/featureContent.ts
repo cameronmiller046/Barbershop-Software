@@ -7,13 +7,14 @@ export type Feature = {
   slug: string;
   icon: FeatureIcon;
   emoji: string;
+  tag: string; // short badge label
   title: string;
-  blurb: string;
+  blurb: string; // summary
   tier: Plan; // minimum plan that unlocks it
   tierNote?: string;
-  intro: string[]; // detail-page paragraphs
   bullets: string[];
-  renders: string[]; // render keys shown on the detail page
+  renders: string[]; // render keys, paired 1:1 with `sections`
+  sections: { title: string; body: string }[];
 };
 
 export const TIER_META: Record<Plan, { label: string; badge: string }> = {
@@ -27,82 +28,63 @@ export const FEATURES: Feature[] = [
     slug: "website",
     icon: "scissors",
     emoji: "💈",
+    tag: "Your storefront",
     title: "Branded shop website",
     blurb: "A professional, mobile-first website for your shop — your brand, your services, your booking link.",
     tier: "SOLO",
-    intro: [
-      "Every shop gets its own beautiful website the moment it's onboarded — no designer, no web host, no code.",
-      "Your logo, your brand colors, your services, and a photo gallery of your work — all editable from the portal in seconds. The whole site is fast and looks sharp on phones, tablets, and desktops.",
-    ],
-    bullets: [
-      "Home, Services, FAQ, and Contact pages",
-      "Photo gallery of your best cuts",
-      "Custom brand colors + logo, changeable anytime",
-      "Printable QR code that links straight to booking",
-      "Live map + one-tap directions on the contact page",
-    ],
+    bullets: ["Photo gallery", "Custom colors + logo", "QR code", "Live map & directions", "Fast on any device"],
     renders: ["gallery", "services", "booking"],
+    sections: [
+      { title: "Show off your best work", body: "A built-in photo gallery puts your sharpest cuts front and center — the first thing a new client sees when they land on your site." },
+      { title: "Services & prices, always current", body: "List every service with its duration and price, each with a photo. Edit it all from the portal in seconds — no web developer, no hosting to manage." },
+      { title: "One clear path to book", body: "Every page points to booking, so a first-time visitor turns into a booked client without friction — on their phone, at midnight, anytime." },
+    ],
   },
   {
     slug: "booking",
     icon: "razor",
     emoji: "🗓️",
+    tag: "Booking",
     title: "Online booking engine",
     blurb: "Customers book, reschedule, and cancel themselves — 24/7, in under a minute.",
     tier: "SOLO",
-    intro: [
-      "Stop playing phone tag. Customers pick a barber, a service, and a time from a clean calendar — day or night.",
-      "Availability is calculated from each barber's real working hours in your shop's timezone, so you never get booked when you're closed or double-booked. Confirmations go out by email, and everyone gets a self-serve link to manage their appointment.",
-    ],
-    bullets: [
-      "Pick a barber, service, and time on a real calendar",
-      "Per-barber availability in your shop's timezone",
-      "Requires name + phone to cut down on no-shows",
-      "Email confirmations + self-serve manage link",
-      "Staff can reschedule or cancel with a reason",
-    ],
+    bullets: ["Pick barber, service, time", "Email confirmations", "Self-serve manage link", "Name + phone required", "No double-bookings"],
     renders: ["booking", "calendar"],
+    sections: [
+      { title: "Book in under a minute", body: "Customers choose a barber, a service, and a time from a clean flow that just works on any phone — no app to download, no account to create." },
+      { title: "Only real openings", body: "Availability is calculated from each barber's working hours and existing appointments in your shop's timezone — so you're never booked when you're closed or already busy." },
+    ],
   },
   {
     slug: "portal",
     icon: "comb",
     emoji: "✂️",
+    tag: "Run the shop",
     title: "Chair-side portal & owner reports",
     blurb: "Run the whole shop from one screen — schedules, clients, team, and CRM-style owner reports.",
     tier: "PRO",
     tierNote: "Portal basics are on every plan; owner reports & sales goals unlock on Pro.",
-    intro: [
-      "Every barber sees their day at a glance; managers see the whole floor. Clients, notes, services, and the team — all in one place.",
-      "Owners get a CRM-style reports dashboard: a monthly sales goal with pace tracking, a 12-month revenue trend, and a per-barber earnings breakdown — so you always know exactly how the shop is doing.",
-    ],
-    bullets: [
-      "Daily dashboard + upcoming appointments",
-      "Client list with full history (find a no-show in seconds)",
-      "Service management, pricing, and photos",
-      "Owner reports: monthly goal, pace & 12-month trend",
-      "Per-barber earnings breakdown",
-    ],
+    bullets: ["Daily dashboard", "Client history", "Team management", "Sales goal & trend", "Per-barber earnings"],
     renders: ["dashboard", "reports", "clients"],
+    sections: [
+      { title: "Your day at a glance", body: "Every barber sees their own chair; managers see the whole floor. Today's appointments, this week's revenue, and upcoming bookings — all in one calm dashboard." },
+      { title: "Know your numbers cold", body: "A CRM-style reports page tracks a monthly sales goal with pace, a 12-month revenue trend, and a per-barber earnings breakdown. No spreadsheets." },
+      { title: "Every client on record", body: "Full visit history and private notes for each client — so you can greet a regular by name, or explain a no-show in seconds." },
+    ],
   },
   {
     slug: "analytics",
     icon: "pole",
     emoji: "📊",
+    tag: "Growth",
     title: "Analytics & security",
     blurb: "Consent-based, privacy-first analytics and enterprise-grade security, built in.",
     tier: "ENTERPRISE",
-    intro: [
-      "Understand exactly where your visitors come from and what turns them into bookings — with a built-in analytics dashboard.",
-      "It's privacy-first: a cookie-consent banner, no personal data, and new-vs-returning visitor counts. Under the hood, every shop's data is fully isolated with role-based access, audit logs, rate limiting, and input validation.",
-    ],
-    bullets: [
-      "Visitors, sources, top shops & pages",
-      "Cookie-consent banner + new-vs-returning visitors",
-      "Full tenant isolation & role-based access",
-      "Audit logs for every sensitive action",
-      "Rate limiting and input validation",
-    ],
+    bullets: ["Visitors & sources", "New vs returning", "Cookie consent", "Tenant isolation", "Audit logs"],
     renders: ["analytics"],
+    sections: [
+      { title: "See what drives bookings", body: "A built-in, privacy-first analytics dashboard shows where visitors come from and what turns them into bookings — with a cookie-consent banner and no personal data. Under the hood: full tenant isolation, role-based access, and audit logs." },
+    ],
   },
 ];
 

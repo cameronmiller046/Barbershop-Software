@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { Reveal } from "@/components/Reveal";
 import { FEATURES, featureBySlug, TIER_META, type FeatureIcon } from "@/lib/featureContent";
 import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
 import {
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const f = featureBySlug(slug);
   if (!f) return { title: "Feature" };
-  return { title: f.title, description: f.blurb };
+  return { title: f.title, description: f.blurb, alternates: { canonical: `/features/${f.slug}` } };
 }
 
 export default async function FeatureDetail({ params }: { params: Promise<{ slug: string }> }) {
@@ -42,63 +43,95 @@ export default async function FeatureDetail({ params }: { params: Promise<{ slug
   if (!f) notFound();
   const Icon = ICONS[f.icon];
   const tier = TIER_META[f.tier];
-  const others = FEATURES.filter((x) => x.slug !== f.slug);
+  const idx = FEATURES.findIndex((x) => x.slug === f.slug);
+  const next = FEATURES[(idx + 1) % FEATURES.length];
+  const NextIcon = ICONS[next.icon];
+
+  const words = f.title.split(" ");
+  const last = words.pop() ?? "";
+  const rest = words.join(" ");
 
   return (
-    <div className="min-h-screen mkt">
+    <div className="relative min-h-screen overflow-x-hidden mkt">
       <MarketingHeader />
-      <section className="container-page py-14">
-        <Link href="/features" className="text-sm text-cream/50 hover:text-cream">← All features</Link>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-xl bg-barber/20 text-flame"><Icon size={24} /></span>
-          <span className={`badge ${tier.badge}`}>{tier.label} plan & up</span>
-        </div>
-        <h1 className="mt-4 font-display text-4xl md:text-5xl">{f.emoji} {f.title}</h1>
-        <p className="mt-3 max-w-2xl text-lg text-cream/75">{f.blurb}</p>
-        {f.tierNote && <p className="mt-2 max-w-2xl text-sm text-cream/50">ℹ️ {f.tierNote}</p>}
-
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-4 text-cream/75">
-            {f.intro.map((p, i) => <p key={i}>{p}</p>)}
-            <ul className="space-y-2 pt-1">
-              {f.bullets.map((b) => <li key={b} className="flex gap-2"><span className="text-brass">✓</span><span>{b}</span></li>)}
-            </ul>
-            <div className="pt-2">
-              <Link href="/beta" className="btn-primary px-6 py-2.5">✨ Request beta access</Link>
-            </div>
+      {/* Intro */}
+      <section className="container-page pb-6 pt-14">
+        <Link href="/features" className="mb-10 inline-flex items-center gap-1.5 text-sm text-cream/50 transition-colors hover:text-cream">
+          ← All features
+        </Link>
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-flame/30 bg-flame/5 px-3 py-1 text-xs font-medium text-flame">
+            <Icon size={14} /> {f.emoji} {f.tag}
+          </span>
+          <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">
+            {rest} <span className="text-shimmer">{last}</span>
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-cream/70">{f.blurb}</p>
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <span className={`badge ${tier.badge}`}>{tier.label} plan &amp; up</span>
           </div>
-          <aside className="card h-max">
-            <div className="text-xs uppercase tracking-wide text-cream/40">Available on</div>
-            <div className="mt-1 font-display text-2xl">{tier.label}</div>
-            <p className="mt-1 text-sm text-cream/50">…and every plan above it.</p>
-            <Link href="/pricing" className="btn-ghost mt-4 w-full">See plans &amp; pricing 💰</Link>
-          </aside>
-        </div>
-
-        {/* Product renders (numerous images) */}
-        <div className="mt-14">
-          <div className="eyebrow">📸 A closer look</div>
-          <h2 className="mt-2 font-display text-2xl">See {f.title.toLowerCase()} in action</h2>
-        </div>
-        <div className="mt-6 space-y-6">
-          {f.renders.map((key) => {
-            const r = RENDERS[key];
-            return r ? <BrowserFrame key={key} url={r.url}>{r.node}</BrowserFrame> : null;
-          })}
-        </div>
-
-        {/* Other features */}
-        <h2 className="mt-16 font-display text-2xl">Explore more features</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {others.map((o) => (
-            <Link key={o.slug} href={`/features/${o.slug}`} className="card card-hover block">
-              <div className="font-medium">{o.emoji} {o.title}</div>
-              <div className="mt-1 text-xs text-cream/50">{o.blurb}</div>
-            </Link>
-          ))}
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {f.bullets.map((b) => (
+              <span key={b} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-charcoal px-3 py-1 text-xs text-cream/70">
+                <span className="text-brass">✓</span> {b}
+              </span>
+            ))}
+          </div>
+          {f.tierNote && <p className="mx-auto mt-4 max-w-xl text-sm text-cream/50">ℹ️ {f.tierNote}</p>}
         </div>
       </section>
+
+      {/* Alternating render + explanation rows */}
+      <section className="container-page space-y-24 py-14 md:space-y-32">
+        {f.renders.map((key, i) => {
+          const r = RENDERS[key];
+          const sec = f.sections[i];
+          const reverse = i % 2 === 1;
+          return (
+            <div key={key} className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
+              <Reveal className={`min-w-0 ${reverse ? "md:order-2" : ""}`}>
+                <div>
+                  <span className="eyebrow">{f.title}</span>
+                  <h2 className="mt-2 font-display text-2xl md:text-3xl">{sec?.title ?? f.title}</h2>
+                  <p className="mt-3 text-cream/70">{sec?.body ?? f.blurb}</p>
+                </div>
+              </Reveal>
+              <Reveal delay={80} className={`min-w-0 ${reverse ? "md:order-1" : ""}`}>
+                {r && <BrowserFrame url={r.url}>{r.node}</BrowserFrame>}
+              </Reveal>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* CTA */}
+      <section className="container-page py-14">
+        <div className="relative mx-auto max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-barber/15 via-charcoal to-charcoal p-10 text-center">
+          <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
+          <h2 className="font-display text-3xl">Run your whole shop from one chair 💈</h2>
+          <p className="mx-auto mt-3 max-w-xl text-cream/70">Flat monthly price, no per-booking fees. Bring your brand — we&apos;ll handle the tech.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/beta" className="btn-barber px-7 py-3 text-base">✨ Request beta access</Link>
+            <Link href="/pricing" className="btn-ghost px-7 py-3 text-base">See pricing 💰</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Next feature */}
+      <section className="container-page pb-16">
+        <Link href={`/features/${next.slug}`} className="group mx-auto flex max-w-4xl items-center justify-between gap-4 rounded-2xl border border-white/10 bg-charcoal p-5 transition-colors hover:border-flame/40">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-barber/20 text-flame"><NextIcon size={20} /></span>
+            <div>
+              <p className="text-xs text-cream/50">Next feature</p>
+              <p className="font-semibold">{next.emoji} {next.title}</p>
+            </div>
+          </div>
+          <span className="text-cream/50 transition-transform group-hover:translate-x-1 group-hover:text-flame">→</span>
+        </Link>
+      </section>
+
       <MarketingFooter />
     </div>
   );

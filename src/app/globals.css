@@ -157,6 +157,18 @@ body {
   .barber-pole-v { animation: none; }
 }
 
+/* Shimmering accent for headline words */
+.text-shimmer {
+  background-image: linear-gradient(90deg, rgb(var(--brass)), #ff7d6e, #d1233a, rgb(var(--brass)));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 3.5s linear infinite;
+}
+@keyframes text-shimmer { to { background-position: 200% center; } }
+@media (prefers-reduced-motion: reduce) { .text-shimmer { animation: none; } }
+
 /* ───────── Motion: entrance + ambient ───────── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(18px); }
