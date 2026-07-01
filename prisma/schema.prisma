@@ -208,6 +208,17 @@ model Appointment {
   // no-show) is always on record. `false` = removed from active views.
   active    Boolean @default(true)
 
+  // Turnaround clock: when the barber started/finished the cut. Duration is
+  // finishedAt - startedAt (5-minute minimum for staff; admins can correct).
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  // What the barber actually collected (they often take payment directly).
+  collectedCents Int?
+  // How the visit happened + how the client found the shop (walk-in logging).
+  kind     String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
+  referral String?
+
   // public token for the customer reschedule / cancel link
   manageToken String @unique @default(cuid())
 

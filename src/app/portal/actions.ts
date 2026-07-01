@@ -103,6 +103,92 @@ export async function deleteAppointment(id: string, reason: string) {
   revalidateAppointments();
 }
 
+// ── Turnaround clock ──
+const MIN_DURATION_MS = 5 * 60 * 1000; // 5-minute minimum so the clock can't be gamed
+
+/** Start the haircut clock (records startedAt). */
+export async function startAppointment(id: string) {
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx || ctx.appt.finishedAt) return;
+  await prisma.appointment.update({ where: { id }, data: { startedAt: new Date(), status: "CONFIRMED", active: true } });
+  await audit({ action: "appointment.started", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
+  revalidateAppointments();
+}
+
+/** Check out — finish + mark complete, recording what the barber collected.
+ *  Turnaround (with a 5-minute minimum) is logged only if they checked in. */
+export async function finishAppointment(id: string, collectedCents?: number) {
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx) return;
+  const started = ctx.appt.startedAt;
+  const finishedAt = started
+    ? (Date.now() - started.getTime() < MIN_DURATION_MS ? new Date(started.getTime() + MIN_DURATION_MS) : new Date())
+    : undefined;
+  await prisma.appointment.update({
+    where: { id },
+    data: {
+      status: "COMPLETED",
+      ...(finishedAt ? { finishedAt } : {}),
+      ...(typeof collectedCents === "number" && collectedCents >= 0 ? { collectedCents: Math.round(collectedCents) } : {}),
+    },
+  });
+  await audit({ action: "appointment.finished", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { collectedCents } });
+  revalidateAppointments();
+}
+
+/** Quickly log a completed cut (walk-in or appointment) for a new or existing
+ *  client — so walk-in traffic gets into the system. Requires kind + referral. */
+export async function logWalkIn(formData: FormData) {
+  const user = await requireStaffWithPerms();
+  if (isDemoAccount(user.email)) return; // read-only demo
+  const name = String(formData.get("name") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const serviceId = String(formData.get("serviceId") || "");
+  const kind = String(formData.get("kind") || "");
+  const referral = String(formData.get("referral") || "").trim();
+  const collected = Number(formData.get("collected") || 0);
+  if (!name || !serviceId || !referral) return;
+  if (kind !== "WALKIN" && kind !== "APPOINTMENT") return;
+
+  const service = await prisma.service.findFirst({ where: { id: serviceId, tenantId: user.tenantId } });
+  if (!service) return;
+
+  // Reuse an existing client with the same name, else create one.
+  const existing = await prisma.client.findFirst({ where: { tenantId: user.tenantId, name: { equals: name, mode: "insensitive" } } });
+  const client = existing ?? (await prisma.client.create({ data: { tenantId: user.tenantId, name, phone: phone || null } }));
+
+  const now = new Date();
+  await prisma.appointment.create({
+    data: {
+      tenantId: user.tenantId, serviceId, barberId: user.id, clientId: client.id,
+      startTime: now, endTime: new Date(now.getTime() + service.durationMin * 60000),
+      status: "COMPLETED", kind, referral,
+      collectedCents: collected > 0 ? Math.round(collected * 100) : service.priceCents,
+      startedAt: now, finishedAt: new Date(now.getTime() + Math.max(5, service.durationMin) * 60000),
+    },
+  });
+  await audit({ action: "appointment.walkin", tenantId: user.tenantId, userId: user.id, meta: { kind, referral, newClient: !existing } });
+  revalidateAppointments();
+  revalidatePath("/portal/clients");
+}
+
+/** Admin correction of the clock — no 5-minute floor. Managers only. */
+export async function correctAppointmentClock(id: string, startISO: string, finishISO: string) {
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx || !can(ctx.user, "shop.viewAll")) return; // managers/admins only
+  const started = startISO ? new Date(startISO) : null;
+  const finished = finishISO ? new Date(finishISO) : null;
+  if (started && isNaN(started.getTime())) return;
+  if (finished && isNaN(finished.getTime())) return;
+  if (started && finished && finished < started) return;
+  await prisma.appointment.update({
+    where: { id },
+    data: { startedAt: started, finishedAt: finished, ...(finished ? { status: "COMPLETED" as const } : {}) },
+  });
+  await audit({ action: "appointment.clock.corrected", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
+  revalidateAppointments();
+}
+
 // ── Clients ──
 export async function saveClientNotes(id: string, formData: FormData) {
   const user = await requirePerm("shop.clients");

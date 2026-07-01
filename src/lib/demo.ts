@@ -233,13 +233,20 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
   //    dashboard (12-month chart, monthly table, daily trend) looks like a real,
   //    growing shop. Built in bulk via createMany. ──
   const staffPair = [manager, barber];
+  const REFERRALS = ["Walk-by / sign", "Google", "Instagram", "Friend / referral", "Returning customer", "Other"];
   const hist: Prisma.AppointmentCreateManyInput[] = [];
   const pushCompleted = (start: Date, svcIdx: number, staffIdx: number, clientIdx: number) => {
     const svc = services[svcIdx % services.length];
+    // Turnaround: service duration ± a little variance, 5-minute floor.
+    const durMin = Math.max(5, svc.durationMin + ((svcIdx * 7) % 15) - 5);
     hist.push({
       tenantId: tenant.id, serviceId: svc.id, barberId: staffPair[staffIdx % staffPair.length].id,
       clientId: clients[clientIdx % clients.length].id, startTime: start,
       endTime: new Date(start.getTime() + svc.durationMin * 60000), status: "COMPLETED",
+      startedAt: start, finishedAt: new Date(start.getTime() + durMin * 60000),
+      collectedCents: svc.priceCents + ((clientIdx % 3) * 500), // list price + occasional tip
+      kind: svcIdx % 4 === 0 ? "WALKIN" : "APPOINTMENT",
+      referral: REFERRALS[(svcIdx + clientIdx) % REFERRALS.length],
     });
   };
 

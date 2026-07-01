@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { formatMoney, classNames } from "@/lib/utils";
 import { AppointmentActions } from "@/components/AppointmentActions";
+import { WalkInLogger } from "@/components/WalkInLogger";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
   addMonths, format, isSameMonth, isSameDay, parseISO, isValid,
@@ -32,7 +33,11 @@ export default async function AppointmentsPage({
   const user = await requireStaffWithPerms();
   const seesAll = can(user, "shop.viewAll");
   const barberScope = seesAll ? {} : { barberId: user.id };
-  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { slug: true } });
+  const [tenant, services, clientList] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { slug: true } }),
+    prisma.service.findMany({ where: { tenantId: user.tenantId, active: true }, select: { id: true, name: true, priceCents: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.client.findMany({ where: { tenantId: user.tenantId }, select: { name: true }, orderBy: { name: "asc" }, take: 500 }),
+  ]);
   const sp = await searchParams;
 
   const monthBase = sp.month && isValid(parseISO(sp.month + "-01")) ? parseISO(sp.month + "-01") : new Date();
@@ -60,8 +65,9 @@ export default async function AppointmentsPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl">Appointments</h1>
         <div className="flex items-center gap-2">
+          <WalkInLogger services={services} clients={clientList} />
           <Link href={`/portal/appointments?month=${prevKey}`} className="btn-ghost px-3 py-1.5">←</Link>
-          <span className="min-w-[10rem] text-center font-display text-lg">{format(monthBase, "MMMM yyyy")}</span>
+          <span className="min-w-[8rem] text-center font-display text-lg">{format(monthBase, "MMMM yyyy")}</span>
           <Link href={`/portal/appointments?month=${nextKey}`} className="btn-ghost px-3 py-1.5">→</Link>
         </div>
       </div>
@@ -130,8 +136,10 @@ export default async function AppointmentsPage({
                   <span className={`badge ${STATUS_BADGE[a.status] || "bg-white/10"}`}>{a.status.replace("_", " ")}</span>
                   {a.statusReason && <span className="text-[11px] text-cream/40">· {a.statusReason}</span>}
                 </div>
-                <AppointmentActions id={a.id} startISO={a.startTime.toISOString()} slug={tenant?.slug ?? ""}
-                  serviceId={a.serviceId} barberId={a.barberId} status={a.status} />
+                <AppointmentActions id={a.id} slug={tenant?.slug ?? ""}
+                  serviceId={a.serviceId} barberId={a.barberId} status={a.status}
+                  startedISO={a.startedAt?.toISOString() ?? null} finishedISO={a.finishedAt?.toISOString() ?? null}
+                  canCorrect={seesAll} servicePriceCents={a.collectedCents ?? a.service.priceCents} />
               </div>
             </div>
           ))}

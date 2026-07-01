@@ -2,34 +2,58 @@
 
 import { useEffect, useState, useTransition } from "react";
 import {
-  setAppointmentStatus, rescheduleAppointment, cancelAppointment, deleteAppointment, reopenAppointment,
+  rescheduleAppointment, cancelAppointment, deleteAppointment, reopenAppointment,
+  startAppointment, finishAppointment, correctAppointmentClock,
 } from "@/app/portal/actions";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS } from "@/lib/appointmentReasons";
 
 type Slot = { start: string; end: string };
 type Day = { date: string; slots: Slot[] };
-type Modal = null | "reschedule" | "cancel" | "delete";
+type Modal = null | "reschedule" | "cancel" | "delete" | "clock" | "collect";
 
 export function AppointmentActions({
-  id, startISO, slug, serviceId, barberId, status,
+  id, slug, serviceId, barberId, status, startedISO, finishedISO, canCorrect, servicePriceCents,
 }: {
-  id: string; startISO: string; slug: string; serviceId: string; barberId: string; status: string;
+  id: string; slug: string; serviceId: string; barberId: string; status: string;
+  startedISO?: string | null; finishedISO?: string | null; canCorrect?: boolean; servicePriceCents?: number;
 }) {
   const [modal, setModal] = useState<Modal>(null);
-  const [pending, start] = useTransition();
+  const [pending, startT] = useTransition();
+  const run = (fn: () => Promise<void>) => startT(async () => { await fn(); setModal(null); });
 
-  const run = (fn: () => Promise<void>) => start(async () => { await fn(); setModal(null); });
+  const running = status === "CONFIRMED" && !!startedISO && !finishedISO;
+  const turnaround = startedISO && finishedISO
+    ? Math.round((new Date(finishedISO).getTime() - new Date(startedISO).getTime()) / 60000)
+    : null;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {status === "CONFIRMED" ? (
-        <>
-          <ActionBtn onClick={() => run(() => setAppointmentStatus(id, "COMPLETED"))} tone="good">Done</ActionBtn>
-          <ActionBtn onClick={() => setModal("reschedule")}>Reschedule</ActionBtn>
-          <ActionBtn onClick={() => setModal("cancel")} tone="warn">Cancel</ActionBtn>
-        </>
+      {turnaround != null && (
+        <span className="rounded-md bg-white/5 px-2 py-1 text-xs text-cream/70" title="Turnaround time">⏱ {turnaround}m</span>
+      )}
+
+      {status === "CONFIRMED" && !finishedISO ? (
+        running ? (
+          <>
+            <Elapsed startISO={startedISO!} />
+            <ActionBtn onClick={() => setModal("collect")} tone="good">✓ Check out</ActionBtn>
+            <ActionBtn onClick={() => setModal("reschedule")}>Reschedule</ActionBtn>
+            <ActionBtn onClick={() => setModal("cancel")} tone="warn">Cancel</ActionBtn>
+          </>
+        ) : (
+          <>
+            <ActionBtn onClick={() => run(() => startAppointment(id))} tone="good">▶ Check in</ActionBtn>
+            <ActionBtn onClick={() => setModal("collect")}>✓ Complete</ActionBtn>
+            <ActionBtn onClick={() => setModal("reschedule")}>Reschedule</ActionBtn>
+            <ActionBtn onClick={() => setModal("cancel")} tone="warn">Cancel</ActionBtn>
+          </>
+        )
       ) : (
         <ActionBtn onClick={() => run(() => reopenAppointment(id))} title="Undo — set back to confirmed">↩ Undo</ActionBtn>
+      )}
+
+      {canCorrect && (startedISO || finishedISO) && (
+        <ActionBtn onClick={() => setModal("clock")} title="Correct the clock">🛠 Clock</ActionBtn>
       )}
       <ActionBtn onClick={() => setModal("delete")} tone="bad" title="Delete">🗑</ActionBtn>
 
@@ -41,17 +65,64 @@ export function AppointmentActions({
       {modal === "cancel" && (
         <ReasonModal title="Cancel appointment"
           hint="Pick a reason. Choosing “No show” marks it as a no-show."
-          reasons={[...CANCEL_REASONS]} confirmLabel="Confirm cancel" tone="bad" pending={pending}
+          reasons={[...CANCEL_REASONS]} confirmLabel="Confirm cancel" pending={pending}
           onClose={() => setModal(null)} onConfirm={(reason) => run(() => cancelAppointment(id, reason))} />
       )}
       {modal === "delete" && (
         <ReasonModal title="Delete appointment"
           hint="This permanently removes the appointment. Pick a reason for the record."
-          reasons={[...DELETE_REASONS]} confirmLabel="Delete" tone="bad" pending={pending}
+          reasons={[...DELETE_REASONS]} confirmLabel="Delete" pending={pending}
           onClose={() => setModal(null)} onConfirm={(reason) => run(() => deleteAppointment(id, reason))} />
+      )}
+      {modal === "clock" && (
+        <ClockModal startISO={startedISO ?? null} finishISO={finishedISO ?? null} pending={pending}
+          onClose={() => setModal(null)}
+          onSave={(s, f) => run(() => correctAppointmentClock(id, s, f))} />
+      )}
+      {modal === "collect" && (
+        <CollectModal defaultCents={servicePriceCents ?? 0} pending={pending}
+          onClose={() => setModal(null)}
+          onConfirm={(cents) => run(() => finishAppointment(id, cents))} />
       )}
     </div>
   );
+}
+
+// Check-out: confirm how much the barber collected (they often take payment directly).
+function CollectModal({ defaultCents, pending, onClose, onConfirm }: {
+  defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number) => void;
+}) {
+  const [amt, setAmt] = useState(defaultCents ? String(Math.round(defaultCents / 100)) : "");
+  const cents = Math.max(0, Math.round(Number(amt || 0) * 100));
+  return (
+    <Modal title="Check out — amount collected" hint="Enter what you collected for this cut. Are you sure this is correct?" onClose={onClose}>
+      <div>
+        <div className="label">Amount collected</div>
+        <div className="flex items-center gap-2">
+          <span className="text-cream/60">$</span>
+          <input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" />
+        </div>
+      </div>
+      <div className="mt-6 flex justify-end gap-2">
+        <button onClick={onClose} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
+        <button disabled={pending} onClick={() => onConfirm(cents)} className="btn-primary px-5 py-2 text-sm disabled:opacity-40">
+          {pending ? "Saving…" : `Yes, I collected $${(cents / 100).toLocaleString()}`}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// Live-ticking elapsed timer while a cut is in progress.
+function Elapsed({ startISO }: { startISO: string }) {
+  const [now, setNow] = useState(() => new Date(startISO).getTime());
+  useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const min = Math.max(0, Math.floor((now - new Date(startISO).getTime()) / 60000));
+  return <span className="rounded-md bg-emerald-500/15 px-2 py-1 text-xs text-emerald-200">⏱ {min}m running</span>;
 }
 
 function ActionBtn({ children, onClick, tone, title }: {
@@ -113,8 +184,8 @@ function ReasonChips({ reasons, value, onChange }: { reasons: string[]; value: s
   );
 }
 
-function ReasonModal({ title, hint, reasons, confirmLabel, tone, pending, onClose, onConfirm }: {
-  title: string; hint: string; reasons: string[]; confirmLabel: string; tone: "bad";
+function ReasonModal({ title, hint, reasons, confirmLabel, pending, onClose, onConfirm }: {
+  title: string; hint: string; reasons: string[]; confirmLabel: string;
   pending: boolean; onClose: () => void; onConfirm: (reason: string) => void;
 }) {
   const [reason, setReason] = useState<string | null>(null);
@@ -127,6 +198,35 @@ function ReasonModal({ title, hint, reasons, confirmLabel, tone, pending, onClos
           className="rounded-full bg-red-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-40">
           {pending ? "Working…" : confirmLabel}
         </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ClockModal({ startISO, finishISO, pending, onClose, onSave }: {
+  startISO: string | null; finishISO: string | null; pending: boolean;
+  onClose: () => void; onSave: (startISO: string, finishISO: string) => void;
+}) {
+  const toLocal = (iso: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+  const [s, setS] = useState(toLocal(startISO));
+  const [f, setF] = useState(toLocal(finishISO));
+  const save = () => onSave(s ? new Date(s).toISOString() : "", f ? new Date(f).toISOString() : "");
+  const mins = s && f ? Math.round((new Date(f).getTime() - new Date(s).getTime()) / 60000) : null;
+
+  return (
+    <Modal title="Correct the clock" hint="Adjust the start and finish times. Leave a field blank to clear it." onClose={onClose}>
+      <div className="space-y-3">
+        <div><div className="label">Started</div><input type="datetime-local" value={s} onChange={(e) => setS(e.target.value)} className="input" /></div>
+        <div><div className="label">Finished</div><input type="datetime-local" value={f} onChange={(e) => setF(e.target.value)} className="input" /></div>
+        {mins != null && <p className="text-sm text-cream/60">Turnaround: <span className="text-cream">{mins} min</span></p>}
+      </div>
+      <div className="mt-6 flex justify-end gap-2">
+        <button onClick={onClose} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
+        <button disabled={pending} onClick={save} className="btn-primary px-5 py-2 text-sm disabled:opacity-40">{pending ? "Saving…" : "Save clock"}</button>
       </div>
     </Modal>
   );
