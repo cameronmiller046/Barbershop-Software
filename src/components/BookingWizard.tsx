@@ -79,8 +79,8 @@ export function BookingWizard({
   const sel = { borderColor: brand, background: `${brand}1a` };
 
   return (
-    <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="space-y-6">
+    <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 space-y-6">
         {/* Step 1: service */}
         <section className="card">
           <StepHeading n={1} title="Choose a service" brand={brand} />
@@ -131,35 +131,32 @@ export function BookingWizard({
             ) : days.length === 0 ? (
               <p className="mt-4 text-sm text-cream/50">No open times soon. Please call the shop.</p>
             ) : (
-              <>
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                  {days.map((d) => {
-                    const date = new Date(d.date);
-                    return (
-                      <button key={d.date} onClick={() => { setActiveDay(d.date); setSlot(null); }}
-                        className="min-w-[72px] rounded-lg border px-2 py-2 text-center text-xs"
-                        style={activeDay === d.date ? sel : { borderColor: "rgba(255,255,255,0.1)" }}>
-                        <div className="text-cream/50">{date.toLocaleDateString(undefined, { weekday: "short" })}</div>
-                        <div className="text-base font-semibold">{date.toLocaleDateString(undefined, { day: "numeric" })}</div>
-                        <div className="text-cream/50">{date.toLocaleDateString(undefined, { month: "short" })}</div>
-                      </button>
-                    );
-                  })}
+              <div className="mt-4 grid gap-5 sm:grid-cols-[auto_1fr]">
+                <Calendar days={days} activeDay={activeDay} brand={brand}
+                  onPick={(iso) => { setActiveDay(iso); setSlot(null); }} />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-cream/40">
+                    {activeDay ? new Date(activeDay).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : "Available times"}
+                  </div>
+                  {activeSlots.length === 0 ? (
+                    <p className="mt-3 text-sm text-cream/50">Pick a date to see open times.</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {activeSlots.map((s) => {
+                        const t = new Date(s.start);
+                        const active = slot?.start === s.start;
+                        return (
+                          <button key={s.start} onClick={() => setSlot(s)}
+                            className="rounded-lg border px-2 py-2 text-sm"
+                            style={active ? { background: brand, color: "#0f0f10", borderColor: brand } : { borderColor: "rgba(255,255,255,0.1)" }}>
+                            {t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {activeSlots.map((s) => {
-                    const t = new Date(s.start);
-                    const active = slot?.start === s.start;
-                    return (
-                      <button key={s.start} onClick={() => setSlot(s)}
-                        className="rounded-lg border px-2 py-2 text-sm"
-                        style={active ? { background: brand, color: "#0f0f10", borderColor: brand } : { borderColor: "rgba(255,255,255,0.1)" }}>
-                        {t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
+              </div>
             )}
           </section>
         )}
@@ -201,6 +198,77 @@ export function BookingWizard({
           <p className="mt-3 text-center text-xs text-cream/40">Reschedule or cancel any time from your confirmation link.</p>
         </div>
       </aside>
+    </div>
+  );
+}
+
+// Month calendar that only enables dates with availability. Replaces the old
+// horizontal day strip (which overflowed the viewport).
+function Calendar({
+  days, activeDay, onPick, brand,
+}: {
+  days: Day[];
+  activeDay: string | null;
+  onPick: (iso: string) => void;
+  brand: string;
+}) {
+  const keyOf = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+
+  const availByKey = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of days) m.set(keyOf(new Date(d.date)), d.date);
+    return m;
+  }, [days]);
+
+  const firstDate = days.length ? new Date(days[0].date) : new Date();
+  const lastDate = days.length ? new Date(days[days.length - 1].date) : new Date();
+  const minMonth = monthStart(firstDate);
+  const maxMonth = monthStart(lastDate);
+
+  const [view, setView] = useState<Date>(monthStart(activeDay ? new Date(activeDay) : firstDate));
+  // Jump to the first available month whenever availability reloads.
+  useEffect(() => { setView(monthStart(firstDate)); }, [days]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const y = view.getFullYear();
+  const mo = view.getMonth();
+  const firstWeekday = new Date(y, mo, 1).getDay();
+  const daysInMonth = new Date(y, mo + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array<null>(firstWeekday).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  const canPrev = view > minMonth;
+  const canNext = view < maxMonth;
+
+  return (
+    <div className="w-full max-w-[280px]">
+      <div className="flex items-center justify-between">
+        <button type="button" disabled={!canPrev} onClick={() => setView(new Date(y, mo - 1, 1))}
+          className="rounded-lg border border-white/10 px-2.5 py-1 text-sm transition hover:bg-white/5 disabled:opacity-25">‹</button>
+        <div className="text-sm font-medium">{view.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</div>
+        <button type="button" disabled={!canNext} onClick={() => setView(new Date(y, mo + 1, 1))}
+          className="rounded-lg border border-white/10 px-2.5 py-1 text-sm transition hover:bg-white/5 disabled:opacity-25">›</button>
+      </div>
+      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] uppercase text-cream/40">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d, i) => <div key={i}>{d}</div>)}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {cells.map((day, i) => {
+          if (day === null) return <div key={i} />;
+          const iso = availByKey.get(keyOf(new Date(y, mo, day)));
+          const selected = !!iso && activeDay === iso;
+          return (
+            <button key={i} type="button" disabled={!iso} onClick={() => iso && onPick(iso)}
+              className="grid aspect-square place-items-center rounded-lg border text-sm transition enabled:hover:border-white/40 disabled:cursor-not-allowed disabled:text-cream/25"
+              style={selected
+                ? { background: brand, color: "#0f0f10", borderColor: brand }
+                : { borderColor: iso ? "rgba(255,255,255,0.18)" : "transparent" }}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
