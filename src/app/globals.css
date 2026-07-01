@@ -6,10 +6,15 @@
   color-scheme: dark;
   --brand: #c9a24b;
   --brand-fg: #0f0f10;
+  --barber-red: #c8102e;
+  --navy: #16324f;
 }
 
 body {
-  background: radial-gradient(1200px 600px at 50% -10%, #1d1d22 0%, #0f0f10 55%);
+  background:
+    radial-gradient(900px 500px at 12% -8%, rgba(200, 16, 46, 0.10) 0%, transparent 55%),
+    radial-gradient(900px 500px at 88% -8%, rgba(22, 50, 79, 0.16) 0%, transparent 55%),
+    radial-gradient(1200px 600px at 50% -10%, #1d1d22 0%, #0f0f10 55%);
   min-height: 100vh;
 }
 
@@ -51,4 +56,54 @@ body {
   .stat {
     @apply rounded-2xl border border-white/10 bg-charcoal/80 p-5;
   }
+  /* Secondary CTA in barber red */
+  .btn-barber {
+    @apply btn text-cream;
+    background: var(--barber-red);
+  }
+  .btn-barber:hover {
+    filter: brightness(1.08);
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-brass;
+  }
+}
+
+/* ───────── Barber-pole motifs ───────── */
+/* Thin diagonal red/cream/navy stripe — section dividers & accents. */
+.barber-stripe {
+  background: repeating-linear-gradient(
+    45deg,
+    #c8102e 0 8px,
+    #f5f1e8 8px 16px,
+    #16324f 16px 24px
+  );
+}
+/* Vertical spinning pole. Period is 30px along the gradient; a horizontal
+   shift of 30/sin(45°) ≈ 42.426px loops seamlessly. */
+.barber-pole-v {
+  background: repeating-linear-gradient(
+    45deg,
+    #c8102e 0 10px,
+    #f5f1e8 10px 20px,
+    #16324f 20px 30px
+  );
+  animation: barber-spin 1.6s linear infinite;
+}
+@keyframes barber-spin {
+  from { background-position: 0 0; }
+  to { background-position: 42.426px 0; }
+}
+/* Cylinder shading overlay for the pole (glass highlight). */
+.pole-glass {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(255, 255, 255, 0.35) 42%,
+    rgba(255, 255, 255, 0.05) 58%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .barber-pole-v { animation: none; }
 }

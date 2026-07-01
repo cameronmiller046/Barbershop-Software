@@ -11,6 +11,10 @@ const config: Config = {
         brass: "#c9a24b",
         brassDark: "#a8842f",
         cream: "#f5f1e8",
+        // Classic barber-pole palette
+        barber: "#c8102e",
+        barberDark: "#9b0e24",
+        navy: "#16324f",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

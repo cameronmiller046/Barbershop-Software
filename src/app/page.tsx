@@ -1,71 +1,161 @@
 import Link from "next/link";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import {
+  BrowserFrame, BookingScreen, DashboardScreen, ReportsPreview, TrendPreview, AnalyticsPreview,
+} from "@/components/marketing/Previews";
+import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
 
 export const metadata = { title: "The Chair — Barbershop software" };
 
 const FEATURES = [
-  { title: "Branded shop website", body: "Every shop gets its own site — services, team, gallery, reviews, and a booking page." },
-  { title: "Online booking + QR", body: "Customers book, reschedule, and cancel themselves. Print a QR code for the front desk." },
-  { title: "Barber portal", body: "Dashboards, appointments, clients, notes, analytics, and social planning in one place." },
-  { title: "Multi-location ready", body: "One platform, many shops. Each tenant's data is fully isolated and secure." },
+  { Icon: ScissorsIcon, title: "Branded shop website", body: "Every shop gets its own site — services, team, reviews, and a booking page." },
+  { Icon: RazorIcon, title: "Online booking + QR", body: "Customers book, reschedule, and cancel themselves. Print a QR for the front desk." },
+  { Icon: CombIcon, title: "Chair-side portal", body: "Dashboards, appointments, clients, and per-barber schedules in one place." },
+  { Icon: PoleIcon, title: "Multi-location ready", body: "One platform, many shops. Each shop's data is fully isolated and secure." },
 ];
+
+// A spinning barber pole.
+function Pole({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex flex-col items-center ${className}`}>
+      <span className="h-3 w-10 rounded-t-md bg-gradient-to-b from-brass to-brassDark" />
+      <div className="relative h-56 w-8 overflow-hidden border-x-2 border-cream/20">
+        <div className="barber-pole-v absolute inset-0" />
+        <div className="pole-glass absolute inset-0" />
+      </div>
+      <span className="h-3 w-10 rounded-b-md bg-gradient-to-t from-brass to-brassDark" />
+    </div>
+  );
+}
+
+function ShowcaseRow({
+  eyebrow, title, body, points, media, flip = false,
+}: {
+  eyebrow: string; title: string; body: string; points: string[]; media: React.ReactNode; flip?: boolean;
+}) {
+  return (
+    <div className="grid items-center gap-8 md:grid-cols-2">
+      <div className={flip ? "md:order-2" : ""}>
+        <div className="eyebrow">{eyebrow}</div>
+        <h3 className="mt-2 font-display text-3xl">{title}</h3>
+        <p className="mt-3 text-cream/70">{body}</p>
+        <ul className="mt-4 space-y-2 text-sm text-cream/75">
+          {points.map((p) => (
+            <li key={p} className="flex gap-2"><span className="text-barber">✦</span><span>{p}</span></li>
+          ))}
+        </ul>
+      </div>
+      <div className={flip ? "md:order-1" : ""}>{media}</div>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
     <div className="min-h-screen">
       <MarketingHeader />
 
-      <section className="container-page grid items-center gap-10 py-20 md:grid-cols-2">
-        <div>
-          <span className="chip">Now in closed beta</span>
-          <h1 className="mt-4 font-display text-5xl leading-tight md:text-6xl">
-            Booking software built for <span className="text-brass">barbershops.</span>
-          </h1>
-          <p className="mt-5 max-w-md text-cream/70">
-            Give every shop a beautiful website, effortless online booking, and a
-            portal that runs the business — all on one platform.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/beta" className="btn-primary px-7 py-3 text-base">Request beta access</Link>
-            <Link href="/t/professional-barbershop" className="btn-ghost px-7 py-3 text-base">
-              View live demo
-            </Link>
+      {/* Hero */}
+      <section className="container-page grid items-center gap-10 py-16 md:grid-cols-2 md:py-24">
+        <div className="flex gap-6">
+          <Pole className="hidden shrink-0 sm:flex" />
+          <div>
+            <div className="eyebrow">Barbershop software · Now in closed beta</div>
+            <h1 className="mt-4 font-display text-5xl leading-[1.05] md:text-6xl">
+              Run the whole shop from <span className="text-brass">one chair.</span>
+            </h1>
+            <p className="mt-5 max-w-md text-cream/70">
+              A branded website, effortless online booking, and a portal that runs the
+              business — built from the ground up for barbershops.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/beta" className="btn-barber px-7 py-3 text-base">Request beta access</Link>
+              <Link href="/t/professional-barbershop" className="btn-ghost px-7 py-3 text-base">View live demo</Link>
+            </div>
+            <p className="mt-4 text-xs text-cream/40">No credit card · Manual onboarding during beta</p>
           </div>
-          <p className="mt-4 text-xs text-cream/40">No credit card · Manual onboarding during beta</p>
         </div>
 
-        <div className="card">
-          <div className="rounded-xl border border-white/10 bg-ink/60 p-4">
-            <div className="flex items-center gap-2 text-xs text-cream/40">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
-              <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
-              <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-              <span className="ml-2">professionalbarbershop.thechair.app</span>
+        <BrowserFrame url="professionalbarbershop.thechair.app/book">
+          <BookingScreen />
+        </BrowserFrame>
+      </section>
+
+      <div className="barber-stripe h-1.5 w-full" />
+
+      {/* Stat band */}
+      <section className="container-page py-12">
+        <div className="grid gap-4 text-center sm:grid-cols-4">
+          {[["1 codebase", "Every shop, isolated"], ["<60s", "To book a cut"], ["100%", "Cookieless analytics"], ["24/7", "Self-serve booking"]].map(([big, small]) => (
+            <div key={big} className="stat">
+              <div className="font-display text-3xl text-brass">{big}</div>
+              <div className="mt-1 text-xs text-cream/50">{small}</div>
             </div>
-            <div className="mt-4 space-y-3">
-              <div className="h-28 rounded-lg bg-gradient-to-br from-brass/30 to-smoke" />
-              <div className="grid grid-cols-3 gap-2">
-                <div className="h-16 rounded-lg bg-smoke" />
-                <div className="h-16 rounded-lg bg-smoke" />
-                <div className="h-16 rounded-lg bg-smoke" />
-              </div>
-              <div className="h-9 w-2/3 rounded-full bg-brass/80" />
-            </div>
-          </div>
-          <p className="mt-3 text-center text-xs text-cream/40">
-            Every tenant runs on this same codebase.
-          </p>
+          ))}
         </div>
       </section>
 
-      <section className="container-page py-10">
+      {/* Feature showcase with real product renders */}
+      <section className="container-page space-y-20 py-12">
+        <div className="text-center">
+          <div className="eyebrow">See it in action</div>
+          <h2 className="mt-2 font-display text-4xl">What&apos;s under the cape</h2>
+          <p className="mx-auto mt-3 max-w-xl text-cream/60">
+            Real screens from the product — booking, the chair-side portal, owner
+            reports, and privacy-first analytics.
+          </p>
+        </div>
+
+        <ShowcaseRow
+          eyebrow="For your customers"
+          title="A booking page they actually enjoy"
+          body="Your brand, your barbers, your services — and a booking flow that takes under a minute on any phone."
+          points={["Pick a barber, service, and time", "Reschedule or cancel with a self-serve link", "Printable QR code for the front desk"]}
+          media={<BrowserFrame url="yourshop.thechair.app/book"><BookingScreen /></BrowserFrame>}
+        />
+
+        <ShowcaseRow
+          flip
+          eyebrow="For the barbers"
+          title="The chair-side portal"
+          body="Every barber sees their day at a glance; managers see the whole floor. Clients, notes, and schedules — all in one place."
+          points={["Today's schedule and upcoming bookings", "Client history with private notes", "Per-barber availability windows"]}
+          media={<BrowserFrame url="yourshop.thechair.app/portal"><DashboardScreen /></BrowserFrame>}
+        />
+
+        <ShowcaseRow
+          eyebrow="For the owner"
+          title="Know your numbers cold"
+          body="A CRM-style reports dashboard: last month vs this month, a monthly sales goal with pace tracking, and a daily revenue trend."
+          points={["Monthly sales goal + pace to hit it", "12-month revenue history", "Per-barber earnings breakdown"]}
+          media={
+            <div className="space-y-4">
+              <BrowserFrame url="yourshop.thechair.app/portal/reports"><ReportsPreview /></BrowserFrame>
+              <div className="card"><TrendPreview /></div>
+            </div>
+          }
+        />
+
+        <ShowcaseRow
+          flip
+          eyebrow="For the platform team"
+          title="Anonymous analytics, built in"
+          body="A self-hosted, Plausible-style dashboard for the whole platform — cookieless, no IPs stored, no customer data. Just the trends you need."
+          points={["Visitors & pageviews with zero cookies", "Top shops, pages, sources, and devices", "Daily-rotating hash — never tracks individuals"]}
+          media={<BrowserFrame url="admin.thechair.app/analytics"><AnalyticsPreview /></BrowserFrame>}
+        />
+      </section>
+
+      {/* Quick feature grid */}
+      <section className="container-page py-12">
         <h2 className="font-display text-3xl">Everything a shop needs</h2>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="card">
-              <h3 className="font-display text-xl text-brass">{f.title}</h3>
-              <p className="mt-2 text-sm text-cream/70">{f.body}</p>
+          {FEATURES.map(({ Icon, title, body }) => (
+            <div key={title} className="card">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-barber/15 text-barber"><Icon size={22} /></span>
+              <h3 className="mt-4 font-display text-lg text-brass">{title}</h3>
+              <p className="mt-2 text-sm text-cream/70">{body}</p>
             </div>
           ))}
         </div>
@@ -74,13 +164,19 @@ export default function Home() {
         </div>
       </section>
 
+      {/* CTA */}
       <section className="container-page py-16">
-        <div className="card flex flex-col items-center gap-4 bg-gradient-to-br from-brass/10 to-transparent text-center">
-          <h2 className="font-display text-3xl">Ready to modernize your shop?</h2>
-          <p className="max-w-md text-cream/70">
-            We&apos;re onboarding a handful of shops each week during beta.
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-navy/40 via-charcoal to-charcoal p-10 text-center">
+          <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
+          <h2 className="font-display text-4xl">Ready to modernize your shop?</h2>
+          <p className="mx-auto mt-3 max-w-md text-cream/70">
+            We&apos;re onboarding a handful of shops each week during beta. Bring your
+            brand — we&apos;ll handle the tech.
           </p>
-          <Link href="/beta" className="btn-primary px-7 py-3 text-base">Request beta access</Link>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link href="/beta" className="btn-barber px-7 py-3 text-base">Request beta access</Link>
+            <Link href="/pricing" className="btn-ghost px-7 py-3 text-base">See pricing</Link>
+          </div>
         </div>
       </section>
 

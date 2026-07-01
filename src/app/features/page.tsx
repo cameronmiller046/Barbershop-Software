@@ -1,25 +1,30 @@
 import Link from "next/link";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
 
 export const metadata = { title: "Features — The Chair" };
 
 const GROUPS = [
   {
-    title: "Branded tenant website",
+    Icon: ScissorsIcon,
+    title: "Branded shop website",
     items: ["Home, Services, Reviews, FAQ, Contact", "Custom brand color and logo", "Printable QR code that links to booking", "Responsive on desktop, tablet, and mobile"],
   },
   {
+    Icon: RazorIcon,
     title: "Booking engine",
     items: ["Schedule, reschedule, and cancel", "Pick barber and service", "Per-barber availability windows", "Email confirmations", "Self-serve manage link for customers"],
   },
   {
-    title: "Barber portal",
-    items: ["Daily dashboard and upcoming appointments", "Client list with private notes", "Service management and pricing", "Analytics on bookings and revenue", "Social media content planner"],
+    Icon: CombIcon,
+    title: "Chair-side portal & owner reports",
+    items: ["Daily dashboard and upcoming appointments", "Client list with private notes", "Service management and pricing", "CRM-style reports: monthly goal, pace & trend", "Per-barber earnings breakdown"],
   },
   {
-    title: "Platform & security",
-    items: ["Full tenant isolation", "Role-based access control", "Audit logs for sensitive actions", "Rate limiting and input validation", "One codebase, unlimited shops"],
+    Icon: PoleIcon,
+    title: "Platform, analytics & security",
+    items: ["Cookieless, anonymous traffic analytics (no PII)", "Full tenant isolation & role-based access", "Audit logs for sensitive actions", "Rate limiting and input validation", "One codebase, unlimited shops"],
   },
 ];
 
@@ -36,7 +41,10 @@ export default function FeaturesPage() {
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           {GROUPS.map((g) => (
             <div key={g.title} className="card">
-              <h2 className="font-display text-2xl text-brass">{g.title}</h2>
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-barber/15 text-barber"><g.Icon size={20} /></span>
+                <h2 className="font-display text-2xl text-brass">{g.title}</h2>
+              </div>
               <ul className="mt-4 space-y-2 text-sm text-cream/75">
                 {g.items.map((it) => (
                   <li key={it} className="flex gap-2">

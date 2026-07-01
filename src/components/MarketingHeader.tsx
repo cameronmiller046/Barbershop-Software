@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { PoleIcon } from "@/components/BarberIcons";
 
 export function MarketingHeader() {
   return (
     <header className="border-b border-white/10">
+      {/* barber-pole accent strip */}
+      <div className="barber-stripe h-1 w-full" />
       <div className="container-page flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-brass font-display font-bold text-ink">
-            C
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-brass text-ink">
+            <PoleIcon size={18} />
           </span>
           <span className="font-display text-lg tracking-wide">The Chair</span>
         </Link>
