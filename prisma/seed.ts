@@ -29,9 +29,8 @@ async function main() {
     address: "4847 Memorial Dr, Stone Mountain, GA 30083",
     slotIntervalMin: 30,
     googleRating: 4.6,
-    // Sales goal = ~10% above the average Atlanta professional barbershop
-    // (~$14,000/mo → $15,400). Drives the Reports goal + pace tracking.
-    monthlyGoalCents: 1540000,
+    // Monthly sales goal — drives the Reports goal + pace tracking.
+    monthlyGoalCents: 1500000, // $15,000/mo
     heroImageUrl: "https://loremflickr.com/1600/900/barbershop,haircut/all?lock=42",
   };
   const tenant = await prisma.tenant.upsert({
