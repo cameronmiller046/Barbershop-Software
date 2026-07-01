@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { clearDemoData, DEMO_SLUG } from "../src/lib/demo";
+import { clearDemoData, seedFlagshipDemo, DEMO_SLUG } from "../src/lib/demo";
 
 const prisma = new PrismaClient();
 
@@ -29,7 +29,9 @@ async function main() {
     address: "4847 Memorial Dr, Stone Mountain, GA 30083",
     slotIntervalMin: 30,
     googleRating: 4.6,
-    monthlyGoalCents: 300000, // $3,000/mo sales goal — drives the Reports dashboard
+    // Sales goal = ~10% above the average Atlanta professional barbershop
+    // (~$14,000/mo → $15,400). Drives the Reports goal + pace tracking.
+    monthlyGoalCents: 1540000,
     heroImageUrl: "https://loremflickr.com/1600/900/barbershop,haircut/all?lock=42",
   };
   const tenant = await prisma.tenant.upsert({
@@ -65,11 +67,16 @@ async function main() {
     ],
   });
 
+  // Populate the flagship with staff + clients + appointments so the demo
+  // Admin/Barber portal has real data immediately (no "Try the demo" needed).
+  await seedFlagshipDemo(prisma);
+
   const stores = await prisma.tenant.count();
   const users = await prisma.user.count();
-  console.log(`✓ Clean baseline: ${stores} store, ${users} users (superadmin + portal logins).`);
+  const appts = await prisma.appointment.count();
+  console.log(`✓ Baseline: ${stores} store, ${users} users, ${appts} appointments.`);
   console.log(`  Portal: test1 / test1 (Manager) · test2 / test2 (Barber).`);
-  console.log(`  Use "Try the demo" in /admin to load appointments + extra stores.`);
+  console.log(`  Use "Try the demo" in /admin to also load the 8 extra stores + traffic.`);
 }
 
 main()

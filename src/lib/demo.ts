@@ -159,7 +159,7 @@ export async function ensureFlagshipStaff(prisma: PrismaClient) {
 
 // ───────────────────────── Flagship store demo ─────────────────────────
 
-async function seedFlagshipDemo(prisma: PrismaClient) {
+export async function seedFlagshipDemo(prisma: PrismaClient) {
   // Ensure the two permanent demo logins exist + have working hours.
   const staff = await ensureFlagshipStaff(prisma);
   if (!staff) return;
@@ -172,13 +172,11 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   const services = await prisma.service.findMany({ where: { tenantId: tenant.id }, orderBy: { sortOrder: "asc" } });
   if (services.length === 0) return;
 
-  const clientNames: [string, string, string][] = [
-    ["Jordan Smith", "jordan@example.com", "(555) 200-1001"],
-    ["Avery Brooks", "avery@example.com", "(555) 200-1002"],
-    ["Sam Rivera", "sam@example.com", "(555) 200-1003"],
-    ["Taylor Quinn", "taylor@example.com", "(555) 200-1004"],
-    ["Casey Morgan", "casey@example.com", "(555) 200-1005"],
-  ];
+  const clientFirst = ["Jordan", "Avery", "Sam", "Taylor", "Casey", "Marcus", "Andre", "Devon", "Isaiah", "Malik", "Xavier", "Terrence", "Damon", "Elijah", "Corey", "Trey", "Rashad", "Darius", "Omar", "Julian", "Kevin", "Brandon", "Chris", "Tyrone"];
+  const clientLast = ["Smith", "Brooks", "Rivera", "Quinn", "Morgan", "Hayes", "Reed", "Carter", "Foster", "Bryant", "Cole", "Webb", "Nash", "Cruz", "Ford", "Stone", "Diaz", "Bennett", "Walker", "Reyes", "Murphy", "Harris", "Bell", "Grant"];
+  const clientNames: [string, string, string][] = clientFirst.map((f, i) => [
+    `${f} ${clientLast[i % clientLast.length]}`, `${f.toLowerCase()}${i}@example.com`, `(555) 200-${1001 + i}`,
+  ]);
   const clients: Client[] = [];
   for (const [name, email, phone] of clientNames) {
     clients.push(await prisma.client.create({ data: { tenantId: tenant.id, name, email, phone } }));
@@ -229,7 +227,7 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   for (let m = 11; m >= 1; m--) {
     const monthStart = startOfMonth(subMonths(now, m));
     const dim = getDaysInMonth(monthStart);
-    const count = 38 + (12 - m) * 2; // ~40 → ~60 cuts/month
+    const count = 160 + (12 - m) * 10; // ~170 → ~280 cuts/month (busy shop, trending up)
     for (let i = 0; i < count; i++) {
       const day = 1 + ((i * 5 + m * 3) % dim);
       const hour = 10 + (i % 8);
@@ -242,7 +240,7 @@ async function seedFlagshipDemo(prisma: PrismaClient) {
   const today = getDate(now);
   let c = 0;
   for (let day = 1; day < today; day++) {
-    const per = day % 3 === 0 ? 2 : 1;
+    const per = 6 + (day % 3); // ~6–8 cuts/day so far this month
     for (let k = 0; k < per; k++) {
       const hour = 10 + (c % 8);
       const start = setMinutes(setHours(startOfDay(addDays(thisMonthStart, day - 1)), hour), (k % 2) * 30);
