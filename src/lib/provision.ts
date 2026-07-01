@@ -57,7 +57,7 @@ export async function provisionTenant(input: {
       name: input.businessName,
       storeNumber,
       status: "ACTIVE",
-      plan: "TRIAL",
+      plan: "SOLO",
       tagline: "Sharp cuts. Good company.",
       email,
       phone: input.phone ?? null,

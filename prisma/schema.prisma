@@ -24,9 +24,9 @@ enum TenantStatus {
 }
 
 enum Plan {
-  TRIAL
-  STARTER
+  SOLO
   PRO
+  ENTERPRISE
 }
 
 enum BetaStatus {
@@ -66,7 +66,7 @@ model Tenant {
   name   String
   storeNumber Int    @default(0) // display id (1–999) for the store picker
   status TenantStatus @default(PENDING)
-  plan   Plan         @default(TRIAL)
+  plan   Plan         @default(SOLO)
 
   // Branding
   tagline      String?

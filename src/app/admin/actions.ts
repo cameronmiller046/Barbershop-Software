@@ -71,6 +71,15 @@ export async function setTenantStatus(id: string, status: TenantStatus) {
   revalidatePath("/admin/tenants");
 }
 
+export async function setTenantPlan(id: string, formData: FormData) {
+  const admin = await requirePlatformAdmin();
+  const plan = String(formData.get("plan") || "");
+  if (!["SOLO", "PRO", "ENTERPRISE"].includes(plan)) return;
+  await prisma.tenant.update({ where: { id }, data: { plan: plan as "SOLO" | "PRO" | "ENTERPRISE" } });
+  await audit({ action: "admin.tenant.plan", userId: admin.id, target: id, meta: { plan } });
+  revalidatePath("/admin/tenants");
+}
+
 export async function toggleFeature(id: string, field: "featureSocial" | "featureAnalytics", value: boolean) {
   const admin = await requirePlatformAdmin();
   await prisma.tenant.update({ where: { id }, data: { [field]: value } });

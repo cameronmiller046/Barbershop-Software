@@ -1,6 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { setTenantStatus, toggleFeature, createStore, deleteStore } from "@/app/admin/actions";
+import { setTenantStatus, setTenantPlan, toggleFeature, createStore, deleteStore } from "@/app/admin/actions";
 import { DeleteStoreButton } from "@/components/DeleteStoreButton";
 import { appUrl } from "@/lib/utils";
 
@@ -49,7 +49,14 @@ export default async function TenantsPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-display text-xl">{t.name}</span>
                     <span className={`badge ${STATUS_COLORS[t.status]}`}>{t.status}</span>
-                    <span className="chip">{t.plan}</span>
+                    <form action={setTenantPlan.bind(null, t.id)} className="flex items-center gap-1">
+                      <select name="plan" defaultValue={t.plan} className="rounded-md border border-white/10 bg-smoke px-2 py-0.5 text-xs text-cream">
+                        <option value="SOLO">Solo</option>
+                        <option value="PRO">Pro</option>
+                        <option value="ENTERPRISE">Enterprise</option>
+                      </select>
+                      <button className="rounded-md bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20">Set plan</button>
+                    </form>
                   </div>
                   <a href={appUrl(`/t/${t.slug}`)} target="_blank" rel="noreferrer" className="text-sm text-brass">/t/{t.slug}</a>
                   <div className="mt-1 text-xs text-cream/50">

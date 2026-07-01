@@ -22,7 +22,7 @@ async function main() {
   const tenantFields = {
     name: "Professional Barber & Beauty Salon",
     status: "ACTIVE" as const,
-    plan: "PRO" as const,
+    plan: "ENTERPRISE" as const,
     tagline: "Barbershop & beauty salon — Stone Mountain, GA.",
     primaryColor: "#C9A24B", // gold
     phone: "404-317-5068",
