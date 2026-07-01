@@ -99,9 +99,8 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
         <img src={heroImg} alt={`Fresh haircuts and fades at ${tenant.name}`} className="absolute inset-0 h-full w-full object-cover" />
         <div
           className="absolute inset-0"
-          style={{ background: `linear-gradient(105deg, rgba(11,11,13,0.94) 0%, rgba(11,11,13,0.80) 42%, rgba(11,11,13,0.45) 100%)` }}
+          style={{ background: `linear-gradient(100deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.55) 46%, rgba(0,0,0,0.22) 100%)` }}
         />
-        <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
 
         <div className="relative container-page grid items-center gap-10 py-20 md:grid-cols-[1.3fr_1fr] md:py-28">
           <div>
@@ -211,8 +210,7 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
 
       {/* ───────── Final CTA ───────── */}
       <section className="container-page py-14">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 p-10 text-center" style={{ background: `linear-gradient(135deg, ${brand}22, transparent)` }}>
-          <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 p-10 text-center" style={{ background: `linear-gradient(135deg, ${brand}1f, transparent)` }}>
           <h2 className="font-display text-4xl">Ready for a fresh cut?</h2>
           <p className="mx-auto mt-2 max-w-md text-cream/70">Pick your barber, service, and time — it takes under a minute.</p>
           <Link href={`${base}/book`} className="btn mt-6 px-8 py-3.5 text-base font-semibold" style={{ background: brand, color: readableOn(brand) }}>
