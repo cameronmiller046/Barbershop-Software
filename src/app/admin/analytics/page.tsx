@@ -40,11 +40,11 @@ export default async function AnalyticsPage() {
     prisma.betaApplication.count(),
     prisma.betaApplication.count({ where: { status: "APPROVED" } }),
     prisma.appointment.findMany({
-      where: { status: "COMPLETED", startTime: { gte: startOfMonth(subMonths(now, 11)) } },
+      where: { active: true, status: "COMPLETED", startTime: { gte: startOfMonth(subMonths(now, 11)) } },
       select: { startTime: true, service: { select: { priceCents: true } } },
     }),
     prisma.appointment.findMany({
-      where: { startTime: { gte: since30, lte: now } },
+      where: { active: true, startTime: { gte: since30, lte: now } },
       select: { startTime: true },
     }),
     prisma.pageView.findMany({

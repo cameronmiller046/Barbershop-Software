@@ -44,7 +44,7 @@ export default async function AppointmentsPage({
   const monthKey = format(monthBase, "yyyy-MM");
 
   const appts = await prisma.appointment.findMany({
-    where: { tenantId: user.tenantId, ...barberScope, startTime: { gte: gridStart, lte: gridEnd } },
+    where: { tenantId: user.tenantId, active: true, ...barberScope, startTime: { gte: gridStart, lte: gridEnd } },
     include: { service: true, client: true, barber: true },
     orderBy: { startTime: "asc" },
   });

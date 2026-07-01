@@ -36,12 +36,12 @@ export default async function ReportsPage() {
 
   const [completed, upcoming] = await Promise.all([
     prisma.appointment.findMany({
-      where: { tenantId, status: "COMPLETED", startTime: { gte: rangeStart } },
+      where: { tenantId, active: true, status: "COMPLETED", startTime: { gte: rangeStart } },
       include: { service: { select: { priceCents: true } }, barber: { select: { id: true, name: true } } },
       orderBy: { startTime: "asc" },
     }),
     prisma.appointment.findMany({
-      where: { tenantId, status: "CONFIRMED", startTime: { gte: now } },
+      where: { tenantId, active: true, status: "CONFIRMED", startTime: { gte: now } },
       include: {
         service: { select: { priceCents: true } },
         barber: { select: { id: true, name: true } },

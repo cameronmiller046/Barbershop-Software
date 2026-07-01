@@ -203,6 +203,9 @@ model Appointment {
   notes     String?
   // Preset reason captured when staff reschedule / cancel / mark no-show.
   statusReason String?
+  // Soft-delete: appointments are never hard-removed, so the history (e.g. a
+  // no-show) is always on record. `false` = removed from active views.
+  active    Boolean @default(true)
 
   // public token for the customer reschedule / cancel link
   manageToken String @unique @default(cuid())

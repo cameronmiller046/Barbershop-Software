@@ -16,15 +16,15 @@ export default async function DashboardPage() {
   const now = new Date();
   const [todays, weekAppts, upcomingCount, clientCount] = await Promise.all([
     prisma.appointment.findMany({
-      where: { tenantId, ...barberScope, startTime: { gte: startOfDay(now), lte: endOfDay(now) }, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      where: { tenantId, active: true, ...barberScope, startTime: { gte: startOfDay(now), lte: endOfDay(now) }, status: { in: ["CONFIRMED", "COMPLETED"] } },
       include: { service: true, client: true, barber: true },
       orderBy: { startTime: "asc" },
     }),
     prisma.appointment.findMany({
-      where: { tenantId, ...barberScope, startTime: { gte: startOfWeek(now), lte: endOfWeek(now) }, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      where: { tenantId, active: true, ...barberScope, startTime: { gte: startOfWeek(now), lte: endOfWeek(now) }, status: { in: ["CONFIRMED", "COMPLETED"] } },
       include: { service: true },
     }),
-    prisma.appointment.count({ where: { tenantId, ...barberScope, startTime: { gte: now }, status: "CONFIRMED" } }),
+    prisma.appointment.count({ where: { tenantId, active: true, ...barberScope, startTime: { gte: now }, status: "CONFIRMED" } }),
     prisma.client.count({ where: { tenantId } }),
   ]);
 

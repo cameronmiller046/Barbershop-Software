@@ -11,7 +11,7 @@ export default async function AdminOverview() {
     prisma.tenant.count({ where: { status: "ACTIVE" } }),
     prisma.user.count(),
     prisma.betaApplication.count({ where: { status: "PENDING" } }),
-    prisma.appointment.count(),
+    prisma.appointment.count({ where: { active: true } }),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 

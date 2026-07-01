@@ -74,13 +74,18 @@ export async function cancelAppointment(id: string, reason: string) {
   revalidateAppointments();
 }
 
-/** Permanently delete an appointment, with a required reason (logged). */
+/**
+ * "Delete" an appointment — a SOFT delete. The row is never removed, so the
+ * history (e.g. a no-show) is always on record in the client's timeline. It's
+ * marked inactive (hidden from active views) with a required, logged reason.
+ */
 export async function deleteAppointment(id: string, reason: string) {
   if (!(DELETE_REASONS as readonly string[]).includes(reason)) return;
   const ctx = await loadOwnedAppointment(id);
   if (!ctx) return;
-  await prisma.appointment.delete({ where: { id } });
-  await audit({ action: "appointment.deleted", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { reason } });
+  const status = reasonToStatus(reason); // "No show" → NO_SHOW, else CANCELLED
+  await prisma.appointment.update({ where: { id }, data: { active: false, status, statusReason: reason } });
+  await audit({ action: "appointment.removed", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { reason } });
   revalidateAppointments();
 }
 

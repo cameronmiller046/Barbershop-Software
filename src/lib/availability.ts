@@ -1,11 +1,38 @@
 import { prisma } from "@/lib/prisma";
-import { addMinutes, startOfDay, endOfDay, isBefore, addDays } from "date-fns";
+import { addMinutes, addDays } from "date-fns";
 
 export type Slot = { start: string; end: string };
 
+// ── Timezone helpers (shop hours are wall-clock in the shop's timezone) ──
+
+/** The shop-local calendar date (Y, M0, D, weekday) for an instant. */
+function zonedYmd(at: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short",
+  }).formatToParts(at);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return { year: Number(get("year")), month0: Number(get("month")) - 1, day: Number(get("day")), weekday: wdMap[get("weekday")] ?? 0 };
+}
+
+/** Convert a wall-clock time (shop-local Y/M0/D + minutes) into a UTC instant. */
+function zonedWallToUtc(year: number, month0: number, day: number, minutes: number, timeZone: string): Date {
+  const h = Math.floor(minutes / 60);
+  const mi = minutes % 60;
+  const guess = Date.UTC(year, month0, day, h, mi);
+  // See how that UTC instant reads in the shop timezone, then correct the delta.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date(guess));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const seenAsUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute"));
+  return new Date(guess - (seenAsUtc - guess));
+}
+
 /**
- * Bookable slots for a barber + service on a date, scoped to a tenant.
- * Slots step by 15 min, fit fully inside a working window, and avoid clashes.
+ * Bookable slots for a barber + service on a shop-local date, in the shop's
+ * timezone. Slots fit fully inside the working window, avoid clashes, and are
+ * never in the past.
  */
 export async function getDaySlots(
   tenantId: string,
@@ -13,57 +40,58 @@ export async function getDaySlots(
   serviceDurationMin: number,
   date: Date,
   stepMin = 15,
+  timeZone = "America/New_York",
 ): Promise<Slot[]> {
-  const dayStart = startOfDay(date);
-  const dow = dayStart.getDay();
+  const { year, month0, day, weekday } = zonedYmd(date, timeZone);
 
   const wh = await prisma.workingHour.findUnique({
-    where: { barberId_dayOfWeek: { barberId, dayOfWeek: dow } },
+    where: { barberId_dayOfWeek: { barberId, dayOfWeek: weekday } },
   });
   if (!wh || wh.tenantId !== tenantId) return [];
 
+  const windowStart = zonedWallToUtc(year, month0, day, wh.startMin, timeZone);
+  const windowEnd = zonedWallToUtc(year, month0, day, wh.endMin, timeZone);
+
   const existing = await prisma.appointment.findMany({
     where: {
-      tenantId,
-      barberId,
-      startTime: { gte: dayStart, lte: endOfDay(date) },
-      status: "CONFIRMED",
+      tenantId, barberId, active: true, status: "CONFIRMED",
+      startTime: { gte: windowStart, lt: windowEnd },
     },
     select: { startTime: true, endTime: true },
   });
 
   const slots: Slot[] = [];
   const step = Math.max(5, stepMin);
-  const windowStart = addMinutes(dayStart, wh.startMin);
-  const windowEnd = addMinutes(dayStart, wh.endMin);
   const now = new Date();
-
   let cursor = windowStart;
-  while (!isBefore(windowEnd, addMinutes(cursor, serviceDurationMin))) {
+  while (cursor.getTime() + serviceDurationMin * 60000 <= windowEnd.getTime()) {
     const slotEnd = addMinutes(cursor, serviceDurationMin);
-    const inPast = isBefore(cursor, now);
+    const inPast = cursor.getTime() <= now.getTime();
     const overlaps = existing.some((a) => cursor < a.endTime && slotEnd > a.startTime);
-    if (!inPast && !overlaps) {
-      slots.push({ start: cursor.toISOString(), end: slotEnd.toISOString() });
-    }
+    if (!inPast && !overlaps) slots.push({ start: cursor.toISOString(), end: slotEnd.toISOString() });
     cursor = addMinutes(cursor, step);
   }
   return slots;
 }
 
-/** Next N days that have at least one open slot for the picker. */
+/** Next N shop-local days that have at least one open slot. */
 export async function getUpcomingDays(
   tenantId: string,
   barberId: string,
   serviceDurationMin: number,
   days = 21,
   stepMin = 15,
+  timeZone = "America/New_York",
 ) {
   const result: { date: string; slots: Slot[] }[] = [];
   for (let i = 0; i < days; i++) {
     const d = addDays(new Date(), i);
-    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin);
-    if (slots.length) result.push({ date: startOfDay(d).toISOString(), slots });
+    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin, timeZone);
+    if (slots.length) {
+      // Label with the shop-local midnight so the client renders the right day.
+      const { year, month0, day } = zonedYmd(d, timeZone);
+      result.push({ date: zonedWallToUtc(year, month0, day, 0, timeZone).toISOString(), slots });
+    }
   }
   return result;
 }
@@ -78,9 +106,7 @@ export async function isSlotFree(
 ) {
   const clash = await prisma.appointment.findFirst({
     where: {
-      tenantId,
-      barberId,
-      status: "CONFIRMED",
+      tenantId, barberId, active: true, status: "CONFIRMED",
       startTime: { lt: end },
       endTime: { gt: start },
       ...(ignoreAppointmentId ? { id: { not: ignoreAppointmentId } } : {}),
