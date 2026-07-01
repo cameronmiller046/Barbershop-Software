@@ -35,7 +35,7 @@ async function main() {
   const tenant = await prisma.tenant.upsert({
     where: { slug: DEMO_SLUG },
     update: tenantFields,
-    create: { slug: DEMO_SLUG, email: "hello@professionalbarbershop.com", ...tenantFields },
+    create: { slug: DEMO_SLUG, email: "hello@professionalbarbershop.com", storeNumber: Math.floor(Math.random() * 999) + 1, ...tenantFields },
   });
 
   // ── Clean baseline: remove all other stores + all non-superadmin users ──

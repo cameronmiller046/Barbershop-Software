@@ -64,6 +64,7 @@ model Tenant {
   id     String       @id @default(cuid())
   slug   String       @unique // used in /t/<slug> routing
   name   String
+  storeNumber Int    @default(0) // display id (1–999) for the store picker
   status TenantStatus @default(PENDING)
   plan   Plan         @default(TRIAL)
 

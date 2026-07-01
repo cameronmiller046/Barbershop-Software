@@ -262,14 +262,14 @@ type TenantSpec = {
 };
 
 const TENANTS: TenantSpec[] = [
-  { slug: "fade-factory", name: "Fade Factory", status: "ACTIVE", plan: "PRO", color: "#2dd4bf", tagline: "Where the fade is king.", phone: "(555) 240-1100", address: "44 Industrial Ave", ownerName: "Terrence Hall", barbers: ["Mike Okafor", "Jordan Beck", "Ray Castillo"], serviceCount: 6, apptCount: 12, seed: 1 },
-  { slug: "the-gentlemans-cut", name: "The Gentleman's Cut", status: "ACTIVE", plan: "STARTER", color: "#ef4444", tagline: "Old-school service, modern style.", phone: "(555) 240-1200", address: "9 Royal Street", ownerName: "Edward Price", barbers: ["Sam Whitfield", "Owen Park"], serviceCount: 5, apptCount: 9, seed: 2 },
-  { slug: "sharp-edges", name: "Sharp Edges Barber Co.", status: "ACTIVE", plan: "PRO", color: "#3b82f6", tagline: "Lines so clean they hurt.", phone: "(555) 240-1300", address: "210 Canal Road", ownerName: "Hector Ramos", barbers: ["Danny Cole", "Iggy Flores", "Tomás León"], serviceCount: 6, apptCount: 14, seed: 3 },
-  { slug: "classic-clippers", name: "Classic Clippers", status: "ACTIVE", plan: "STARTER", color: "#f59e0b", tagline: "Your neighborhood barbershop.", phone: "(555) 240-1400", address: "88 Maple Street", ownerName: "Walter Boone", barbers: ["Curtis Wynn", "Pete Salas"], serviceCount: 4, apptCount: 7, seed: 4 },
-  { slug: "urban-mane", name: "Urban Mane", status: "PENDING", plan: "TRIAL", color: "#a855f7", tagline: "City cuts, sharp vibes.", phone: "(555) 240-1500", address: "1 Market Plaza", ownerName: "Devin Okoro", barbers: ["Leo Tran"], serviceCount: 4, apptCount: 4, seed: 5 },
-  { slug: "king-cuts", name: "King Cuts", status: "ACTIVE", plan: "PRO", color: "#10b981", tagline: "Treat every client like royalty.", phone: "(555) 240-1600", address: "300 Crown Blvd", ownerName: "Marcus Webb", barbers: ["Jamal Reed", "Nico Bauer", "Andre Foss"], serviceCount: 6, apptCount: 13, seed: 6 },
-  { slug: "the-barber-lounge", name: "The Barber Lounge", status: "SUSPENDED", plan: "STARTER", color: "#64748b", tagline: "Relax. Get fresh.", phone: "(555) 240-1700", address: "57 Lounge Way", ownerName: "Gregory Tate", barbers: ["Chad Voss"], serviceCount: 5, apptCount: 6, seed: 7 },
-  { slug: "first-chair-grooming", name: "First Chair Grooming", status: "PENDING", plan: "TRIAL", color: "#ec4899", tagline: "Grooming, elevated.", phone: "(555) 240-1800", address: "12 Harbor Lane", ownerName: "Bianca Russo", barbers: ["Theo Mensah", "Quinn Park"], serviceCount: 4, apptCount: 3, seed: 8 },
+  { slug: "fade-factory", name: "Fade Factory", status: "ACTIVE", plan: "PRO", color: "#2dd4bf", tagline: "Where the fade is king.", phone: "(555) 240-1100", address: "44 Industrial Ave, Chicago, IL", ownerName: "Terrence Hall", barbers: ["Mike Okafor", "Jordan Beck", "Ray Castillo"], serviceCount: 6, apptCount: 12, seed: 1 },
+  { slug: "the-gentlemans-cut", name: "The Gentleman's Cut", status: "ACTIVE", plan: "STARTER", color: "#ef4444", tagline: "Old-school service, modern style.", phone: "(555) 240-1200", address: "9 Royal Street, New Orleans, LA", ownerName: "Edward Price", barbers: ["Sam Whitfield", "Owen Park"], serviceCount: 5, apptCount: 9, seed: 2 },
+  { slug: "sharp-edges", name: "Sharp Edges Barber Co.", status: "ACTIVE", plan: "PRO", color: "#3b82f6", tagline: "Lines so clean they hurt.", phone: "(555) 240-1300", address: "210 Canal Road, Houston, TX", ownerName: "Hector Ramos", barbers: ["Danny Cole", "Iggy Flores", "Tomás León"], serviceCount: 6, apptCount: 14, seed: 3 },
+  { slug: "classic-clippers", name: "Classic Clippers", status: "ACTIVE", plan: "STARTER", color: "#f59e0b", tagline: "Your neighborhood barbershop.", phone: "(555) 240-1400", address: "88 Maple Street, Columbus, OH", ownerName: "Walter Boone", barbers: ["Curtis Wynn", "Pete Salas"], serviceCount: 4, apptCount: 7, seed: 4 },
+  { slug: "urban-mane", name: "Urban Mane", status: "PENDING", plan: "TRIAL", color: "#a855f7", tagline: "City cuts, sharp vibes.", phone: "(555) 240-1500", address: "1 Market Plaza, San Francisco, CA", ownerName: "Devin Okoro", barbers: ["Leo Tran"], serviceCount: 4, apptCount: 4, seed: 5 },
+  { slug: "king-cuts", name: "King Cuts", status: "ACTIVE", plan: "PRO", color: "#10b981", tagline: "Treat every client like royalty.", phone: "(555) 240-1600", address: "300 Crown Blvd, Atlanta, GA", ownerName: "Marcus Webb", barbers: ["Jamal Reed", "Nico Bauer", "Andre Foss"], serviceCount: 6, apptCount: 13, seed: 6 },
+  { slug: "the-barber-lounge", name: "The Barber Lounge", status: "SUSPENDED", plan: "STARTER", color: "#64748b", tagline: "Relax. Get fresh.", phone: "(555) 240-1700", address: "57 Lounge Way, Miami, FL", ownerName: "Gregory Tate", barbers: ["Chad Voss"], serviceCount: 5, apptCount: 6, seed: 7 },
+  { slug: "first-chair-grooming", name: "First Chair Grooming", status: "PENDING", plan: "TRIAL", color: "#ec4899", tagline: "Grooming, elevated.", phone: "(555) 240-1800", address: "12 Harbor Lane, Seattle, WA", ownerName: "Bianca Russo", barbers: ["Theo Mensah", "Quinn Park"], serviceCount: 4, apptCount: 3, seed: 8 },
 ];
 
 const SERVICE_TEMPLATES = [
@@ -292,11 +292,15 @@ async function seedExtraStores(prisma: PrismaClient) {
   const hash = await bcrypt.hash("demo1234", 10);
   const created: { spec: TenantSpec; id: string }[] = [];
 
+  // Random store numbers (1–999), unique across all stores.
+  const usedNums = new Set((await prisma.tenant.findMany({ select: { storeNumber: true } })).map((t) => t.storeNumber));
+  const pickNum = () => { let n = Math.floor(Math.random() * 999) + 1; while (usedNums.has(n)) n = Math.floor(Math.random() * 999) + 1; usedNums.add(n); return n; };
+
   for (const t of TENANTS) {
     const tenant = await prisma.tenant.upsert({
       where: { slug: t.slug },
       update: { status: t.status, plan: t.plan, primaryColor: t.color, name: t.name },
-      create: { slug: t.slug, name: t.name, status: t.status, plan: t.plan, primaryColor: t.color, tagline: t.tagline, email: `hello@${t.slug}.test`, phone: t.phone, address: t.address },
+      create: { slug: t.slug, name: t.name, storeNumber: pickNum(), status: t.status, plan: t.plan, primaryColor: t.color, tagline: t.tagline, email: `hello@${t.slug}.test`, phone: t.phone, address: t.address },
     });
 
     const owner = await prisma.user.upsert({

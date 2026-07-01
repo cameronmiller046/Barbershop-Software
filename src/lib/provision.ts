@@ -46,10 +46,16 @@ export async function provisionTenant(input: {
   const password = tempPassword();
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // Random store number (1–999), avoiding existing ones.
+  const usedNums = new Set((await prisma.tenant.findMany({ select: { storeNumber: true } })).map((t) => t.storeNumber));
+  let storeNumber = Math.floor(Math.random() * 999) + 1;
+  while (usedNums.has(storeNumber)) storeNumber = Math.floor(Math.random() * 999) + 1;
+
   const tenant = await prisma.tenant.create({
     data: {
       slug,
       name: input.businessName,
+      storeNumber,
       status: "ACTIVE",
       plan: "TRIAL",
       tagline: "Sharp cuts. Good company.",

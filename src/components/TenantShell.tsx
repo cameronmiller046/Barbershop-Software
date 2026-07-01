@@ -78,7 +78,7 @@ export function TenantShell({
               <Link key={n.key} href={n.href}>{n.label}</Link>
             ))}
           </div>
-          <Link href="/portal" className="text-cream/30 transition hover:text-cream/60">Powered by The Chair</Link>
+          <span className="text-cream/30">Powered by The Chair</span>
         </div>
       </footer>
     </div>
