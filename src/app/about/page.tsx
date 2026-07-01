@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { BrowserFrame, DashboardScreen, AnalyticsPreview } from "@/components/marketing/Previews";
 
 export const metadata = { title: "About — The Chair" };
 
@@ -31,6 +32,31 @@ export default function AboutPage() {
         <div className="mt-8 flex gap-3">
           <Link href="/beta" className="btn-primary">Request beta access</Link>
           <Link href="/contact" className="btn-ghost">Contact us</Link>
+        </div>
+      </section>
+
+      <section className="container-page space-y-14 pb-16">
+        <div className="grid items-center gap-8 md:grid-cols-2">
+          <div>
+            <div className="eyebrow">Runs the day</div>
+            <h2 className="mt-2 font-display text-3xl">One portal for the whole shop</h2>
+            <p className="mt-3 text-cream/70">
+              Barbers see their chair; managers see the floor. Appointments,
+              clients, and schedules in one clean dashboard.
+            </p>
+          </div>
+          <BrowserFrame url="yourshop.thechair.app/portal"><DashboardScreen /></BrowserFrame>
+        </div>
+        <div className="grid items-center gap-8 md:grid-cols-2">
+          <div className="md:order-2">
+            <div className="eyebrow">Privacy-first</div>
+            <h2 className="mt-2 font-display text-3xl">Analytics without the tracking</h2>
+            <p className="mt-3 text-cream/70">
+              A cookieless, anonymous analytics dashboard for the whole platform —
+              no IPs, no customer data, just the trends the team needs.
+            </p>
+          </div>
+          <div className="md:order-1"><BrowserFrame url="admin.thechair.app/analytics"><AnalyticsPreview /></BrowserFrame></div>
         </div>
       </section>
       <MarketingFooter />

@@ -46,18 +46,18 @@ export function TrendChart({
       <polyline points={goalPts} fill="none" stroke="#f5f1e8" strokeOpacity={0.4} strokeWidth={2} strokeDasharray="7 5" />
 
       {/* actual: area + line + endpoint */}
-      {areaPts && <polygon points={areaPts} fill="#c9a24b" fillOpacity={0.16} />}
+      {areaPts && <polygon points={areaPts} fill="#d1233a" fillOpacity={0.16} />}
       {actualPtsArr.length > 1 && (
-        <polyline points={actualPts} fill="none" stroke="#c9a24b" strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
+        <polyline points={actualPts} fill="none" stroke="#d1233a" strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
       )}
       {last && (
         <>
-          <line x1={last[0]} x2={last[0]} y1={padT} y2={baseY} stroke="#c9a24b" strokeOpacity={0.25} />
-          <circle cx={last[0]} cy={last[1]} r={6} fill="#c9a24b" />
+          <line x1={last[0]} x2={last[0]} y1={padT} y2={baseY} stroke="#d1233a" strokeOpacity={0.25} />
+          <circle cx={last[0]} cy={last[1]} r={6} fill="#d1233a" />
           <text
             x={Math.min(last[0] + 10, W - padR - 4)} y={Math.max(last[1] - 16, padT + 14)}
             textAnchor={last[0] > W - padR - 90 ? "end" : "start"}
-            fontSize={17} fontWeight={700} fill="#c9a24b"
+            fontSize={17} fontWeight={700} fill="#d1233a"
           >
             {format(actualCents[actualCents.length - 1] ?? 0)}
           </text>
@@ -76,8 +76,8 @@ export function TrendChart({
 
       {/* legend */}
       <g transform={`translate(${padL}, ${padT - 8})`}>
-        <line x1={0} x2={26} y1={-4} y2={-4} stroke="#c9a24b" strokeWidth={3.5} />
-        <text x={32} y={0} fontSize={14} fill="#c9a24b">Actual</text>
+        <line x1={0} x2={26} y1={-4} y2={-4} stroke="#d1233a" strokeWidth={3.5} />
+        <text x={32} y={0} fontSize={14} fill="#d1233a">Actual</text>
         <line x1={110} x2={136} y1={-4} y2={-4} stroke="#f5f1e8" strokeOpacity={0.4} strokeWidth={2} strokeDasharray="7 5" />
         <text x={142} y={0} fontSize={14} fill="#f5f1e8" fillOpacity={0.55}>Goal pace</text>
       </g>

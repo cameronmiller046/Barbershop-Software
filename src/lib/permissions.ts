@@ -31,8 +31,10 @@ const ALL_FALSE: Record<PermKey, boolean> = {
 const DEFAULTS: Record<Role, Record<PermKey, boolean>> = {
   PLATFORM_ADMIN: { ...ALL_TRUE },
   OWNER: { ...ALL_TRUE },
-  RECEPTIONIST: { "shop.viewAll": true, "shop.clients": true, "shop.services": true, "shop.team": false, "shop.settings": false },
-  BARBER: { "shop.viewAll": false, "shop.clients": true, "shop.services": true, "shop.team": false, "shop.settings": false },
+  // Only managers/admins manage the shop (services, settings, team). Barbers
+  // run their own chair: their book + their clients.
+  RECEPTIONIST: { "shop.viewAll": true, "shop.clients": true, "shop.services": false, "shop.team": false, "shop.settings": false },
+  BARBER: { "shop.viewAll": false, "shop.clients": true, "shop.services": false, "shop.team": false, "shop.settings": false },
   CUSTOMER: { ...ALL_FALSE },
 };
 

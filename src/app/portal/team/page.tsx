@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { createBarber, toggleBarber } from "@/app/portal/actions";
+import { createBarber, toggleBarber, updateStaffProfile } from "@/app/portal/actions";
 import { roleLabel } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
+
+const dateInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
 export default async function TeamPage() {
   const user = await requireStaffWithPerms();
@@ -19,6 +21,7 @@ export default async function TeamPage() {
   return (
     <div>
       <h1 className="font-display text-3xl">Team</h1>
+      <p className="mt-1 text-cream/60">Manage staff, their profile, and HR details.</p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">
@@ -26,14 +29,31 @@ export default async function TeamPage() {
             <div className="card text-cream/60">No staff yet — add your first barber.</div>
           ) : (
             team.map((m) => (
-              <div key={m.id} className="card flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="font-medium">{m.name} {!m.active && <span className="chip ml-1">inactive</span>}</div>
-                  <div className="text-sm text-cream/50">{m.email} · {roleLabel(m.role)}</div>
+              <div key={m.id} className="card">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{m.name} {!m.active && <span className="chip ml-1">inactive</span>}</div>
+                    <div className="text-sm text-cream/50">
+                      {m.email} · {roleLabel(m.role)}
+                      {m.hireDate && <> · since {new Date(m.hireDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</>}
+                    </div>
+                  </div>
+                  <form action={toggleBarber.bind(null, m.id, !m.active)}>
+                    <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
+                  </form>
                 </div>
-                <form action={toggleBarber.bind(null, m.id, !m.active)}>
-                  <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
-                </form>
+
+                <details className="mt-3 border-t border-white/10 pt-3">
+                  <summary className="cursor-pointer text-sm text-brass">Edit profile &amp; HR details</summary>
+                  <form action={updateStaffProfile.bind(null, m.id)} className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div><label className="label">Name</label><input name="name" defaultValue={m.name} className="input" /></div>
+                    <div><label className="label">Instagram</label><input name="instagramHandle" defaultValue={m.instagramHandle ?? ""} placeholder="handle" className="input" /></div>
+                    <div><label className="label">Hire date</label><input name="hireDate" type="date" defaultValue={dateInput(m.hireDate)} className="input" /></div>
+                    <div><label className="label">Date of birth</label><input name="dateOfBirth" type="date" defaultValue={dateInput(m.dateOfBirth)} className="input" /></div>
+                    <div className="sm:col-span-2"><label className="label">Bio</label><input name="bio" defaultValue={m.bio ?? ""} className="input" /></div>
+                    <div className="sm:col-span-2"><button className="btn-primary">Save details</button></div>
+                  </form>
+                </details>
               </div>
             ))
           )}

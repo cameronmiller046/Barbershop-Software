@@ -9,7 +9,7 @@ import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/Barber
 export const metadata = { title: "The Chair — Barbershop software" };
 
 const FEATURES = [
-  { Icon: ScissorsIcon, title: "Branded shop website", body: "Every shop gets its own site — services, team, reviews, and a booking page." },
+  { Icon: ScissorsIcon, title: "Branded shop website", body: "Every shop gets its own site — services, team, a photo gallery, and a booking page." },
   { Icon: RazorIcon, title: "Online booking + QR", body: "Customers book, reschedule, and cancel themselves. Print a QR for the front desk." },
   { Icon: CombIcon, title: "Chair-side portal", body: "Dashboards, appointments, clients, and per-barber schedules in one place." },
   { Icon: PoleIcon, title: "Multi-location ready", body: "One platform, many shops. Each shop's data is fully isolated and secure." },

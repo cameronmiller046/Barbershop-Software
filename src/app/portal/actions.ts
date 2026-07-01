@@ -119,6 +119,34 @@ export async function toggleBarber(id: string, active: boolean) {
   revalidatePath("/portal/team");
 }
 
+// Admin edits a staff member's profile + HR fields (requires shop.team).
+export async function updateStaffProfile(id: string, formData: FormData) {
+  const user = await requirePerm("shop.team");
+  if (!user) return;
+  const target = await prisma.user.findFirst({
+    where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
+  });
+  if (!target) return;
+
+  const name = String(formData.get("name") || "").trim();
+  const hire = String(formData.get("hireDate") || "");
+  const dob = String(formData.get("dateOfBirth") || "");
+  const parseDate = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null);
+
+  await prisma.user.update({
+    where: { id: target.id },
+    data: {
+      name: name || undefined,
+      bio: String(formData.get("bio") || "") || null,
+      instagramHandle: String(formData.get("instagramHandle") || "").replace(/^@/, "").trim() || null,
+      hireDate: parseDate(hire),
+      dateOfBirth: parseDate(dob),
+    },
+  });
+  await audit({ action: "team.profile", tenantId: user.tenantId, userId: user.id, target: target.id });
+  revalidatePath("/portal/team");
+}
+
 // Edit a standard user's level within the shop (requires shop.team).
 export async function setStaffRole(id: string, role: "BARBER" | "RECEPTIONIST") {
   const user = await requirePerm("shop.team");

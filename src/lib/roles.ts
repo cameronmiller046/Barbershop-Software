@@ -49,7 +49,7 @@ export type Capability = { area: string; superadmin: boolean; manager: boolean; 
 export const CAPABILITIES: Capability[] = [
   { area: "Browse / book on a shop's public site", superadmin: true, manager: true, barber: true },
   { area: "Manage own appointments & clients", superadmin: true, manager: true, barber: true },
-  { area: "Manage shop services", superadmin: true, manager: true, barber: true },
+  { area: "Manage shop services", superadmin: true, manager: true, barber: false },
   { area: "See the whole shop's schedule & revenue", superadmin: true, manager: true, barber: false },
   { area: "Manage shop staff (add / level / deactivate)", superadmin: true, manager: true, barber: false },
   { area: "Edit shop branding, settings & booking", superadmin: true, manager: true, barber: false },

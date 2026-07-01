@@ -42,7 +42,7 @@ export function BarChart({
                 style={{
                   height: `${(b.value / max) * 100}%`,
                   minHeight: b.value > 0 ? 2 : 0,
-                  background: b.highlight ? "#c9a24b" : "#a8842f",
+                  background: b.highlight ? "#d1233a" : "#7f2531",
                 }}
               />
             </div>

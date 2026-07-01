@@ -5,16 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0f0f10",
-        charcoal: "#1a1a1d",
-        smoke: "#232327",
-        brass: "#c9a24b",
-        brassDark: "#a8842f",
+        // Navy base (was near-black)
+        ink: "#0c1a2b",
+        charcoal: "#12273e",
+        smoke: "#1d3a5c",
+        // Barber-red primary accent (was gold). Kept the `brass` name so the
+        // whole app re-skins from these tokens without per-component edits.
+        brass: "#d1233a",
+        brassDark: "#a81b2e",
         cream: "#f5f1e8",
         // Classic barber-pole palette
-        barber: "#c8102e",
-        barberDark: "#9b0e24",
-        navy: "#16324f",
+        barber: "#d1233a",
+        barberDark: "#a81b2e",
+        navy: "#1f4e79",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

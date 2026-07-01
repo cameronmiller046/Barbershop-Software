@@ -19,7 +19,6 @@ export function TenantShell({
   const nav = [
     { href: base, label: "Home", key: "home" },
     { href: `${base}/services`, label: "Services", key: "services" },
-    { href: `${base}/reviews`, label: "Reviews", key: "reviews" },
     { href: `${base}/faq`, label: "FAQ", key: "faq" },
     { href: `${base}/contact`, label: "Contact", key: "contact" },
   ];

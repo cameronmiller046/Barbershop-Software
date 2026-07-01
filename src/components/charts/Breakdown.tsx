@@ -25,7 +25,7 @@ export function Breakdown({
             </span>
           </div>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/5">
-            <div className="h-2 rounded-full" style={{ width: `${(r.value / max) * 100}%`, background: "#c9a24b" }} />
+            <div className="h-2 rounded-full" style={{ width: `${(r.value / max) * 100}%`, background: "#d1233a" }} />
           </div>
         </div>
       ))}

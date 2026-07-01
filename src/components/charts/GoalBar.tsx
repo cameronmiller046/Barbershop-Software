@@ -35,7 +35,7 @@ export function GoalBar({
       <div className="relative mt-3 h-4 overflow-hidden rounded-full bg-white/5">
         <div
           className="absolute inset-y-0 left-0 rounded-full"
-          style={{ width: `${clamped}%`, background: hit ? "#34d399" : "#c9a24b" }}
+          style={{ width: `${clamped}%`, background: hit ? "#34d399" : "#d1233a" }}
         />
         {/* Projected end-of-month marker */}
         {projectedCents > earnedCents && (

@@ -4,17 +4,17 @@
 
 :root {
   color-scheme: dark;
-  --brand: #c9a24b;
-  --brand-fg: #0f0f10;
-  --barber-red: #c8102e;
-  --navy: #16324f;
+  --brand: #d1233a; /* barber red */
+  --brand-fg: #f5f1e8; /* cream text on red */
+  --barber-red: #d1233a;
+  --navy: #1f4e79;
 }
 
 body {
   background:
-    radial-gradient(900px 500px at 12% -8%, rgba(200, 16, 46, 0.10) 0%, transparent 55%),
-    radial-gradient(900px 500px at 88% -8%, rgba(22, 50, 79, 0.16) 0%, transparent 55%),
-    radial-gradient(1200px 600px at 50% -10%, #1d1d22 0%, #0f0f10 55%);
+    radial-gradient(900px 500px at 12% -8%, rgba(209, 35, 58, 0.12) 0%, transparent 55%),
+    radial-gradient(900px 500px at 88% -8%, rgba(31, 78, 121, 0.28) 0%, transparent 55%),
+    radial-gradient(1200px 600px at 50% -10%, #14304d 0%, #0c1a2b 58%);
   min-height: 100vh;
 }
 
@@ -74,9 +74,9 @@ body {
 .barber-stripe {
   background: repeating-linear-gradient(
     45deg,
-    #c8102e 0 8px,
+    #d1233a 0 8px,
     #f5f1e8 8px 16px,
-    #16324f 16px 24px
+    #1f4e79 16px 24px
   );
 }
 /* Vertical spinning pole. Period is 30px along the gradient; a horizontal
@@ -84,9 +84,9 @@ body {
 .barber-pole-v {
   background: repeating-linear-gradient(
     45deg,
-    #c8102e 0 10px,
+    #d1233a 0 10px,
     #f5f1e8 10px 20px,
-    #16324f 20px 30px
+    #1f4e79 20px 30px
   );
   animation: barber-spin 1.6s linear infinite;
 }
