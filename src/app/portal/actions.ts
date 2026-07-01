@@ -2,11 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { addMinutes } from "date-fns";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireTenantStaff, requireStaffWithPerms } from "@/lib/rbac";
 import { can, type PermKey } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
+import { isSlotFree } from "@/lib/availability";
+import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } from "@/lib/appointmentReasons";
 import type { AppointmentStatus } from "@prisma/client";
 
 /** Load the acting staff member and confirm they hold a permission, else abort. */
@@ -27,6 +30,58 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
   if (res.count) await audit({ action: "appointment.status", tenantId: user.tenantId, userId: user.id, target: id, meta: { status } });
   revalidatePath("/portal/appointments");
   revalidatePath("/portal");
+}
+
+/** Load an appointment the acting staff may manage (own book, or all if manager). */
+async function loadOwnedAppointment(id: string) {
+  const user = await requireStaffWithPerms();
+  const appt = await prisma.appointment.findFirst({
+    where: { id, tenantId: user.tenantId },
+    include: { service: { select: { durationMin: true } } },
+  });
+  if (!appt) return null;
+  if (!can(user, "shop.viewAll") && appt.barberId !== user.id) return null; // barbers: own only
+  return { user, appt };
+}
+
+const revalidateAppointments = () => { revalidatePath("/portal/appointments"); revalidatePath("/portal"); revalidatePath("/portal/reports"); };
+
+/** Move an appointment to a new time (same barber), with a required reason. */
+export async function rescheduleAppointment(id: string, startISO: string, reason: string) {
+  if (!(RESCHEDULE_REASONS as readonly string[]).includes(reason)) return;
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx) return;
+  const { user, appt } = ctx;
+  const start = new Date(startISO);
+  if (isNaN(start.getTime()) || start < new Date()) return;
+  const end = addMinutes(start, appt.service.durationMin);
+  if (!(await isSlotFree(user.tenantId, appt.barberId, start, end, appt.id))) return;
+  await prisma.appointment.update({
+    where: { id }, data: { startTime: start, endTime: end, status: "CONFIRMED", statusReason: reason },
+  });
+  await audit({ action: "appointment.rescheduled", tenantId: user.tenantId, userId: user.id, target: id, meta: { reason, start: startISO } });
+  revalidateAppointments();
+}
+
+/** Cancel (or mark no-show) with a required reason. */
+export async function cancelAppointment(id: string, reason: string) {
+  if (!(CANCEL_REASONS as readonly string[]).includes(reason)) return;
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx) return;
+  const status = reasonToStatus(reason);
+  await prisma.appointment.update({ where: { id }, data: { status, statusReason: reason } });
+  await audit({ action: "appointment.cancelled", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { reason, status } });
+  revalidateAppointments();
+}
+
+/** Permanently delete an appointment, with a required reason (logged). */
+export async function deleteAppointment(id: string, reason: string) {
+  if (!(DELETE_REASONS as readonly string[]).includes(reason)) return;
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx) return;
+  await prisma.appointment.delete({ where: { id } });
+  await audit({ action: "appointment.deleted", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { reason } });
+  revalidateAppointments();
 }
 
 // ── Clients ──

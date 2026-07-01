@@ -3,7 +3,7 @@ import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { formatMoney, classNames } from "@/lib/utils";
-import { setAppointmentStatus } from "@/app/portal/actions";
+import { AppointmentActions } from "@/components/AppointmentActions";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
   addMonths, format, isSameMonth, isSameDay, parseISO, isValid,
@@ -12,16 +12,16 @@ import {
 export const dynamic = "force-dynamic";
 
 const STATUS_DOT: Record<string, string> = {
-  CONFIRMED: "bg-blue-400",
-  COMPLETED: "bg-green-400",
+  CONFIRMED: "bg-amber-400",
+  COMPLETED: "bg-emerald-400",
   CANCELLED: "bg-red-400",
-  NO_SHOW: "bg-yellow-400",
+  NO_SHOW: "bg-zinc-400",
 };
 const STATUS_BADGE: Record<string, string> = {
-  CONFIRMED: "bg-blue-500/20 text-blue-200",
-  COMPLETED: "bg-green-500/20 text-green-200",
+  CONFIRMED: "bg-amber-500/20 text-amber-200",
+  COMPLETED: "bg-emerald-500/20 text-emerald-200",
   CANCELLED: "bg-red-500/20 text-red-200",
-  NO_SHOW: "bg-yellow-500/20 text-yellow-200",
+  NO_SHOW: "bg-zinc-500/25 text-zinc-200",
 };
 
 export default async function AppointmentsPage({
@@ -32,6 +32,7 @@ export default async function AppointmentsPage({
   const user = await requireStaffWithPerms();
   const seesAll = can(user, "shop.viewAll");
   const barberScope = seesAll ? {} : { barberId: user.id };
+  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { slug: true } });
   const sp = await searchParams;
 
   const monthBase = sp.month && isValid(parseISO(sp.month + "-01")) ? parseISO(sp.month + "-01") : new Date();
@@ -124,21 +125,13 @@ export default async function AppointmentsPage({
                   {a.client.phone ? ` · ${a.client.phone}` : ""}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`badge ${STATUS_BADGE[a.status] || "bg-white/10"}`}>{a.status}</span>
-                {a.status === "CONFIRMED" && (
-                  <div className="flex gap-1">
-                    <form action={setAppointmentStatus.bind(null, a.id, "COMPLETED")}>
-                      <button className="rounded-md bg-green-500/15 px-2 py-1 text-xs text-green-200 hover:bg-green-500/25">Done</button>
-                    </form>
-                    <form action={setAppointmentStatus.bind(null, a.id, "NO_SHOW")}>
-                      <button className="rounded-md bg-yellow-500/15 px-2 py-1 text-xs text-yellow-200 hover:bg-yellow-500/25">No-show</button>
-                    </form>
-                    <form action={setAppointmentStatus.bind(null, a.id, "CANCELLED")}>
-                      <button className="rounded-md bg-red-500/15 px-2 py-1 text-xs text-red-200 hover:bg-red-500/25">Cancel</button>
-                    </form>
-                  </div>
-                )}
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`badge ${STATUS_BADGE[a.status] || "bg-white/10"}`}>{a.status.replace("_", " ")}</span>
+                  {a.statusReason && <span className="text-[11px] text-cream/40">· {a.statusReason}</span>}
+                </div>
+                <AppointmentActions id={a.id} startISO={a.startTime.toISOString()} slug={tenant?.slug ?? ""}
+                  serviceId={a.serviceId} barberId={a.barberId} status={a.status} />
               </div>
             </div>
           ))}

@@ -201,6 +201,8 @@ model Appointment {
   endTime   DateTime
   status    AppointmentStatus @default(CONFIRMED)
   notes     String?
+  // Preset reason captured when staff reschedule / cancel / mark no-show.
+  statusReason String?
 
   // public token for the customer reschedule / cancel link
   manageToken String @unique @default(cuid())
