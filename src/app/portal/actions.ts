@@ -206,6 +206,17 @@ export async function setTenantImage(field: "logoUrl" | "heroImageUrl", formData
   revalidatePath("/portal/settings");
 }
 
+// Admin sets the hero photo focal point ("X% Y%"), requires shop.settings.
+export async function setHeroPosition(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const raw = String(formData.get("position") || "").trim();
+  if (!/^\d{1,3}% \d{1,3}%$/.test(raw)) return;
+  await prisma.tenant.update({ where: { id: user.tenantId }, data: { heroImagePosition: raw } });
+  await audit({ action: "tenant.heroPosition", tenantId: user.tenantId, userId: user.id, meta: { position: raw } });
+  revalidatePath("/portal/settings");
+}
+
 // ── Account self-service (any signed-in staff edits their OWN account) ──
 export async function updateOwnProfile(formData: FormData) {
   const user = await requireTenantStaff();

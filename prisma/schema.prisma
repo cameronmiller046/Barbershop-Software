@@ -72,6 +72,9 @@ model Tenant {
   primaryColor String  @default("#c9a24b")
   logoUrl      String?
   heroImageUrl String?
+  // CSS object-position for the hero photo, e.g. "50% 30%". Lets admins pick
+  // which part of the photo stays in frame.
+  heroImagePosition String @default("50% 50%")
 
   // Contact / locale
   email    String?

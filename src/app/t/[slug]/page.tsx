@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TenantShell } from "@/components/TenantShell";
 import { QrCode } from "@/components/QrCode";
+import { Reveal } from "@/components/Reveal";
 import { getTenantBySlug, getTenantServices, getTenantReviews } from "@/lib/tenant";
 import { formatMoney, formatDuration, appUrl, readableOn } from "@/lib/utils";
 
@@ -96,14 +97,14 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
       {/* ───────── Fancy hero ───────── */}
       <section className="relative overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={heroImg} alt={`Fresh haircuts and fades at ${tenant.name}`} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={heroImg} alt={`Fresh haircuts and fades at ${tenant.name}`} className="absolute inset-0 h-full w-full object-cover animate-kenburns" style={{ objectPosition: tenant.heroImagePosition }} />
         <div
           className="absolute inset-0"
           style={{ background: `linear-gradient(100deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.55) 46%, rgba(0,0,0,0.22) 100%)` }}
         />
 
         <div className="relative container-page grid items-center gap-10 py-20 md:grid-cols-[1.3fr_1fr] md:py-28">
-          <div>
+          <div className="animate-fade-up">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-3 py-1 text-xs text-cream/80 backdrop-blur">
               <span className="h-2 w-2 rounded-full" style={{ background: brand }} />
               {tenant.address || "Walk-ins welcome"}
@@ -134,7 +135,7 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
           </div>
 
           {/* Booking card */}
-          <div className="justify-self-center">
+          <div className="animate-fade-up justify-self-center" style={{ animationDelay: "160ms" }}>
             <div className="card flex flex-col items-center gap-4 border-white/15 bg-charcoal/90 text-center shadow-2xl shadow-black/40">
               <span className="font-display text-xl" style={{ color: brand }}>Scan to book</span>
               <QrCode value={bookUrl} size={190} dark="#0f0f10" light="#f5f1e8" />
@@ -155,11 +156,13 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
           <Link href={`${base}/book`} className="btn-ghost hidden sm:inline-flex">Book yours</Link>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {gallery.map((g) => (
-            <div key={g.src} className="group relative aspect-[4/5] overflow-hidden rounded-xl border border-white/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={g.src} alt={g.alt} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-            </div>
+          {gallery.map((g, i) => (
+            <Reveal key={g.src} delay={i * 70}>
+              <div className="group relative aspect-[4/5] overflow-hidden rounded-xl border border-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.src} alt={g.alt} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -174,19 +177,21 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
           <div className="card text-cream/60">Services coming soon.</div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {services.slice(0, 6).map((s) => (
-              <div key={s.id} className="card flex flex-col">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-display text-xl">{s.name}</h3>
-                  <span style={{ color: brand }}>{formatMoney(s.priceCents)}</span>
+            {services.slice(0, 6).map((s, i) => (
+              <Reveal key={s.id} delay={i * 70} className="flex">
+                <div className="card card-hover flex w-full flex-col">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-display text-xl">{s.name}</h3>
+                    <span style={{ color: brand }}>{formatMoney(s.priceCents)}</span>
+                  </div>
+                  {s.description && <p className="mt-1 text-sm text-cream/60">{s.description}</p>}
+                  <div className="mt-3 flex gap-2 text-xs">
+                    <span className="chip">{formatDuration(s.durationMin)}</span>
+                    {s.barber && <span className="chip">with {s.barber.name}</span>}
+                  </div>
+                  <Link href={`${base}/book?service=${s.id}`} className="btn-primary mt-5">Book this</Link>
                 </div>
-                {s.description && <p className="mt-1 text-sm text-cream/60">{s.description}</p>}
-                <div className="mt-3 flex gap-2 text-xs">
-                  <span className="chip">{formatDuration(s.durationMin)}</span>
-                  {s.barber && <span className="chip">with {s.barber.name}</span>}
-                </div>
-                <Link href={`${base}/book?service=${s.id}`} className="btn-primary mt-5">Book this</Link>
-              </div>
+              </Reveal>
             ))}
           </div>
         )}
@@ -197,12 +202,14 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
         <section className="container-page py-10">
           <h2 className="font-display text-3xl">What clients say</h2>
           <div className="mt-6 grid gap-5 md:grid-cols-3">
-            {reviews.slice(0, 3).map((r) => (
-              <div key={r.id} className="card">
-                <div style={{ color: brand }}>{"★".repeat(r.rating)}</div>
-                <p className="mt-2 text-sm text-cream/75">“{r.body}”</p>
-                <p className="mt-3 text-xs text-cream/50">— {r.authorName}</p>
-              </div>
+            {reviews.slice(0, 3).map((r, i) => (
+              <Reveal key={r.id} delay={i * 90} className="flex">
+                <div className="card card-hover w-full">
+                  <div style={{ color: brand }}>{"★".repeat(r.rating)}</div>
+                  <p className="mt-2 text-sm text-cream/75">“{r.body}”</p>
+                  <p className="mt-3 text-xs text-cream/50">— {r.authorName}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -210,13 +217,15 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
 
       {/* ───────── Final CTA ───────── */}
       <section className="container-page py-14">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 p-10 text-center" style={{ background: `linear-gradient(135deg, ${brand}1f, transparent)` }}>
-          <h2 className="font-display text-4xl">Ready for a fresh cut?</h2>
-          <p className="mx-auto mt-2 max-w-md text-cream/70">Pick your barber, service, and time — it takes under a minute.</p>
-          <Link href={`${base}/book`} className="btn mt-6 px-8 py-3.5 text-base font-semibold" style={{ background: brand, color: readableOn(brand) }}>
-            Book now
-          </Link>
-        </div>
+        <Reveal>
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 p-10 text-center" style={{ background: `linear-gradient(135deg, ${brand}1f, transparent)` }}>
+            <h2 className="font-display text-4xl">Ready for a fresh cut?</h2>
+            <p className="mx-auto mt-2 max-w-md text-cream/70">Pick your barber, service, and time — it takes under a minute.</p>
+            <Link href={`${base}/book`} className="btn mt-6 px-8 py-3.5 text-base font-semibold" style={{ background: brand, color: readableOn(brand) }}>
+              Book now
+            </Link>
+          </div>
+        </Reveal>
       </section>
     </TenantShell>
   );

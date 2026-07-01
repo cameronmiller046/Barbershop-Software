@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant, setTenantImage } from "@/app/portal/actions";
+import { updateTenant, setTenantImage, setHeroPosition } from "@/app/portal/actions";
 import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { ImageUpload } from "@/components/ImageUpload";
+import { HeroFocusPicker } from "@/components/HeroFocusPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,13 @@ export default async function SettingsPage() {
           <ImageUpload action={setTenantImage.bind(null, "heroImageUrl")} label="hero photo" hasImage={!!tenant.heroImageUrl} maxW={1600} />
           <p className="mt-1 text-xs text-cream/40">The big photo behind your homepage headline.</p>
         </div>
+
+        {tenant.heroImageUrl && (
+          <div>
+            <div className="label">Hero focus</div>
+            <HeroFocusPicker src={tenant.heroImageUrl} initial={tenant.heroImagePosition} action={setHeroPosition} />
+          </div>
+        )}
       </div>
     </div>
   );
