@@ -10,6 +10,7 @@ const schema = z.object({
   path: z.string().min(1).max(200),
   ref: z.string().max(400).optional(),
   slug: z.string().max(80).optional(),
+  vid: z.string().max(64).optional(), // persistent visitor id (only sent with consent)
 });
 
 // POST /api/track — anonymous, cookieless page-view beacon. Always returns 204
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new NextResponse(null, { status: 204 });
-  const { path, ref, slug } = parsed.data;
+  const { path, ref, slug, vid } = parsed.data;
 
   // Only ever track public pages — never the internal portal/admin/api.
   if (/^\/(admin|portal|api|login)(\/|$)/.test(path)) return new NextResponse(null, { status: 204 });
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     let selfHost: string | undefined;
     try { selfHost = new URL(req.url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
 
-    await recordPageView({ tenantId, path, referrer: ref || "", ua, ip, selfHost });
+    await recordPageView({ tenantId, path, referrer: ref || "", ua, ip, selfHost, vid });
   } catch {
     // swallow — never surface analytics failures to visitors
   }

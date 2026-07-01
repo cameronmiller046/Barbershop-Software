@@ -3,12 +3,15 @@ import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { BrowserFrame, BookingScreen, ReportsPreview } from "@/components/marketing/Previews";
 
-export const metadata = { title: "Pricing — The Chair" };
+export const metadata = {
+  title: "Pricing",
+  description: "Flat monthly barbershop software pricing with no per-booking fees. Free Solo plan, $39 Pro, $89 Growth. Up to half the price of Squire and Booksy.",
+};
 
 const TIERS = [
-  { name: "Trial", price: "Free", note: "During closed beta", features: ["1 shop", "Online booking", "Chair-side portal", "Email confirmations"], cta: "Request access", highlight: false },
-  { name: "Starter", price: "$29", note: "per shop / month", features: ["Everything in Trial", "Up to 3 barbers", "Reviews & QR booking", "Owner reports dashboard"], cta: "Request access", highlight: true },
-  { name: "Pro", price: "$79", note: "per shop / month", features: ["Everything in Starter", "Unlimited barbers", "Anonymous analytics", "Priority support"], cta: "Request access", highlight: false },
+  { name: "🪑 Solo", price: "$0", note: "free forever · 1 chair", features: ["Branded booking page", "Online booking + QR code", "Chair-side portal", "Email confirmations"], cta: "Start free", highlight: false },
+  { name: "✂️ Pro", price: "$39", note: "per shop / month", features: ["Everything in Solo", "Up to 6 barbers", "Owner reports & sales goals", "Reviews & photo gallery", "No-show tracking"], cta: "Start 14-day trial", highlight: true },
+  { name: "👑 Growth", price: "$89", note: "per shop / month", features: ["Everything in Pro", "Unlimited barbers", "Multi-location", "Analytics dashboard", "Priority support"], cta: "Talk to sales", highlight: false },
 ];
 
 export default function PricingPage() {
@@ -16,10 +19,11 @@ export default function PricingPage() {
     <div className="min-h-screen">
       <MarketingHeader />
       <section className="container-page py-16">
-        <h1 className="font-display text-4xl md:text-5xl">Simple, per-shop pricing</h1>
+        <div className="eyebrow">💈 Simple, honest pricing</div>
+        <h1 className="mt-2 font-display text-4xl md:text-5xl">Pricing that pays for itself 💰</h1>
         <p className="mt-3 max-w-xl text-cream/70">
-          Billing activates after beta. Today, onboarding is free and manual — we
-          set up your shop for you.
+          Flat monthly price per shop — <span className="text-cream">no per-booking fees, ever</span>.
+          Up to half the price of Squire, Booksy, and Schedulicity. ✅
         </p>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {TIERS.map((t) => (
@@ -44,9 +48,12 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
-        <p className="mt-8 text-xs text-cream/40">
-          Billing &amp; subscriptions (Phase 6) are on the roadmap; pricing shown is indicative.
-        </p>
+        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-cream/60">
+          <span>✅ No per-booking fees</span>
+          <span>🔓 Cancel anytime</span>
+          <span>💳 No credit card to start</span>
+          <span>📅 14-day free trial</span>
+        </div>
 
         <div className="mt-16 grid items-center gap-8 md:grid-cols-2">
           <div>

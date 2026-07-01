@@ -3,7 +3,10 @@ import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { BrowserFrame, DashboardScreen, AnalyticsPreview } from "@/components/marketing/Previews";
 
-export const metadata = { title: "About — The Chair" };
+export const metadata = {
+  title: "About",
+  description: "The Chair gives barbershops a professional website, online booking, and a portal to run the shop — one platform, unlimited shops.",
+};
 
 export default function AboutPage() {
   return (

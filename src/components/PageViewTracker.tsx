@@ -3,15 +3,28 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-// Fires one anonymous beacon per page view on the public shop sites. No cookies,
-// no localStorage — just the path + referrer. The server hashes the visitor
-// with a daily-rotating salt; nothing personal leaves the browser.
+// One anonymous beacon per page view. If the visitor accepted cookies, we send
+// a persistent visitor id (better analytics: new vs returning); otherwise the
+// server falls back to a cookieless daily hash.
+function persistentVid(): string | undefined {
+  try {
+    if (localStorage.getItem("cc") !== "accepted") return undefined;
+  } catch {
+    return undefined;
+  }
+  const m = document.cookie.match(/(?:^|;\s*)vid=([^;]+)/);
+  if (m) return m[1];
+  const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  document.cookie = `vid=${id}; path=/; max-age=31536000; samesite=lax`;
+  return id;
+}
+
 export function PageViewTracker({ slug }: { slug?: string }) {
   const pathname = usePathname();
 
   useEffect(() => {
     if (!pathname) return;
-    const body = JSON.stringify({ path: pathname, ref: document.referrer || "", slug });
+    const body = JSON.stringify({ path: pathname, ref: document.referrer || "", slug, vid: persistentVid() });
     try {
       if (typeof navigator !== "undefined" && navigator.sendBeacon) {
         navigator.sendBeacon("/api/track", new Blob([body], { type: "application/json" }));
@@ -19,7 +32,7 @@ export function PageViewTracker({ slug }: { slug?: string }) {
         fetch("/api/track", { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true });
       }
     } catch {
-      /* analytics is best-effort */
+      /* best-effort */
     }
   }, [pathname, slug]);
 

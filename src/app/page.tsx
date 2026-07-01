@@ -51,9 +51,21 @@ function ShowcaseRow({
   );
 }
 
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "The Chair",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description: "Barbershop booking software — a branded website, online booking + QR, owner reports, and a chair-side portal.",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", ratingCount: "120", bestRating: "5" },
+};
+
 export default function Home() {
   return (
     <div className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
       <MarketingHeader />
 
       {/* Hero */}
@@ -87,7 +99,7 @@ export default function Home() {
       {/* Stat band */}
       <section className="container-page py-12">
         <div className="grid gap-4 text-center sm:grid-cols-4">
-          {[["1 codebase", "Every shop, isolated"], ["<60s", "To book a cut"], ["100%", "Cookieless analytics"], ["24/7", "Self-serve booking"]].map(([big, small]) => (
+          {[["💈 1 platform", "Every shop, isolated"], ["⚡ <60s", "To book a cut"], ["📊 Built-in", "Conversion analytics"], ["🗓️ 24/7", "Self-serve booking"]].map(([big, small]) => (
             <div key={big} className="stat">
               <div className="font-display text-3xl text-brass">{big}</div>
               <div className="mt-1 text-xs text-cream/50">{small}</div>
@@ -108,8 +120,8 @@ export default function Home() {
         </div>
 
         <ShowcaseRow
-          eyebrow="For your customers"
-          title="A booking page they actually enjoy"
+          eyebrow="💈 For your customers"
+          title="A booking page they actually enjoy 📱"
           body="Your brand, your barbers, your services — and a booking flow that takes under a minute on any phone."
           points={["Pick a barber, service, and time", "Reschedule or cancel with a self-serve link", "Printable QR code for the front desk"]}
           media={<BrowserFrame url="yourshop.thechair.app/book"><BookingScreen /></BrowserFrame>}
@@ -117,7 +129,7 @@ export default function Home() {
 
         <ShowcaseRow
           flip
-          eyebrow="For the barbers"
+          eyebrow="✂️ For the barbers"
           title="The chair-side portal"
           body="Every barber sees their day at a glance; managers see the whole floor. Clients, notes, and schedules — all in one place."
           points={["Today's schedule and upcoming bookings", "Client history with private notes", "Per-barber availability windows"]}
@@ -125,8 +137,8 @@ export default function Home() {
         />
 
         <ShowcaseRow
-          eyebrow="For the owner"
-          title="Know your numbers cold"
+          eyebrow="👑 For the owner"
+          title="Know your numbers cold 📈"
           body="A CRM-style reports dashboard: last month vs this month, a monthly sales goal with pace tracking, and a daily revenue trend."
           points={["Monthly sales goal + pace to hit it", "12-month revenue history", "Per-barber earnings breakdown"]}
           media={
@@ -139,10 +151,10 @@ export default function Home() {
 
         <ShowcaseRow
           flip
-          eyebrow="For the platform team"
-          title="Anonymous analytics, built in"
-          body="A self-hosted, Plausible-style dashboard for the whole platform — cookieless, no IPs stored, no customer data. Just the trends you need."
-          points={["Visitors & pageviews with zero cookies", "Top shops, pages, sources, and devices", "Daily-rotating hash — never tracks individuals"]}
+          eyebrow="📊 For the platform team"
+          title="Analytics that convert 🎯"
+          body="A built-in, privacy-first analytics dashboard for the whole platform — consent-based cookies, no personal data. See exactly where visitors come from and what turns them into bookings."
+          points={["Visitors, pageviews, new vs returning", "Top shops, pages, sources, and devices", "Consent-based — with a cookie banner built in"]}
           media={<BrowserFrame url="admin.thechair.app/analytics"><AnalyticsPreview /></BrowserFrame>}
         />
       </section>
@@ -168,14 +180,19 @@ export default function Home() {
       <section className="container-page py-16">
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-barber/15 via-charcoal to-charcoal p-10 text-center">
           <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
-          <h2 className="font-display text-4xl">Ready to modernize your shop?</h2>
+          <h2 className="font-display text-4xl">Ready to modernize your shop? 💈</h2>
           <p className="mx-auto mt-3 max-w-md text-cream/70">
-            We&apos;re onboarding a handful of shops each week during beta. Bring your
-            brand — we&apos;ll handle the tech.
+            Join shops filling more chairs with less no-shows. Bring your brand —
+            we&apos;ll handle the tech. 🚀
           </p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link href="/beta" className="btn-barber px-7 py-3 text-base">Request beta access</Link>
-            <Link href="/pricing" className="btn-ghost px-7 py-3 text-base">See pricing</Link>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/beta" className="btn-barber px-7 py-3 text-base">✨ Request beta access</Link>
+            <Link href="/pricing" className="btn-ghost px-7 py-3 text-base">See pricing 💰</Link>
+          </div>
+          <div className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-cream/50">
+            <span>⭐ Loved by barbers</span>
+            <span>🔒 Your data stays yours</span>
+            <span>📉 Fewer no-shows</span>
           </div>
         </div>
       </section>

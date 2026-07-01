@@ -66,6 +66,7 @@ export async function recordPageView(opts: {
   ua: string;
   ip: string;
   selfHost?: string;
+  vid?: string; // persistent visitor id (consented); else cookieless daily hash
 }): Promise<void> {
   await prisma.pageView.create({
     data: {
@@ -74,7 +75,7 @@ export async function recordPageView(opts: {
       page: pageType(opts.path),
       source: sourceFromReferrer(opts.referrer, opts.selfHost),
       device: deviceFromUA(opts.ua),
-      visitorHash: visitorHash(opts.ip, opts.ua, opts.tenantId),
+      visitorHash: opts.vid ? `c:${opts.vid}` : visitorHash(opts.ip, opts.ua, opts.tenantId),
     },
   });
 }

@@ -64,7 +64,17 @@ export function TenantShell({
               </Link>
             ))}
           </nav>
-          <Link href={`${base}/book`} className="btn-primary">Book now</Link>
+          <div className="flex items-center gap-2">
+            <Link href={`${base}/book`} className="btn-primary">Book now</Link>
+            <details className="relative lg:hidden">
+              <summary className="btn-ghost cursor-pointer list-none px-3 py-2" aria-label="Menu">☰</summary>
+              <div className="absolute right-0 z-50 mt-2 flex w-44 flex-col rounded-xl border border-white/10 bg-charcoal p-2 shadow-2xl">
+                {nav.map((n) => (
+                  <Link key={n.key} href={n.href} className="rounded-lg px-3 py-2 text-sm text-cream/80 hover:bg-white/5">{n.label}</Link>
+                ))}
+              </div>
+            </details>
+          </div>
         </div>
       </header>
 

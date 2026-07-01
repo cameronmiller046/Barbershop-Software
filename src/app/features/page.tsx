@@ -3,7 +3,10 @@ import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
 
-export const metadata = { title: "Features — The Chair" };
+export const metadata = {
+  title: "Features",
+  description: "Everything a barbershop needs: branded website, online booking + QR, chair-side portal, owner reports, and privacy-first analytics.",
+};
 
 const GROUPS = [
   {
