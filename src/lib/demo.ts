@@ -54,6 +54,18 @@ export async function clearDemoData(prisma: PrismaClient) {
   await ensureFlagshipStaff(prisma);
 }
 
+/**
+ * Make sure the flagship demo shop has data — used by the "View as Demo …"
+ * buttons so the portal is never empty on a fresh deployment. Idempotent and
+ * cheap when data already exists.
+ */
+export async function ensureDemoData(prisma: PrismaClient) {
+  const flagship = await prisma.tenant.findUnique({ where: { slug: DEMO_SLUG }, select: { id: true } });
+  if (!flagship) return;
+  const count = await prisma.appointment.count({ where: { tenantId: flagship.id } });
+  if (count < 20) await seedFlagshipDemo(prisma);
+}
+
 /** Load a ton of demo data: flagship staff + appointments, plus 8 extra stores. */
 export async function loadDemoData(prisma: PrismaClient) {
   await seedFlagshipDemo(prisma);
@@ -164,6 +176,9 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
   const staff = await ensureFlagshipStaff(prisma);
   if (!staff) return;
   const { tenant, manager, barber } = staff;
+
+  // The demo shop runs on the full Enterprise plan (all features unlocked).
+  await prisma.tenant.update({ where: { id: tenant.id }, data: { plan: "ENTERPRISE" } });
 
   // Idempotent: clear prior flagship demo appointments + clients.
   await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });

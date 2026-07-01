@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth";
 import { appUrl, readableOn, hexToRgbTriple } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
+import { planLimits } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
       <div className="container-page grid gap-8 py-8 md:grid-cols-[200px_1fr]">
         <aside className="md:sticky md:top-8 md:self-start">
-          <PortalNav perms={perms} siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)} />
+          <PortalNav perms={perms} siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)} reports={planLimits(tenant?.plan ?? "SOLO").reports} />
         </aside>
         <main>{children}</main>
       </div>

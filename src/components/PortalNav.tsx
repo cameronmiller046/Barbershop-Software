@@ -17,11 +17,11 @@ const LINKS: { href: string; label: string; exact?: boolean; perm?: PermKey }[] 
   { href: "/portal/account", label: "My account" },
 ];
 
-export function PortalNav({ perms, siteUrl }: { perms: Record<string, boolean>; siteUrl: string }) {
+export function PortalNav({ perms, siteUrl, reports = true }: { perms: Record<string, boolean>; siteUrl: string; reports?: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="space-y-1">
-      {LINKS.filter((l) => !l.perm || perms[l.perm]).map((l) => {
+      {LINKS.filter((l) => (!l.perm || perms[l.perm]) && (l.href !== "/portal/reports" || reports)).map((l) => {
         const active = l.exact ? pathname === l.href : pathname.startsWith(l.href);
         return (
           <Link key={l.href} href={l.href}

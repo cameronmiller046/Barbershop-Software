@@ -3,6 +3,7 @@ import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/utils";
 import { can } from "@/lib/permissions";
+import { planLimits } from "@/lib/plans";
 import {
   monthlyBuckets, dailyCumulative, goalPace, pctChange, avgTicket,
 } from "@/lib/reporting";
@@ -29,7 +30,8 @@ export default async function ReportsPage() {
   if (!can(user, "shop.viewAll")) redirect("/portal");
   const tenantId = user.tenantId;
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { monthlyGoalCents: true } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { monthlyGoalCents: true, plan: true } });
+  if (!planLimits(tenant?.plan ?? "SOLO").reports) redirect("/portal?upgrade=reports");
   const now = new Date();
   const rangeStart = startOfMonth(subMonths(now, 11));
   const monthEnd = endOfMonth(now);

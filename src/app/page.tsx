@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { signIn } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { ensureDemoData } from "@/lib/demo";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import {
@@ -11,9 +13,10 @@ import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/Barber
 
 export const metadata = { title: { absolute: "The Chair — Barbershop booking software 💈" } };
 
-// Log straight into the portal as a sample account.
+// Log straight into the portal as a sample account (seeds demo data on first use).
 async function demoLogin(formData: FormData) {
   "use server";
+  try { await ensureDemoData(prisma); } catch { /* best-effort */ }
   try {
     await signIn("credentials", {
       email: formData.get("email"),

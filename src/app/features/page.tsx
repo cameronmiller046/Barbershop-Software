@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
+import { BrowserFrame, BookingScreen, DashboardScreen, ReportsPreview, AnalyticsPreview } from "@/components/marketing/Previews";
 
 export const metadata = {
   title: "Features",
@@ -12,7 +13,7 @@ const GROUPS = [
   {
     Icon: ScissorsIcon,
     title: "Branded shop website",
-    items: ["Home, Services, Reviews, FAQ, Contact", "Custom brand color and logo", "Printable QR code that links to booking", "Responsive on desktop, tablet, and mobile"],
+    items: ["Home, Services, FAQ, Contact + photo gallery", "Custom brand colors and logo", "Printable QR code that links to booking", "Responsive on desktop, tablet, and mobile"],
   },
   {
     Icon: RazorIcon,
@@ -27,7 +28,7 @@ const GROUPS = [
   {
     Icon: PoleIcon,
     title: "Platform, analytics & security",
-    items: ["Cookieless, anonymous traffic analytics (no PII)", "Full tenant isolation & role-based access", "Audit logs for sensitive actions", "Rate limiting and input validation", "One codebase, unlimited shops"],
+    items: ["Consent-based, privacy-first analytics (no PII)", "Full tenant isolation & role-based access", "Audit logs for sensitive actions", "Rate limiting and input validation", "One codebase, unlimited shops"],
   },
 ];
 
@@ -59,8 +60,32 @@ export default function FeaturesPage() {
             </div>
           ))}
         </div>
-        <div className="mt-10">
-          <Link href="/beta" className="btn-primary px-7 py-3 text-base">Request beta access</Link>
+        {/* Product renders */}
+        <div className="mt-16">
+          <div className="eyebrow">👀 See it in action</div>
+          <h2 className="mt-2 font-display text-3xl">What the features look like</h2>
+        </div>
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <div>
+            <BrowserFrame url="yourshop.thechair.app/book"><BookingScreen /></BrowserFrame>
+            <p className="mt-2 text-sm text-cream/60">💈 Customer booking page — pick a barber, service, and time.</p>
+          </div>
+          <div>
+            <BrowserFrame url="yourshop.thechair.app/portal"><DashboardScreen /></BrowserFrame>
+            <p className="mt-2 text-sm text-cream/60">✂️ Chair-side portal — today&apos;s schedule at a glance.</p>
+          </div>
+          <div>
+            <BrowserFrame url="yourshop.thechair.app/portal/reports"><ReportsPreview /></BrowserFrame>
+            <p className="mt-2 text-sm text-cream/60">📈 Owner reports — sales goal, pace, and 12-month trend.</p>
+          </div>
+          <div>
+            <BrowserFrame url="admin.thechair.app/analytics"><AnalyticsPreview /></BrowserFrame>
+            <p className="mt-2 text-sm text-cream/60">📊 Analytics — visitors, sources, and top shops.</p>
+          </div>
+        </div>
+
+        <div className="mt-12">
+          <Link href="/beta" className="btn-primary px-7 py-3 text-base">✨ Request beta access</Link>
         </div>
       </section>
       <MarketingFooter />

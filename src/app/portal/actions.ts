@@ -10,6 +10,7 @@ import { can, type PermKey } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
 import { isSlotFree } from "@/lib/availability";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } from "@/lib/appointmentReasons";
+import { planLimits } from "@/lib/plans";
 import type { AppointmentStatus } from "@prisma/client";
 
 /** Load the acting staff member and confirm they hold a permission, else abort. */
@@ -150,6 +151,12 @@ export async function createBarber(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const password = String(formData.get("password") || "");
   if (!email || !name || password.length < 6) return;
+
+  // Enforce the plan's chair limit.
+  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { plan: true } });
+  const count = await prisma.user.count({ where: { tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } } });
+  if (tenant && count >= planLimits(tenant.plan).maxBarbers) redirect("/portal/team?err=limit");
+
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return;
   const created = await prisma.user.create({
