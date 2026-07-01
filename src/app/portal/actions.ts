@@ -119,6 +119,20 @@ export async function toggleBarber(id: string, active: boolean) {
   revalidatePath("/portal/team");
 }
 
+// Admin sets a barber's photo (requires shop.team). Separate action so it can
+// live outside the profile <form> (nested forms are invalid).
+export async function setStaffAvatar(id: string, formData: FormData) {
+  const user = await requirePerm("shop.team");
+  if (!user) return;
+  const target = await prisma.user.findFirst({
+    where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
+  });
+  if (!target) return;
+  await prisma.user.update({ where: { id: target.id }, data: { avatarUrl: String(formData.get("imageUrl") || "") || null } });
+  await audit({ action: "team.avatar", tenantId: user.tenantId, userId: user.id, target: target.id });
+  revalidatePath("/portal/team");
+}
+
 // Admin edits a staff member's profile + HR fields (requires shop.team).
 export async function updateStaffProfile(id: string, formData: FormData) {
   const user = await requirePerm("shop.team");
@@ -178,6 +192,18 @@ export async function updateTenant(formData: FormData) {
   await audit({ action: "tenant.updated", tenantId: user.tenantId, userId: user.id });
   revalidatePath("/portal/settings");
   revalidatePath("/portal/reports");
+}
+
+// Admin sets the shop's logo or hero photo (requires shop.settings).
+export async function setTenantImage(field: "logoUrl" | "heroImageUrl", formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: { [field]: String(formData.get("imageUrl") || "") || null },
+  });
+  await audit({ action: "tenant.image", tenantId: user.tenantId, userId: user.id, meta: { field } });
+  revalidatePath("/portal/settings");
 }
 
 // ── Account self-service (any signed-in staff edits their OWN account) ──

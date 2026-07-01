@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant } from "@/app/portal/actions";
+import { updateTenant, setTenantImage } from "@/app/portal/actions";
 import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
+import { ImageUpload } from "@/components/ImageUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,36 @@ export default async function SettingsPage() {
         </div>
         <button className="btn-primary">Save changes</button>
       </form>
+
+      <div className="card mt-6 space-y-5">
+        <div>
+          <h2 className="font-display text-xl">Branding images</h2>
+          <p className="mt-1 text-sm text-cream/50">Shown across your public site. Uploads are compressed automatically.</p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {tenant.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={tenant.logoUrl} alt="Logo" className="h-14 w-14 rounded-full object-cover" />
+          ) : (
+            <div className="grid h-14 w-14 place-items-center rounded-full bg-smoke text-cream/40">Logo</div>
+          )}
+          <div>
+            <div className="label">Logo</div>
+            <ImageUpload action={setTenantImage.bind(null, "logoUrl")} label="logo" hasImage={!!tenant.logoUrl} maxW={400} />
+          </div>
+        </div>
+
+        <div>
+          <div className="label">Hero photo</div>
+          {tenant.heroImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={tenant.heroImageUrl} alt="Hero" className="mb-2 h-36 w-full rounded-lg object-cover" />
+          )}
+          <ImageUpload action={setTenantImage.bind(null, "heroImageUrl")} label="hero photo" hasImage={!!tenant.heroImageUrl} maxW={1600} />
+          <p className="mt-1 text-xs text-cream/40">The big photo behind your homepage headline.</p>
+        </div>
+      </div>
     </div>
   );
 }

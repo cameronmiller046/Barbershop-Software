@@ -65,7 +65,7 @@ body {
     filter: brightness(1.08);
   }
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.2em] text-brass;
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-flame;
   }
 }
 

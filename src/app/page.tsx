@@ -63,7 +63,7 @@ export default function Home() {
           <div>
             <div className="eyebrow">Barbershop software · Now in closed beta</div>
             <h1 className="mt-4 font-display text-5xl leading-[1.05] md:text-6xl">
-              Run the whole shop from <span className="text-brass">one chair.</span>
+              Run the whole shop from <span className="text-flame">one chair.</span>
             </h1>
             <p className="mt-5 max-w-md text-cream/70">
               A branded website, effortless online booking, and a portal that runs the
@@ -153,7 +153,7 @@ export default function Home() {
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map(({ Icon, title, body }) => (
             <div key={title} className="card">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-barber/15 text-barber"><Icon size={22} /></span>
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-barber/20 text-flame"><Icon size={22} /></span>
               <h3 className="mt-4 font-display text-lg text-brass">{title}</h3>
               <p className="mt-2 text-sm text-cream/70">{body}</p>
             </div>

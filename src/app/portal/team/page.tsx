@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { createBarber, toggleBarber, updateStaffProfile } from "@/app/portal/actions";
+import { createBarber, toggleBarber, updateStaffProfile, setStaffAvatar } from "@/app/portal/actions";
 import { roleLabel } from "@/lib/roles";
 import { can } from "@/lib/permissions";
+import { ImageUpload } from "@/components/ImageUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,15 @@ export default async function TeamPage() {
 
                 <details className="mt-3 border-t border-white/10 pt-3">
                   <summary className="cursor-pointer text-sm text-brass">Edit profile &amp; HR details</summary>
+                  <div className="mt-3 flex items-center gap-3">
+                    {m.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.avatarUrl} alt={m.name} className="h-12 w-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="grid h-12 w-12 place-items-center rounded-full bg-smoke text-cream/50">{m.name.charAt(0)}</div>
+                    )}
+                    <ImageUpload action={setStaffAvatar.bind(null, m.id)} label="photo" hasImage={!!m.avatarUrl} maxW={400} />
+                  </div>
                   <form action={updateStaffProfile.bind(null, m.id)} className="mt-3 grid gap-3 sm:grid-cols-2">
                     <div><label className="label">Name</label><input name="name" defaultValue={m.name} className="input" /></div>
                     <div><label className="label">Instagram</label><input name="instagramHandle" defaultValue={m.instagramHandle ?? ""} placeholder="handle" className="input" /></div>

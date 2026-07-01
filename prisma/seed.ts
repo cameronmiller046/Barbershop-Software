@@ -30,6 +30,7 @@ async function main() {
     slotIntervalMin: 30,
     googleRating: 4.6,
     monthlyGoalCents: 300000, // $3,000/mo sales goal — drives the Reports dashboard
+    heroImageUrl: "https://loremflickr.com/1600/900/barbershop,haircut/all?lock=42",
   };
   const tenant = await prisma.tenant.upsert({
     where: { slug: DEMO_SLUG },
@@ -44,14 +45,14 @@ async function main() {
   await prisma.service.deleteMany({ where: { tenantId: tenant.id } });
   await prisma.service.createMany({
     data: [
-      { tenantId: tenant.id, name: "Haircut", description: "Consultation, cut, and style.", durationMin: 30, priceCents: 3500, sortOrder: 0, imageUrl: "https://picsum.photos/seed/cut1/600/400" },
-      { tenantId: tenant.id, name: "Skin Fade", description: "Bald fade with crisp lines.", durationMin: 30, priceCents: 4000, sortOrder: 1, imageUrl: "https://picsum.photos/seed/fade2/600/400" },
-      { tenantId: tenant.id, name: "Beard Trim & Shape", description: "Lineup and conditioning.", durationMin: 30, priceCents: 2500, sortOrder: 2, imageUrl: "https://picsum.photos/seed/beard3/600/400" },
-      { tenantId: tenant.id, name: "Cut + Beard Combo", description: "The full refresh.", durationMin: 60, priceCents: 5500, sortOrder: 3, imageUrl: "https://picsum.photos/seed/combo4/600/400" },
-      { tenantId: tenant.id, name: "Women's Cut & Style", description: "Wash, cut, and blow-dry.", durationMin: 60, priceCents: 6500, sortOrder: 4, imageUrl: "https://picsum.photos/seed/style5/600/400" },
-      { tenantId: tenant.id, name: "Silk Press", description: "Smooth, sleek finish.", durationMin: 90, priceCents: 8000, sortOrder: 5, imageUrl: "https://picsum.photos/seed/silk6/600/400" },
-      { tenantId: tenant.id, name: "Kids Cut", description: "Ages 10 and under.", durationMin: 30, priceCents: 2500, sortOrder: 6, imageUrl: "https://picsum.photos/seed/kids7/600/400" },
-      { tenantId: tenant.id, name: "Hair Design / Parting", description: "Custom lines and creative design.", durationMin: 30, priceCents: 4500, sortOrder: 7, imageUrl: "https://picsum.photos/seed/design8/600/400" },
+      { tenantId: tenant.id, name: "Haircut", description: "Consultation, cut, and style.", durationMin: 30, priceCents: 3500, sortOrder: 0, imageUrl: "https://loremflickr.com/600/400/haircut,barber/all?lock=1" },
+      { tenantId: tenant.id, name: "Skin Fade", description: "Bald fade with crisp lines.", durationMin: 30, priceCents: 4000, sortOrder: 1, imageUrl: "https://loremflickr.com/600/400/barber,fade/all?lock=2" },
+      { tenantId: tenant.id, name: "Beard Trim & Shape", description: "Lineup and conditioning.", durationMin: 30, priceCents: 2500, sortOrder: 2, imageUrl: "https://loremflickr.com/600/400/beard,barber/all?lock=3" },
+      { tenantId: tenant.id, name: "Cut + Beard Combo", description: "The full refresh.", durationMin: 60, priceCents: 5500, sortOrder: 3, imageUrl: "https://loremflickr.com/600/400/haircut,beard/all?lock=4" },
+      { tenantId: tenant.id, name: "Women's Cut & Style", description: "Wash, cut, and blow-dry.", durationMin: 60, priceCents: 6500, sortOrder: 4, imageUrl: "https://loremflickr.com/600/400/hairstyle,salon/all?lock=5" },
+      { tenantId: tenant.id, name: "Silk Press", description: "Smooth, sleek finish.", durationMin: 90, priceCents: 8000, sortOrder: 5, imageUrl: "https://loremflickr.com/600/400/hairstyle,hair/all?lock=6" },
+      { tenantId: tenant.id, name: "Kids Cut", description: "Ages 10 and under.", durationMin: 30, priceCents: 2500, sortOrder: 6, imageUrl: "https://loremflickr.com/600/400/kids,haircut/all?lock=7" },
+      { tenantId: tenant.id, name: "Hair Design / Parting", description: "Custom lines and creative design.", durationMin: 30, priceCents: 4500, sortOrder: 7, imageUrl: "https://loremflickr.com/600/400/barber,haircut/all?lock=8" },
     ],
   });
 

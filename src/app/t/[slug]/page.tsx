@@ -60,6 +60,11 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
   const base = `/t/${tenant.slug}`;
   const bookUrl = appUrl(`${base}/book`);
   const brand = tenant.primaryColor;
+  const heroImg = tenant.heroImageUrl || HERO_IMG;
+  // Gallery uses the shop's own service photos (admin-managed); falls back to
+  // stock haircut shots until the admin uploads their own.
+  const serviceShots = services.filter((s) => s.imageUrl).slice(0, 6).map((s) => ({ src: s.imageUrl as string, alt: s.name }));
+  const gallery = serviceShots.length >= 3 ? serviceShots : GALLERY;
 
   // Local-business structured data — strong signal for local search / rich results.
   const jsonLd = {
@@ -91,10 +96,10 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
       {/* ───────── Fancy hero ───────── */}
       <section className="relative overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={HERO_IMG} alt={`Fresh haircuts and fades at ${tenant.name}`} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={heroImg} alt={`Fresh haircuts and fades at ${tenant.name}`} className="absolute inset-0 h-full w-full object-cover" />
         <div
           className="absolute inset-0"
-          style={{ background: `linear-gradient(105deg, rgba(12,26,43,0.94) 0%, rgba(12,26,43,0.80) 42%, rgba(12,26,43,0.45) 100%)` }}
+          style={{ background: `linear-gradient(105deg, rgba(11,11,13,0.94) 0%, rgba(11,11,13,0.80) 42%, rgba(11,11,13,0.45) 100%)` }}
         />
         <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
 
@@ -133,7 +138,7 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
           <div className="justify-self-center">
             <div className="card flex flex-col items-center gap-4 border-white/15 bg-charcoal/90 text-center shadow-2xl shadow-black/40">
               <span className="font-display text-xl" style={{ color: brand }}>Scan to book</span>
-              <QrCode value={bookUrl} size={190} dark="#0c1a2b" light="#f5f1e8" />
+              <QrCode value={bookUrl} size={190} dark="#0f0f10" light="#f5f1e8" />
               <Link href={`${base}/book`} className="btn-primary w-full">Book online now</Link>
               <p className="max-w-[15rem] text-xs text-cream/50">Fast, free, and no account needed.</p>
             </div>
@@ -151,7 +156,7 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
           <Link href={`${base}/book`} className="btn-ghost hidden sm:inline-flex">Book yours</Link>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {GALLERY.map((g) => (
+          {gallery.map((g) => (
             <div key={g.src} className="group relative aspect-[4/5] overflow-hidden rounded-xl border border-white/10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={g.src} alt={g.alt} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />

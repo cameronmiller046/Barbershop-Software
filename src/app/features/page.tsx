@@ -42,7 +42,7 @@ export default function FeaturesPage() {
           {GROUPS.map((g) => (
             <div key={g.title} className="card">
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-barber/15 text-barber"><g.Icon size={20} /></span>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-barber/20 text-flame"><g.Icon size={20} /></span>
                 <h2 className="font-display text-2xl text-brass">{g.title}</h2>
               </div>
               <ul className="mt-4 space-y-2 text-sm text-cream/75">

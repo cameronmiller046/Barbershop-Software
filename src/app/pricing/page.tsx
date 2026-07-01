@@ -27,7 +27,7 @@ export default function PricingPage() {
               key={t.name}
               className={`card flex flex-col ${t.highlight ? "border-brass" : ""}`}
             >
-              {t.highlight && <span className="badge mb-2 w-max bg-brass text-cream">Most popular</span>}
+              {t.highlight && <span className="badge mb-2 w-max bg-barber text-cream">Most popular</span>}
               <h2 className="font-display text-2xl">{t.name}</h2>
               <div className="mt-2">
                 <span className="text-4xl font-bold">{t.price}</span>
