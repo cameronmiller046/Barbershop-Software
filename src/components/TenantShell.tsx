@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Tenant } from "@prisma/client";
-import { readableOn } from "@/lib/utils";
+import { readableOn, hexToRgbTriple } from "@/lib/utils";
 
 /**
  * Wraps a tenant's public site with its brand color (injected as CSS vars so
@@ -32,6 +32,7 @@ export function TenantShell({
           // the shop's primaryColor accent), independent of the platform theme.
           "--brand": tenant.primaryColor,
           "--brand-fg": readableOn(tenant.primaryColor),
+          "--brass": hexToRgbTriple(tenant.primaryColor),
           background: "radial-gradient(1100px 520px at 50% -10%, #17171c 0%, #0b0b0d 60%)",
         } as React.CSSProperties
       }

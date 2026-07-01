@@ -13,9 +13,9 @@ const schema = z.object({
   serviceId: z.string().min(1),
   barberId: z.string().min(1),
   start: z.string().datetime(),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120),
   email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().max(40).optional().or(z.literal("")),
+  phone: z.string().trim().min(7).max(40).refine((v) => v.replace(/\D/g, "").length >= 7, "A valid phone number is required"),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 

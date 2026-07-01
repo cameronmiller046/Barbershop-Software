@@ -5,21 +5,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Navy base (was near-black)
-        ink: "#0d1b2e",
-        charcoal: "#15293f",
-        smoke: "#1e3a58",
-        // `brass` = readable light ivory for headings/accent text on the dark
-        // navy base (red text on navy failed contrast). Fills use `barber`.
-        brass: "#f0ead9",
+        // Neutral near-black base (no blue).
+        ink: "#0f0f10",
+        charcoal: "#17171b",
+        smoke: "#26262b",
+        // `brass` = the themeable accent. Driven by --brass so each tenant's
+        // portal/site can recolor every accent to their brand (ivory by
+        // default on the platform). Uses rgb() so opacity utilities work.
+        brass: "rgb(var(--brass) / <alpha-value>)",
         brassDark: "#d9cfb4",
         cream: "#f5f1e8",
-        // Barber-pole palette: deep red for fills, a lighter "flame" red that
-        // stays readable as text on navy, and navy-blue for stripe accents.
+        // Barber-red fills + a lighter, readable "flame" red for accent text.
         barber: "#d1233a",
         barberDark: "#a81b2e",
         flame: "#ff7d6e",
-        navy: "#1f4e79",
+        // neutral (kept for legacy usages; no longer blue)
+        navy: "#2a2a30",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

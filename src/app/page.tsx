@@ -166,7 +166,7 @@ export default function Home() {
 
       {/* CTA */}
       <section className="container-page py-16">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-navy/40 via-charcoal to-charcoal p-10 text-center">
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-barber/15 via-charcoal to-charcoal p-10 text-center">
           <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
           <h2 className="font-display text-4xl">Ready to modernize your shop?</h2>
           <p className="mx-auto mt-3 max-w-md text-cream/70">

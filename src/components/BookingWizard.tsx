@@ -57,9 +57,9 @@ export function BookingWizard({
   const activeSlots = days.find((d) => d.date === activeDay)?.slots ?? [];
 
   async function submit() {
-    if (!service || !resolvedBarberId || !slot || !form.name.trim()) return;
-    if (!form.email.trim() && !form.phone.trim()) {
-      setError("Add an email or phone so we can reach you."); return;
+    if (!service || !resolvedBarberId || !slot || !form.name.trim() || !form.phone.trim()) return;
+    if (form.phone.replace(/\D/g, "").length < 7) {
+      setError("Enter a valid phone number so we can reach you."); return;
     }
     setSubmitting(true); setError(null);
     try {
@@ -166,12 +166,12 @@ export function BookingWizard({
           <section className="card">
             <StepHeading n={serviceLocksBarber || barbers.length <= 1 ? 3 : 4} title="Your details" brand={brand} />
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div><label className="label">Name</label>
-                <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jordan Smith" /></div>
-              <div><label className="label">Phone</label>
-                <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(555) 123-4567" /></div>
-              <div className="sm:col-span-2"><label className="label">Email</label>
-                <input className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
+              <div><label className="label">Name <span style={{ color: brand }}>*</span></label>
+                <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jordan Smith" /></div>
+              <div><label className="label">Phone <span style={{ color: brand }}>*</span></label>
+                <input className="input" type="tel" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(555) 123-4567" /></div>
+              <div className="sm:col-span-2"><label className="label">Email (optional)</label>
+                <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
               <div className="sm:col-span-2"><label className="label">Notes (optional)</label>
                 <textarea className="input min-h-[72px]" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             </div>

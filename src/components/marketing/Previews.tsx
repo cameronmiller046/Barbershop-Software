@@ -12,7 +12,7 @@ export function BrowserFrame({ url, children }: { url: string; children: React.R
       <div className="flex items-center gap-2 border-b border-white/10 bg-ink/70 px-4 py-2.5">
         <span className="h-3 w-3 rounded-full bg-barber" />
         <span className="h-3 w-3 rounded-full bg-brass" />
-        <span className="h-3 w-3 rounded-full bg-navy" />
+        <span className="h-3 w-3 rounded-full bg-cream/40" />
         <span className="ml-3 truncate rounded-md bg-white/5 px-3 py-1 text-xs text-cream/40">{url}</span>
       </div>
       <div className="p-4">{children}</div>
@@ -29,7 +29,7 @@ export function BookingScreen() {
   ];
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-brass/25 to-navy/30 p-4">
+      <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-brass/25 to-barber/25 p-4">
         <div>
           <div className="font-display text-lg">Professional Barber &amp; Beauty</div>
           <div className="text-xs text-cream/50">Stone Mountain, GA · ★ 4.6</div>

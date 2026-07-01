@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TenantShell } from "@/components/TenantShell";
 import { getTenantBySlug } from "@/lib/tenant";
+import { readableOn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function TenantContactPage({ params }: { params: Promise<{ 
             <span className="absolute inset-0" aria-hidden />
             <span
               className="btn absolute bottom-3 right-3 px-4 py-2 text-sm font-semibold shadow-lg"
-              style={{ background: tenant.primaryColor, color: "#0c1a2b" }}
+              style={{ background: tenant.primaryColor, color: readableOn(tenant.primaryColor) }}
             >
               Get directions →
             </span>

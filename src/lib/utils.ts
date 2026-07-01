@@ -50,6 +50,17 @@ export function appUrl(path = "") {
   return `${base.replace(/\/$/, "")}${path}`;
 }
 
+// "#C9A24B" -> "201 162 75", for use in `rgb(var(--brass) / <alpha-value>)`.
+export function hexToRgbTriple(hex: string): string {
+  let h = (hex || "").replace("#", "").trim();
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length !== 6) return "240 234 217"; // fallback ivory
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `${r} ${g} ${b}`;
+}
+
 // Pick readable foreground (black/white) for a tenant's brand color.
 export function readableOn(hex: string) {
   const c = hex.replace("#", "");

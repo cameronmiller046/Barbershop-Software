@@ -3,7 +3,7 @@ import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { PortalNav } from "@/components/PortalNav";
 import { signOut } from "@/lib/auth";
-import { appUrl } from "@/lib/utils";
+import { appUrl, readableOn, hexToRgbTriple } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
 
@@ -14,8 +14,20 @@ export default async function PortalLayout({ children }: { children: React.React
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
   const perms = permMap(user);
 
+  // Apply the store's own brand to their portal (accent + neutral black base),
+  // so each shop's portal matches their public site.
+  const brand = tenant?.primaryColor || "#d1233a";
+
   return (
-    <div className="min-h-screen">
+    <div
+      className="min-h-screen"
+      style={{
+        "--brand": brand,
+        "--brand-fg": readableOn(brand),
+        "--brass": hexToRgbTriple(brand),
+        background: "radial-gradient(1100px 520px at 50% -10%, #1a1a1e 0%, #0f0f10 60%)",
+      } as React.CSSProperties}
+    >
       <header className="border-b border-white/10">
         <div className="container-page flex h-16 items-center justify-between">
           <Link href="/portal" className="flex items-center gap-2">
