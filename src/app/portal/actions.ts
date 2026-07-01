@@ -11,11 +11,13 @@ import { audit } from "@/lib/audit";
 import { isSlotFree } from "@/lib/availability";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } from "@/lib/appointmentReasons";
 import { planLimits } from "@/lib/plans";
+import { isDemoAccount } from "@/lib/demoMode";
 import type { AppointmentStatus } from "@prisma/client";
 
 /** Load the acting staff member and confirm they hold a permission, else abort. */
 async function requirePerm(key: PermKey) {
   const user = await requireStaffWithPerms();
+  if (isDemoAccount(user.email)) return null; // demo mode is read-only
   if (!can(user, key)) return null;
   return user;
 }
@@ -23,6 +25,7 @@ async function requirePerm(key: PermKey) {
 // ── Appointments ──
 export async function setAppointmentStatus(id: string, status: AppointmentStatus) {
   const user = await requireTenantStaff();
+  if (isDemoAccount(user.email)) return; // demo mode is read-only
   // Ensure the appointment belongs to this tenant (isolation guard).
   const res = await prisma.appointment.updateMany({
     where: { id, tenantId: user.tenantId },
@@ -36,6 +39,7 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
 /** Load an appointment the acting staff may manage (own book, or all if manager). */
 async function loadOwnedAppointment(id: string) {
   const user = await requireStaffWithPerms();
+  if (isDemoAccount(user.email)) return null; // demo mode is read-only
   const appt = await prisma.appointment.findFirst({
     where: { id, tenantId: user.tenantId },
     include: { service: { select: { durationMin: true } } },
@@ -302,6 +306,7 @@ export async function setHeroPosition(formData: FormData) {
 // ── Account self-service (any signed-in staff edits their OWN account) ──
 export async function updateOwnProfile(formData: FormData) {
   const user = await requireTenantStaff();
+  if (isDemoAccount(user.email)) redirect("/portal/account?demo=1"); // read-only demo
   const name = String(formData.get("name") || "").trim();
   await prisma.user.update({
     where: { id: user.id },
@@ -319,6 +324,7 @@ export async function updateOwnProfile(formData: FormData) {
 
 export async function changeOwnPassword(formData: FormData) {
   const user = await requireTenantStaff();
+  if (isDemoAccount(user.email)) redirect("/portal/account?demo=1"); // read-only demo
   const current = String(formData.get("current") || "");
   const next = String(formData.get("next") || "");
   if (next.length < 6) redirect("/portal/account?pw=short");

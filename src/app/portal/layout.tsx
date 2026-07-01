@@ -7,6 +7,7 @@ import { appUrl, readableOn, hexToRgbTriple } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
+import { isDemoAccount } from "@/lib/demoMode";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,12 @@ export default async function PortalLayout({ children }: { children: React.React
           </div>
         </div>
       </header>
+
+      {isDemoAccount(user.email) && (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-5 py-2 text-center text-sm text-amber-200">
+          🎬 Demo mode — explore freely. Changes you make here are <span className="font-semibold">not saved</span> and never affect any live site.
+        </div>
+      )}
 
       <div className="container-page grid gap-8 py-8 md:grid-cols-[200px_1fr]">
         <aside className="md:sticky md:top-8 md:self-start">
