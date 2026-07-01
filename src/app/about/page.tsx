@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mkt">
       <MarketingHeader />
       <section className="container-page max-w-3xl py-16">
         <h1 className="font-display text-4xl md:text-5xl">About The Chair</h1>

@@ -8,7 +8,7 @@ import { ScissorsIcon } from "@/components/BarberIcons";
 /** A macOS-style browser window frame with a barber-striped title bar. */
 export function BrowserFrame({ url, children }: { url: string; children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-charcoal shadow-2xl shadow-black/40">
+    <div className="preview-dark overflow-hidden rounded-2xl border border-white/10 bg-charcoal shadow-2xl shadow-black/40">
       <div className="flex items-center gap-2 border-b border-white/10 bg-ink/70 px-4 py-2.5">
         <span className="h-3 w-3 rounded-full bg-barber" />
         <span className="h-3 w-3 rounded-full bg-brass" />

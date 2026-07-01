@@ -7,10 +7,57 @@
   --brand: #d1233a; /* barber red (platform default) */
   --brand-fg: #f5f1e8; /* cream text on red */
   --barber-red: #d1233a;
-  /* Themeable accent (space-separated RGB). Ivory by default; tenants override
-     with their brand color in TenantShell / the portal layout. */
+  /* Surface + text tokens (space-separated RGB). Dark defaults; a `.theme-light`
+     wrapper flips these for the marketing site. */
+  --ink: 15 15 16;
+  --charcoal: 23 23 27;
+  --smoke: 38 38 43;
+  --cream: 245 241 232;
+  /* Themeable accent. Ivory by default; tenants + the light theme override it. */
   --brass: 240 234 217;
 }
+
+/* ───────── Marketing theme (toggleable) — dark-gray by default, light option ───────── */
+.mkt {
+  --ink: 28 28 33; /* gray dark base (not pure black) */
+  --charcoal: 39 39 45; /* cards */
+  --smoke: 54 54 61; /* muted surfaces */
+  --cream: 240 237 230; /* light text */
+  --brass: 240 234 217; /* ivory accent */
+  background: #1b1b1f;
+  color: rgb(var(--cream));
+}
+.mkt.light {
+  color-scheme: light;
+  --ink: 247 244 238; /* off-white base */
+  --charcoal: 255 255 255; /* white cards */
+  --smoke: 236 232 224; /* light warm gray */
+  --cream: 28 26 32; /* dark text */
+  --brass: 138 94 30; /* deep brass, readable on light */
+  background: #f4f0e8;
+}
+.mkt.light .card { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+.mkt.light .border-white\/5 { border-color: rgba(0, 0, 0, 0.05); }
+.mkt.light .border-white\/10 { border-color: rgba(0, 0, 0, 0.08); }
+.mkt.light .border-white\/15 { border-color: rgba(0, 0, 0, 0.12); }
+.mkt.light .border-white\/20 { border-color: rgba(0, 0, 0, 0.16); }
+.mkt.light .bg-white\/5 { background-color: rgba(0, 0, 0, 0.04); }
+.mkt.light .bg-white\/10 { background-color: rgba(0, 0, 0, 0.06); }
+.mkt.light .text-flame { color: #c0182e; }
+
+/* App screenshots keep the real (black) app palette regardless of theme. */
+.preview-dark {
+  --ink: 15 15 16;
+  --charcoal: 23 23 27;
+  --smoke: 38 38 43;
+  --cream: 245 241 232;
+  --brass: 240 234 217;
+  color: rgb(245 241 232);
+}
+.mkt.light .preview-dark .border-white\/10 { border-color: rgba(255, 255, 255, 0.1); }
+.mkt.light .preview-dark .border-white\/15 { border-color: rgba(255, 255, 255, 0.15); }
+.mkt.light .preview-dark .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
+.mkt.light .preview-dark .text-flame { color: #ff7d6e; }
 
 body {
   /* Near-black base with a subtle red glow (classic barbershop on black). */

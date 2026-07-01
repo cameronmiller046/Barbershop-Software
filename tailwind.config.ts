@@ -5,16 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Neutral near-black base (no blue).
-        ink: "#0f0f10",
-        charcoal: "#17171b",
-        smoke: "#26262b",
-        // `brass` = the themeable accent. Driven by --brass so each tenant's
-        // portal/site can recolor every accent to their brand (ivory by
-        // default on the platform). Uses rgb() so opacity utilities work.
+        // Surface + text tokens are CSS-variable driven so a `.theme-light`
+        // wrapper can flip the marketing site to a light palette while the
+        // portal/shop stay dark. Defaults (in globals :root) = the dark values.
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        charcoal: "rgb(var(--charcoal) / <alpha-value>)",
+        smoke: "rgb(var(--smoke) / <alpha-value>)",
+        cream: "rgb(var(--cream) / <alpha-value>)",
+        // `brass` = the themeable accent (per-tenant brand, or light-theme brass).
         brass: "rgb(var(--brass) / <alpha-value>)",
         brassDark: "#d9cfb4",
-        cream: "#f5f1e8",
         // Barber-red fills + a lighter, readable "flame" red for accent text.
         barber: "#d1233a",
         barberDark: "#a81b2e",

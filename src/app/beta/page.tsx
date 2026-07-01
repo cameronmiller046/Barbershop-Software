@@ -6,7 +6,7 @@ export const metadata = { title: "Request beta access — The Chair" };
 
 export default function BetaPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mkt">
       <MarketingHeader />
       <section className="container-page max-w-xl py-16">
         <h1 className="font-display text-4xl">Request beta access</h1>

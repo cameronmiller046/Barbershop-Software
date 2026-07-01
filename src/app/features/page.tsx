@@ -15,7 +15,7 @@ const ICONS: Record<FeatureIcon, typeof ScissorsIcon> = {
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mkt">
       <MarketingHeader />
       <section className="container-page py-16">
         <h1 className="font-display text-4xl md:text-5xl">Features</h1>

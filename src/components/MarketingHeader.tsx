@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PoleIcon } from "@/components/BarberIcons";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const LINKS = [
   { href: "/features", label: "Features" },
@@ -27,6 +28,7 @@ export function MarketingHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link href="/login" className="btn-ghost hidden sm:inline-flex">Sign in</Link>
           <Link href="/beta" className="btn-primary">Request access</Link>
 

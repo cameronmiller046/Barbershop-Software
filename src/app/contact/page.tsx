@@ -20,7 +20,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mkt">
       <MarketingHeader />
       <section className="container-page max-w-xl py-16">
         <h1 className="font-display text-4xl">Contact us</h1>

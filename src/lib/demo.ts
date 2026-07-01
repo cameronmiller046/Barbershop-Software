@@ -9,6 +9,7 @@ export const DEMO_SLUG = "professional-barbershop";
 //   test1 / test1 → Manager (OWNER)      test2 / test2 → Barber (BARBER)
 export const FLAGSHIP_MANAGER_EMAIL = "test1";
 export const FLAGSHIP_BARBER_EMAIL = "test2";
+export const DEMO_GOAL_CENTS = 1500000; // $15,000/mo demo sales goal
 
 // Flagship store hours: Mon–Fri 10:00–19:30 · Sat 9:00–17:30 · Sun 12:00–18:00
 const STORE_HOURS: Record<number, [number, number]> = {
@@ -60,10 +61,14 @@ export async function clearDemoData(prisma: PrismaClient) {
  * cheap when data already exists.
  */
 export async function ensureDemoData(prisma: PrismaClient) {
-  const flagship = await prisma.tenant.findUnique({ where: { slug: DEMO_SLUG }, select: { id: true } });
+  const flagship = await prisma.tenant.findUnique({ where: { slug: DEMO_SLUG }, select: { id: true, monthlyGoalCents: true } });
   if (!flagship) return;
   const count = await prisma.appointment.count({ where: { tenantId: flagship.id } });
-  if (count < 20) await seedFlagshipDemo(prisma);
+  // Reseed if empty OR if the demo is out of date (goal not yet the current
+  // target) — this refreshes stale live demos to the latest data + $15k goal.
+  if (count < 20 || flagship.monthlyGoalCents !== DEMO_GOAL_CENTS) {
+    await seedFlagshipDemo(prisma);
+  }
 }
 
 /** Load a ton of demo data: flagship staff + appointments, plus 8 extra stores. */
@@ -177,8 +182,8 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
   if (!staff) return;
   const { tenant, manager, barber } = staff;
 
-  // The demo shop runs on the full Enterprise plan (all features unlocked).
-  await prisma.tenant.update({ where: { id: tenant.id }, data: { plan: "ENTERPRISE" } });
+  // The demo shop runs on the full Enterprise plan with a $15k/mo goal.
+  await prisma.tenant.update({ where: { id: tenant.id }, data: { plan: "ENTERPRISE", monthlyGoalCents: DEMO_GOAL_CENTS } });
 
   // Idempotent: clear prior flagship demo appointments + clients.
   await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });

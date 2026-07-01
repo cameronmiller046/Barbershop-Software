@@ -45,7 +45,7 @@ export default async function FeatureDetail({ params }: { params: Promise<{ slug
   const others = FEATURES.filter((x) => x.slug !== f.slug);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mkt">
       <MarketingHeader />
       <section className="container-page py-14">
         <Link href="/features" className="text-sm text-cream/50 hover:text-cream">← All features</Link>

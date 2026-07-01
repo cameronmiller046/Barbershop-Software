@@ -16,7 +16,7 @@ const TIERS = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mkt">
       <MarketingHeader />
       <section className="container-page py-16">
         <div className="eyebrow">💈 Simple, honest pricing</div>
