@@ -44,13 +44,12 @@ export function AppointmentActions({
         ) : (
           <>
             <ActionBtn onClick={() => run(() => startAppointment(id))} tone="good">▶ Check in</ActionBtn>
-            <ActionBtn onClick={() => setModal("collect")}>✓ Complete</ActionBtn>
             <ActionBtn onClick={() => setModal("reschedule")}>Reschedule</ActionBtn>
             <ActionBtn onClick={() => setModal("cancel")} tone="warn">Cancel</ActionBtn>
           </>
         )
       ) : (
-        <ActionBtn onClick={() => run(() => reopenAppointment(id))} title="Undo — set back to confirmed">↩ Undo</ActionBtn>
+        canCorrect && <ActionBtn onClick={() => run(() => reopenAppointment(id))} title="Undo — reset to confirmed (admin only)">↩ Undo</ActionBtn>
       )}
 
       {canCorrect && (startedISO || finishedISO) && (

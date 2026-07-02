@@ -64,11 +64,15 @@ export async function rescheduleAppointment(id: string, startISO: string, reason
   revalidateAppointments();
 }
 
-/** Undo — put an appointment back to CONFIRMED (reverses Done / Cancel / No-show / Remove). */
+/** Undo — fully reset an appointment to a fresh CONFIRMED state (clears the
+ *  clock + collected amount so the check-in button comes back). */
 export async function reopenAppointment(id: string) {
   const ctx = await loadOwnedAppointment(id);
-  if (!ctx) return;
-  await prisma.appointment.update({ where: { id }, data: { status: "CONFIRMED", active: true, statusReason: null } });
+  if (!ctx || !can(ctx.user, "shop.viewAll")) return; // managers/admins only — barbers can't reset the clock
+  await prisma.appointment.update({
+    where: { id },
+    data: { status: "CONFIRMED", active: true, statusReason: null, startedAt: null, finishedAt: null, collectedCents: null },
+  });
   await audit({ action: "appointment.reopened", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
   revalidateAppointments();
 }
