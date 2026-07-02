@@ -7,6 +7,7 @@ import {
   startAppointment, finishAppointment, correctAppointmentClock,
 } from "@/app/portal/actions";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS } from "@/lib/appointmentReasons";
+import { BookingCalendar } from "@/components/BookingCalendar";
 
 type Slot = { start: string; end: string };
 type Day = { date: string; slots: Slot[] };
@@ -242,7 +243,7 @@ function RescheduleModal({ id, slug, serviceId, barberId, pending, onClose, onCo
   onClose: () => void; onConfirm: (startISO: string, reason: string) => void;
 }) {
   const [days, setDays] = useState<Day[] | null>(null);
-  const [dayIdx, setDayIdx] = useState(0);
+  const [activeDay, setActiveDay] = useState<string | null>(null);
   const [slotStart, setSlotStart] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
 
@@ -250,11 +251,11 @@ function RescheduleModal({ id, slug, serviceId, barberId, pending, onClose, onCo
     const qs = new URLSearchParams({ serviceId, barberId });
     fetch(`/api/t/${slug}/availability?${qs}`)
       .then((r) => r.json())
-      .then((d) => setDays(d.days ?? []))
+      .then((d) => { setDays(d.days ?? []); setActiveDay(d.days?.[0]?.date ?? null); })
       .catch(() => setDays([]));
   }, [slug, serviceId, barberId]);
 
-  const slots = days?.[dayIdx]?.slots ?? [];
+  const slots = days?.find((d) => d.date === activeDay)?.slots ?? [];
 
   return (
     <Modal title="Reschedule appointment" hint="Pick a new date, time, and a reason." onClose={onClose}>
@@ -263,22 +264,14 @@ function RescheduleModal({ id, slug, serviceId, barberId, pending, onClose, onCo
       ) : days.length === 0 ? (
         <p className="text-sm text-cream/50">No open times in the next few weeks for this barber.</p>
       ) : (
-        <div className="space-y-4">
-          <div>
-            <div className="label">New date</div>
-            <select className="input" value={dayIdx}
-              onChange={(e) => { setDayIdx(Number(e.target.value)); setSlotStart(null); }}>
-              {days.map((d, i) => (
-                <option key={d.date} value={i}>
-                  {new Date(d.date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="label">New time</div>
-            <div className="grid max-h-40 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-              {slots.map((s) => {
+        <div className="grid gap-5 sm:grid-cols-[auto_1fr]">
+          <BookingCalendar days={days} activeDay={activeDay}
+            onPick={(iso) => { setActiveDay(iso); setSlotStart(null); }} />
+          <div className="min-w-0 space-y-4">
+            <div>
+              <div className="label">{activeDay ? new Date(activeDay).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : "Times"}</div>
+              <div className="grid max-h-36 grid-cols-3 gap-2 overflow-y-auto">
+                {slots.map((s) => {
                 const active = slotStart === s.start;
                 return (
                   <button key={s.start} type="button" onClick={() => setSlotStart(s.start)}
@@ -296,13 +289,14 @@ function RescheduleModal({ id, slug, serviceId, barberId, pending, onClose, onCo
             <div className="label">Reason</div>
             <ReasonChips reasons={[...RESCHEDULE_REASONS]} value={reason} onChange={setReason} />
           </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <button onClick={onClose} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
-            <button disabled={!slotStart || !reason || pending}
-              onClick={() => slotStart && reason && onConfirm(slotStart, reason)}
-              className="btn-primary px-5 py-2 text-sm disabled:opacity-40">
-              {pending ? "Saving…" : "Reschedule"}
-            </button>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={onClose} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
+              <button disabled={!slotStart || !reason || pending}
+                onClick={() => slotStart && reason && onConfirm(slotStart, reason)}
+                className="btn-primary px-5 py-2 text-sm disabled:opacity-40">
+                {pending ? "Saving…" : "Reschedule"}
+              </button>
+            </div>
           </div>
         </div>
       )}
