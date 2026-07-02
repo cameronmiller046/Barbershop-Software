@@ -21,7 +21,7 @@ export async function getTenantServices(tenantId: string) {
 /** Barbers (staff who take appointments) for a tenant. */
 export async function getTenantBarbers(tenantId: string) {
   return prisma.user.findMany({
-    where: { tenantId, role: "BARBER", active: true },
+    where: { tenantId, role: "BARBER", active: true, kioskOnly: false },
     orderBy: { name: "asc" },
     select: { id: true, name: true, bio: true, avatarUrl: true, instagramHandle: true },
   });

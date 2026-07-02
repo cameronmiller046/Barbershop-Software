@@ -35,7 +35,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   // Validate service + barber belong to THIS tenant (isolation).
   const [service, barber] = await Promise.all([
     prisma.service.findFirst({ where: { id: serviceId, tenantId: tenant.id } }),
-    prisma.user.findFirst({ where: { id: barberId, tenantId: tenant.id, role: "BARBER" } }),
+    prisma.user.findFirst({ where: { id: barberId, tenantId: tenant.id, role: "BARBER", kioskOnly: false } }),
   ]);
   if (!service || !barber) return NextResponse.json({ error: "Invalid service or barber" }, { status: 400 });
 

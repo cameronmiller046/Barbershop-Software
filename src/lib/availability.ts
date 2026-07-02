@@ -52,10 +52,14 @@ export async function getDaySlots(
   const windowStart = zonedWallToUtc(year, month0, day, wh.startMin, timeZone);
   const windowEnd = zonedWallToUtc(year, month0, day, wh.endMin, timeZone);
 
+  // Any appointment that OVERLAPS the window — including one that began before
+  // it opens but is still running (matches the isSlotFree predicate). A narrower
+  // "startTime within window" filter would miss an in-progress cut.
   const existing = await prisma.appointment.findMany({
     where: {
       tenantId, barberId, active: true, status: "CONFIRMED",
-      startTime: { gte: windowStart, lt: windowEnd },
+      startTime: { lt: windowEnd },
+      endTime: { gt: windowStart },
     },
     select: { startTime: true, endTime: true },
   });
@@ -94,6 +98,28 @@ export async function getUpcomingDays(
     }
   }
   return result;
+}
+
+/**
+ * The soonest instant a barber can start a service of `serviceDurationMin`,
+ * respecting their working hours and existing bookings. Scans forward from now
+ * across up to `scanDays` days. Returns null if they have no availability at all
+ * (e.g. no working hours). Used to queue walk-ins from the self-check-in kiosk.
+ */
+export async function nextFreeStart(
+  tenantId: string,
+  barberId: string,
+  serviceDurationMin: number,
+  stepMin = 5,
+  timeZone = "America/New_York",
+  scanDays = 14,
+): Promise<Date | null> {
+  for (let i = 0; i < scanDays; i++) {
+    const d = addDays(new Date(), i);
+    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin, timeZone);
+    if (slots.length) return new Date(slots[0].start);
+  }
+  return null;
 }
 
 /** Server-side guard: re-check a slot is still free before committing. */

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { PortalNav } from "@/components/PortalNav";
@@ -13,6 +14,8 @@ export const dynamic = "force-dynamic";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const user = await requireStaffWithPerms();
+  // Kiosk-locked accounts can only ever see the self-check-in surface.
+  if (user.kioskOnly) redirect("/kiosk");
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
   const perms = permMap(user);
 

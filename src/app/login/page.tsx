@@ -24,7 +24,12 @@ export default async function LoginPage({
   const sp = await searchParams;
   const session = await auth();
   if (session?.user) {
-    redirect(session.user.role === "PLATFORM_ADMIN" ? "/admin" : "/portal");
+    // Only bounce a session whose backing account still exists and is active.
+    // A deactivated/deleted login (e.g. a removed kiosk device) keeps a valid
+    // JWT; without this check it would ping-pong forever between /login and the
+    // portal (which redirects it right back). Fall through to the form instead.
+    const stillActive = await prisma.user.findFirst({ where: { id: session.user.id, active: true }, select: { id: true } });
+    if (stillActive) redirect(session.user.role === "PLATFORM_ADMIN" ? "/admin" : "/portal");
   }
 
   const stores = (await prisma.tenant.findMany({

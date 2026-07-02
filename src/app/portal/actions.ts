@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { addMinutes } from "date-fns";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireTenantStaff, requireStaffWithPerms } from "@/lib/rbac";
+import { requirePortalStaff } from "@/lib/rbac";
 import { can, type PermKey } from "@/lib/permissions";
 import { audit } from "@/lib/audit";
 import { isSlotFree } from "@/lib/availability";
@@ -15,14 +15,14 @@ import type { AppointmentStatus } from "@prisma/client";
 
 /** Load the acting staff member and confirm they hold a permission, else abort. */
 async function requirePerm(key: PermKey) {
-  const user = await requireStaffWithPerms();
+  const user = await requirePortalStaff();
   if (!can(user, key)) return null;
   return user;
 }
 
 // ── Appointments ──
 export async function setAppointmentStatus(id: string, status: AppointmentStatus) {
-  const user = await requireTenantStaff();
+  const user = await requirePortalStaff();
   // Ensure the appointment belongs to this tenant (isolation guard).
   const res = await prisma.appointment.updateMany({
     where: { id, tenantId: user.tenantId },
@@ -35,7 +35,7 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
 
 /** Load an appointment the acting staff may manage (own book, or all if manager). */
 async function loadOwnedAppointment(id: string) {
-  const user = await requireStaffWithPerms();
+  const user = await requirePortalStaff();
   const appt = await prisma.appointment.findFirst({
     where: { id, tenantId: user.tenantId },
     include: { service: { select: { durationMin: true } } },
@@ -139,7 +139,7 @@ export async function finishAppointment(id: string, collectedCents?: number) {
 /** Quickly log a completed cut (walk-in or appointment) for a new or existing
  *  client — so walk-in traffic gets into the system. Requires kind + referral. */
 export async function logWalkIn(formData: FormData) {
-  const user = await requireStaffWithPerms();
+  const user = await requirePortalStaff();
   const name = String(formData.get("name") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const serviceId = String(formData.get("serviceId") || "");
@@ -250,9 +250,9 @@ export async function createBarber(formData: FormData) {
   const password = String(formData.get("password") || "");
   if (!email || !name || password.length < 6) return;
 
-  // Enforce the plan's chair limit.
+  // Enforce the plan's chair limit (kiosk device logins don't take a chair).
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { plan: true } });
-  const count = await prisma.user.count({ where: { tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } } });
+  const count = await prisma.user.count({ where: { tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] }, kioskOnly: false } });
   if (tenant && count >= planLimits(tenant.plan).maxBarbers) redirect("/portal/team?err=limit");
 
   const exists = await prisma.user.findUnique({ where: { email } });
@@ -326,6 +326,54 @@ export async function updateStaffProfile(id: string, formData: FormData) {
   revalidatePath("/portal/team");
 }
 
+/** Restrict (or release) a staff account to the self-check-in kiosk only. When
+ *  on, that login can only ever reach /kiosk — used for a shared front-desk
+ *  tablet. Requires shop.team. */
+export async function setKioskMode(id: string, on: boolean) {
+  const user = await requirePerm("shop.team");
+  if (!user) return;
+  await prisma.user.updateMany({
+    where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
+    data: { kioskOnly: on },
+  });
+  await audit({ action: "team.kioskMode", tenantId: user.tenantId, userId: user.id, target: id, meta: { on } });
+  revalidatePath("/portal/team");
+}
+
+/** Create a dedicated check-in kiosk device login (locked to /kiosk). Does not
+ *  count against the plan's chair limit and isn't a bookable barber. */
+export async function createKioskAccount(formData: FormData) {
+  const user = await requirePerm("shop.team");
+  if (!user) return;
+  const email = String(formData.get("email") || "").toLowerCase().trim();
+  const password = String(formData.get("password") || "");
+  const label = String(formData.get("name") || "").trim() || "Front desk kiosk";
+  if (!email || password.length < 6) redirect("/portal/team?kioskErr=fields");
+  if (await prisma.user.findUnique({ where: { email } })) redirect("/portal/team?kioskErr=email");
+  await prisma.user.create({
+    data: {
+      tenantId: user.tenantId,
+      email,
+      name: label,
+      role: "RECEPTIONIST",
+      kioskOnly: true,
+      passwordHash: await bcrypt.hash(password, 10),
+    },
+  });
+  await audit({ action: "kiosk.account.created", tenantId: user.tenantId, userId: user.id, target: email });
+  revalidatePath("/portal/team");
+  redirect("/portal/team?kiosk=created");
+}
+
+/** Permanently remove a kiosk device login (only kiosk-only accounts). */
+export async function deleteKioskAccount(id: string) {
+  const user = await requirePerm("shop.team");
+  if (!user) return;
+  await prisma.user.deleteMany({ where: { id, tenantId: user.tenantId, kioskOnly: true } });
+  await audit({ action: "kiosk.account.removed", tenantId: user.tenantId, userId: user.id, target: id });
+  revalidatePath("/portal/team");
+}
+
 // Edit a standard user's level within the shop (requires shop.team).
 export async function setStaffRole(id: string, role: "BARBER" | "RECEPTIONIST") {
   const user = await requirePerm("shop.team");
@@ -390,7 +438,7 @@ export async function setHeroPosition(formData: FormData) {
 
 // ── Account self-service (any signed-in staff edits their OWN account) ──
 export async function updateOwnProfile(formData: FormData) {
-  const user = await requireTenantStaff();
+  const user = await requirePortalStaff();
   const name = String(formData.get("name") || "").trim();
   await prisma.user.update({
     where: { id: user.id },
@@ -407,7 +455,7 @@ export async function updateOwnProfile(formData: FormData) {
 }
 
 export async function changeOwnPassword(formData: FormData) {
-  const user = await requireTenantStaff();
+  const user = await requirePortalStaff();
   const current = String(formData.get("current") || "");
   const next = String(formData.get("next") || "");
   if (next.length < 6) redirect("/portal/account?pw=short");

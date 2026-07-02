@@ -5,7 +5,8 @@ import { NextResponse } from "next/server";
 // route layouts (see src/lib/rbac.ts); this is the coarse gate.
 export default auth((req) => {
   const { pathname, origin } = req.nextUrl;
-  const needsAuth = pathname.startsWith("/portal") || pathname.startsWith("/admin");
+  const needsAuth =
+    pathname.startsWith("/portal") || pathname.startsWith("/admin") || pathname.startsWith("/kiosk");
 
   if (needsAuth && !req.auth) {
     const url = new URL("/login", origin);
@@ -16,5 +17,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/portal/:path*", "/admin/:path*"],
+  matcher: ["/portal/:path*", "/admin/:path*", "/kiosk/:path*"],
 };

@@ -18,6 +18,7 @@ export type StaffWithPerms = {
   role: Role;
   tenantId: string;
   permissionOverrides: unknown;
+  kioskOnly: boolean;
 };
 
 /** Require any authenticated user. Redirects to /login otherwise. */
@@ -55,10 +56,31 @@ export async function requireStaffWithPerms(): Promise<StaffWithPerms> {
   const session = await requireTenantStaff();
   const full = await prisma.user.findUnique({
     where: { id: session.id, active: true },
-    select: { id: true, name: true, email: true, role: true, tenantId: true, permissionOverrides: true },
+    select: { id: true, name: true, email: true, role: true, tenantId: true, permissionOverrides: true, kioskOnly: true },
   });
   if (!full || !full.tenantId) redirect("/login");
   return { ...full, tenantId: full.tenantId };
+}
+
+/**
+ * Require a kiosk-capable staff account bound to a tenant. Any tenant staff can
+ * open the self-check-in kiosk (managers to preview it, or the dedicated device
+ * account). Kiosk-only accounts are funnelled here from the portal.
+ */
+export async function requireKioskStaff(): Promise<StaffWithPerms> {
+  return requireStaffWithPerms();
+}
+
+/**
+ * Require a FULL-portal staff account. Identical to requireStaffWithPerms but
+ * also rejects kiosk-only device logins — because a layout redirect does NOT run
+ * for server-action POSTs, so authorization for portal mutations must be enforced
+ * here, at the action layer. Every /portal server action must use this guard.
+ */
+export async function requirePortalStaff(): Promise<StaffWithPerms> {
+  const user = await requireStaffWithPerms();
+  if (user.kioskOnly) redirect("/kiosk");
+  return user;
 }
 
 const RANK: Record<Role, number> = {

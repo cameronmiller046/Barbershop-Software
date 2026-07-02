@@ -1,7 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { createBarber, toggleBarber, updateStaffProfile, setStaffAvatar } from "@/app/portal/actions";
+import {
+  createBarber, toggleBarber, updateStaffProfile, setStaffAvatar,
+  setKioskMode, createKioskAccount, deleteKioskAccount,
+} from "@/app/portal/actions";
 import { roleLabel } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
@@ -11,15 +15,20 @@ export const dynamic = "force-dynamic";
 
 const dateInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-export default async function TeamPage({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
+export default async function TeamPage({ searchParams }: { searchParams: Promise<{ err?: string; kioskErr?: string; kiosk?: string }> }) {
   const user = await requireStaffWithPerms();
   if (!can(user, "shop.team")) redirect("/portal");
   const sp = await searchParams;
 
-  const [team, tenant] = await Promise.all([
+  const [team, devices, tenant] = await Promise.all([
     prisma.user.findMany({
-      where: { tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
+      where: { tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] }, kioskOnly: false },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { tenantId: user.tenantId, kioskOnly: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, email: true, active: true },
     }),
     prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { plan: true } }),
   ]);
@@ -56,9 +65,16 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
                       {m.hireDate && <> · since {new Date(m.hireDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</>}
                     </div>
                   </div>
-                  <form action={toggleBarber.bind(null, m.id, !m.active)}>
-                    <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
-                  </form>
+                  <div className="flex items-center gap-2">
+                    <form action={setKioskMode.bind(null, m.id, true)}>
+                      <button className="btn-ghost px-3 py-1.5 text-xs" title="Lock this login to the self-check-in kiosk only">
+                        Restrict to kiosk
+                      </button>
+                    </form>
+                    <form action={toggleBarber.bind(null, m.id, !m.active)}>
+                      <button className="btn-ghost px-3 py-1.5 text-xs">{m.active ? "Deactivate" : "Activate"}</button>
+                    </form>
+                  </div>
                 </div>
 
                 <details className="mt-3 border-t border-white/10 pt-3">
@@ -103,6 +119,72 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
             </form>
           )}
         </aside>
+      </div>
+
+      {/* ── Self check-in kiosk ── */}
+      <div className="mt-12 border-t border-white/10 pt-8">
+        <h2 className="font-display text-2xl">Self check-in kiosk</h2>
+        <p className="mt-1 max-w-2xl text-cream/60">
+          Put a tablet or computer at your front desk so clients can check themselves in and join the walk-in queue.
+          Create a device login below (or hit <span className="text-cream/80">Restrict to kiosk</span> on any staff member) —
+          that login only ever sees the check-in screen.
+        </p>
+
+        {sp.kiosk === "created" && (
+          <p className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+            Device created. Sign in on the tablet with that email &amp; password — it opens straight to check-in.
+          </p>
+        )}
+        {sp.kioskErr === "email" && (
+          <p className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">That email is already in use.</p>
+        )}
+        {sp.kioskErr === "fields" && (
+          <p className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">Enter a login email and a password of at least 6 characters.</p>
+        )}
+
+        <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_340px]">
+          <div className="space-y-3">
+            {devices.length === 0 ? (
+              <div className="card text-cream/60">
+                No check-in devices yet. Add one on the right, then sign in with it on your front-desk tablet.
+              </div>
+            ) : (
+              devices.map((d) => (
+                <div key={d.id} className="card flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium">
+                      {d.name} <span className="chip ml-1">kiosk</span>
+                      {!d.active && <span className="chip ml-1">inactive</span>}
+                    </div>
+                    <div className="text-sm text-cream/50">{d.email}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <form action={setKioskMode.bind(null, d.id, false)}>
+                      <button className="btn-ghost px-3 py-1.5 text-xs" title="Turn this back into a normal staff login">Unrestrict</button>
+                    </form>
+                    <form action={deleteKioskAccount.bind(null, d.id)}>
+                      <button className="btn-ghost px-3 py-1.5 text-xs text-red-300 hover:text-red-200">Remove</button>
+                    </form>
+                  </div>
+                </div>
+              ))
+            )}
+            <Link href="/kiosk" target="_blank" rel="noreferrer" className="inline-block text-sm text-brass hover:underline">
+              Open the check-in kiosk on this device ↗
+            </Link>
+          </div>
+
+          <aside className="card h-max">
+            <h3 className="font-display text-xl">Add a check-in device</h3>
+            <p className="mt-1 text-xs text-cream/50">A login locked to the check-in screen. It doesn&apos;t use a chair.</p>
+            <form action={createKioskAccount} className="mt-4 space-y-3">
+              <div><label className="label">Device name</label><input name="name" placeholder="Front desk iPad" className="input" /></div>
+              <div><label className="label">Login email</label><input name="email" type="email" required className="input" /></div>
+              <div><label className="label">Password</label><input name="password" type="text" required minLength={6} className="input" /></div>
+              <button className="btn-primary w-full">Create device login</button>
+            </form>
+          </aside>
+        </div>
       </div>
     </div>
   );

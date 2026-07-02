@@ -128,6 +128,10 @@ model User {
   // Shape: { "shop.settings": true, "shop.viewAll": false }. Absent key = use role default.
   permissionOverrides Json?
 
+  // When true, this account is locked to the self-check-in kiosk (/kiosk) and
+  // cannot reach the full staff portal. Used for shared front-desk tablets.
+  kioskOnly Boolean @default(false)
+
   // null for PLATFORM_ADMIN; set for everyone else
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId String?
@@ -182,10 +186,13 @@ model Service {
 
 model Client {
   id    String  @id @default(cuid())
-  name  String
-  email String?
-  phone String?
-  notes String?
+  name  String // display name — kept in sync with "firstName lastName"
+  firstName String?
+  lastName  String?
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId String

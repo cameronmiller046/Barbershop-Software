@@ -23,7 +23,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   if (service.barberId) barberId = service.barberId;
   if (!barberId) {
     const first = await prisma.user.findFirst({
-      where: { tenantId: tenant.id, role: "BARBER", active: true },
+      where: { tenantId: tenant.id, role: "BARBER", active: true, kioskOnly: false },
     });
     barberId = first?.id ?? null;
   }

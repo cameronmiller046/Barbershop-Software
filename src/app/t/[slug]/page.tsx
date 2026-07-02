@@ -70,7 +70,7 @@ export default async function TenantHome({ params }: { params: Promise<{ slug: s
     getTenantServices(tenant.id),
     getTenantReviews(tenant.id),
     prisma.user.findMany({
-      where: { tenantId: tenant.id, role: { in: ["OWNER", "BARBER"] }, active: true },
+      where: { tenantId: tenant.id, role: { in: ["OWNER", "BARBER"] }, active: true, kioskOnly: false },
       select: { id: true, name: true, avatarUrl: true, bio: true, instagramHandle: true },
       orderBy: [{ role: "asc" }, { createdAt: "asc" }],
       take: 8,
