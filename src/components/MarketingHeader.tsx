@@ -7,7 +7,6 @@ const LINKS = [
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-  { href: "/t/professional-barbershop", label: "Live demo" },
 ];
 
 export function MarketingHeader() {
