@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
+import { signIn } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { ensureDemoData } from "@/lib/demo";
 import { MarketingHeader } from "@/components/MarketingHeader";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import {
@@ -8,6 +13,22 @@ import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/Barber
 import { FEATURES, type FeatureIcon } from "@/lib/featureContent";
 
 export const metadata = { title: { absolute: "The Chair — Barbershop booking software 💈" } };
+
+// Log straight into the portal as a sample account (seeds demo data on first use).
+async function demoLogin(formData: FormData) {
+  "use server";
+  try { await ensureDemoData(prisma); } catch { /* best-effort */ }
+  try {
+    await signIn("credentials", {
+      email: formData.get("email"),
+      password: formData.get("password"),
+      redirectTo: "/portal",
+    });
+  } catch (err) {
+    if (err instanceof AuthError) redirect("/login?error=1");
+    throw err;
+  }
+}
 
 const FEATURE_ICONS: Record<FeatureIcon, typeof ScissorsIcon> = {
   scissors: ScissorsIcon, razor: RazorIcon, comb: CombIcon, pole: PoleIcon,
@@ -83,7 +104,22 @@ export default function Home() {
               <Link href="/beta" className="btn-barber px-7 py-3 text-base">✨ Request beta access</Link>
               <Link href="/t/professional-barbershop" className="btn-ghost px-7 py-3 text-base">💈 View a live store</Link>
             </div>
-            <p className="mt-6 text-xs text-cream/40">No credit card · Manual onboarding during beta</p>
+            <div className="mt-4">
+              <div className="text-xs uppercase tracking-wide text-cream/40">Try the portal instantly</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <form action={demoLogin}>
+                  <input type="hidden" name="email" value="test1" />
+                  <input type="hidden" name="password" value="test1" />
+                  <button type="submit" className="btn-primary px-5 py-2 text-sm">👑 View as Demo Admin</button>
+                </form>
+                <form action={demoLogin}>
+                  <input type="hidden" name="email" value="test2" />
+                  <input type="hidden" name="password" value="test2" />
+                  <button type="submit" className="btn-ghost px-5 py-2 text-sm">✂️ View as Demo Barber</button>
+                </form>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-cream/40">No credit card · Manual onboarding during beta</p>
           </div>
         </div>
 
