@@ -37,7 +37,7 @@ export function BookingScreen() {
         <div className="barber-stripe h-10 w-3 rounded-full" />
       </div>
       <div className="flex gap-2">
-        {["Marcus", "Devon", "Jaz"].map((b, i) => (
+        {["Aaron", "Brandon", "Chris"].map((b, i) => (
           <div key={b} className="flex flex-col items-center gap-1">
             <div className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ${i === 0 ? "bg-brass text-ink" : "bg-smoke text-cream/70"}`}>{b[0]}</div>
             <span className="text-[10px] text-cream/50">{b}</span>

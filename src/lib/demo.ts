@@ -63,6 +63,7 @@ export async function clearDemoData(prisma: PrismaClient) {
 export async function ensureDemoData(prisma: PrismaClient) {
   const flagship = await prisma.tenant.findUnique({ where: { slug: DEMO_SLUG }, select: { id: true, monthlyGoalCents: true } });
   if (!flagship) return;
+  await ensureFlagshipStaff(prisma); // keep staff names/details current (cheap, idempotent)
   const count = await prisma.appointment.count({ where: { tenantId: flagship.id } });
   // Reseed if empty OR if the demo is out of date (goal not yet the current
   // target) — this refreshes stale live demos to the latest data + $15k goal.
@@ -136,30 +137,30 @@ export async function ensureFlagshipStaff(prisma: PrismaClient) {
   const manager = await prisma.user.upsert({
     where: { email: FLAGSHIP_MANAGER_EMAIL },
     update: {
-      tenantId: tenant.id, role: "OWNER", name: "Marcus Reed", active: true,
-      bio: "Owner & master barber — runs the shop.", instagramHandle: "marcus.thebarber",
+      tenantId: tenant.id, role: "OWNER", name: "Aaron Anderson", active: true,
+      bio: "Owner & master barber — runs the shop.", instagramHandle: "aaronanderson",
       avatarUrl: "https://i.pravatar.cc/240?img=12", passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10),
       permissionOverrides: Prisma.JsonNull,
     },
     create: {
-      tenantId: tenant.id, email: FLAGSHIP_MANAGER_EMAIL, name: "Marcus Reed",
+      tenantId: tenant.id, email: FLAGSHIP_MANAGER_EMAIL, name: "Aaron Anderson",
       role: "OWNER", passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10), bio: "Owner & master barber — runs the shop.",
-      instagramHandle: "marcus.thebarber", avatarUrl: "https://i.pravatar.cc/240?img=12",
+      instagramHandle: "aaronanderson", avatarUrl: "https://i.pravatar.cc/240?img=12",
       hireDate: new Date("2017-05-01"), dateOfBirth: new Date("1985-11-20"),
     },
   });
   const barber = await prisma.user.upsert({
     where: { email: FLAGSHIP_BARBER_EMAIL },
     update: {
-      tenantId: tenant.id, role: "BARBER", name: "Devon Carter", active: true,
-      bio: "Senior barber — fades & beard work.", instagramHandle: "devoncuts",
+      tenantId: tenant.id, role: "BARBER", name: "Brandon Brooks", active: true,
+      bio: "Senior barber — fades & beard work.", instagramHandle: "brandonbrooks",
       avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10),
       permissionOverrides: Prisma.JsonNull,
     },
     create: {
-      tenantId: tenant.id, email: FLAGSHIP_BARBER_EMAIL, name: "Devon Carter",
+      tenantId: tenant.id, email: FLAGSHIP_BARBER_EMAIL, name: "Brandon Brooks",
       role: "BARBER", passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10), bio: "Senior barber — fades & beard work.",
-      instagramHandle: "devoncuts", avatarUrl: "https://i.pravatar.cc/240?img=53",
+      instagramHandle: "brandonbrooks", avatarUrl: "https://i.pravatar.cc/240?img=53",
       hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
     },
   });
