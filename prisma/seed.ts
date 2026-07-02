@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { clearDemoData, seedFlagshipDemo, DEMO_SLUG } from "../src/lib/demo";
+import { clearDemoData, seedFlagshipDemo, DEMO_SLUG, LOC_SERVICES } from "../src/lib/demo";
 
 const prisma = new PrismaClient();
 
@@ -54,6 +54,7 @@ async function main() {
       { tenantId: tenant.id, name: "Silk Press", description: "Smooth, sleek finish.", durationMin: 90, priceCents: 8000, sortOrder: 5, imageUrl: "https://loremflickr.com/600/400/hairstyle,hair/all?lock=6" },
       { tenantId: tenant.id, name: "Kids Cut", description: "Ages 10 and under.", durationMin: 30, priceCents: 2500, sortOrder: 6, imageUrl: "https://loremflickr.com/600/400/kids,haircut/all?lock=7" },
       { tenantId: tenant.id, name: "Hair Design / Parting", description: "Custom lines and creative design.", durationMin: 30, priceCents: 4500, sortOrder: 7, imageUrl: "https://loremflickr.com/600/400/barber,haircut/all?lock=8" },
+      ...LOC_SERVICES.map((s, i) => ({ tenantId: tenant.id, ...s, sortOrder: 8 + i })),
     ],
   });
 

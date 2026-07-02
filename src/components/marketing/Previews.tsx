@@ -139,8 +139,9 @@ export function ServicesScreen() {
   const services = [
     { name: "Haircut", dur: "30 min", price: "$35" },
     { name: "Skin Fade", dur: "30 min", price: "$40" },
-    { name: "Beard Trim & Shape", dur: "30 min", price: "$25" },
     { name: "Cut + Beard Combo", dur: "60 min", price: "$55" },
+    { name: "Loc Retwist", dur: "60 min", price: "$65" },
+    { name: "Starter Locs", dur: "120 min", price: "$150" },
   ];
   return (
     <div className="space-y-2">
