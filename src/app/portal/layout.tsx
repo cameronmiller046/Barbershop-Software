@@ -50,7 +50,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
       {isDemoAccount(user.email) && (
         <div className="border-b border-amber-500/30 bg-amber-500/10 px-5 py-2 text-center text-sm text-amber-200">
-          🎬 Demo mode — explore freely. Changes you make here are <span className="font-semibold">not saved</span> and never affect any live site.
+          🎬 You&apos;re signed in to the sample shop — explore and try every feature.
         </div>
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   rescheduleAppointment, cancelAppointment, deleteAppointment, reopenAppointment,
   startAppointment, finishAppointment, correctAppointmentClock,
@@ -145,14 +146,18 @@ function ActionBtn({ children, onClick, tone, title }: {
 function Modal({ title, hint, children, onClose }: {
   title: string; hint?: string; children: React.ReactNode; onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [onClose]);
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
+  if (!mounted) return null;
+  // Portal to <body> so the overlay is never trapped in a card's stacking context.
+  return createPortal(
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-charcoal p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <h3 className="font-display text-xl">{title}</h3>
@@ -161,7 +166,8 @@ function Modal({ title, hint, children, onClose }: {
         {hint && <p className="mt-1 text-sm text-cream/50">{hint}</p>}
         <div className="mt-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

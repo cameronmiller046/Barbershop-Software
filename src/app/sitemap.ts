@@ -13,7 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let shops: MetadataRoute.Sitemap = [];
   try {
-    const tenants = await prisma.tenant.findMany({ where: { status: "ACTIVE" }, select: { slug: true } });
+    const tenants = await prisma.tenant.findMany({ where: { status: "ACTIVE", isDemo: false }, select: { slug: true } });
     shops = tenants.flatMap((t) =>
       ["", "/services", "/book", "/contact"].map((sub) => ({
         url: appUrl(`/t/${t.slug}${sub}`),

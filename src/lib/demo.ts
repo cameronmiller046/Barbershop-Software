@@ -324,8 +324,8 @@ async function seedExtraStores(prisma: PrismaClient) {
   for (const t of TENANTS) {
     const tenant = await prisma.tenant.upsert({
       where: { slug: t.slug },
-      update: { status: t.status, plan: t.plan, primaryColor: t.color, name: t.name },
-      create: { slug: t.slug, name: t.name, storeNumber: pickNum(), status: t.status, plan: t.plan, primaryColor: t.color, tagline: t.tagline, email: `hello@${t.slug}.test`, phone: t.phone, address: t.address },
+      update: { status: t.status, plan: t.plan, primaryColor: t.color, name: t.name, isDemo: true },
+      create: { slug: t.slug, name: t.name, storeNumber: pickNum(), status: t.status, plan: t.plan, primaryColor: t.color, tagline: t.tagline, email: `hello@${t.slug}.test`, phone: t.phone, address: t.address, isDemo: true },
     });
 
     const owner = await prisma.user.upsert({

@@ -65,6 +65,9 @@ model Tenant {
   slug   String       @unique // used in /t/<slug> routing
   name   String
   storeNumber Int    @default(0) // display id (1–999) for the store picker
+  // Demo/sample shops (loaded via "Try the demo"). Kept OUT of every live/public
+  // surface (store picker, sitemap) so demo and real data never overlap.
+  isDemo Boolean @default(false)
   status TenantStatus @default(PENDING)
   plan   Plan         @default(SOLO)
 

@@ -28,7 +28,7 @@ export default async function LoginPage({
   }
 
   const stores = (await prisma.tenant.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", isDemo: false }, // never surface demo shops on the live login
     select: { slug: true, name: true, storeNumber: true, address: true },
     orderBy: { storeNumber: "asc" },
   })).map((t) => ({ slug: t.slug, label: storeLabel(t) }));

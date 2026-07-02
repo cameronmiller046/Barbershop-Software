@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { logWalkIn } from "@/app/portal/actions";
 import { REFERRAL_TYPES } from "@/lib/appointmentMeta";
 
@@ -17,6 +18,8 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
   const [referral, setReferral] = useState("");
   const [collected, setCollected] = useState("");
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const svc = services.find((s) => s.id === serviceId);
   // Prefill the collected amount with the service price when the service changes.
   useEffect(() => { if (svc) setCollected(String(Math.round(svc.priceCents / 100))); }, [serviceId]); // eslint-disable-line
@@ -39,8 +42,8 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
     <>
       <button onClick={() => setOpen(true)} className="btn-primary px-4 py-2 text-sm">＋ Log a cut</button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setOpen(false)}>
+      {open && mounted && createPortal(
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setOpen(false)}>
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-charcoal p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -95,7 +98,8 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
