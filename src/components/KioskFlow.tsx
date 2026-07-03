@@ -47,11 +47,11 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
     setError(null);
   }
 
-  // Show the thank-you screen for 5 seconds after check-in, then return to the
+  // Show the thank-you screen for 10 seconds after check-in, then return to the
   // welcome screen so the next person starts fresh.
   useEffect(() => {
     if (step !== "done") return;
-    const t = setTimeout(reset, 5000);
+    const t = setTimeout(reset, 10000);
     return () => clearTimeout(t);
   }, [step]);
 
