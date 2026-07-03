@@ -47,11 +47,11 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
     setError(null);
   }
 
-  // Auto-return to the welcome screen a little after a successful check-in so the
-  // next person starts fresh.
+  // Show the thank-you screen for 5 seconds after check-in, then return to the
+  // welcome screen so the next person starts fresh.
   useEffect(() => {
     if (step !== "done") return;
-    const t = setTimeout(reset, 12000);
+    const t = setTimeout(reset, 5000);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -410,8 +410,9 @@ function Done({ result, onDone }: { result: CheckInResult; onDone: () => void })
   return (
     <div className="text-center">
       <div className="mx-auto grid h-20 w-20 place-items-center rounded-full text-4xl" style={brand}>✓</div>
-      <h1 className="mt-6 font-display text-4xl">You&apos;re checked in!</h1>
-      <p className="mt-3 text-lg text-cream/70">
+      <h1 className="mt-6 font-display text-4xl">Thank you!</h1>
+      <p className="mt-2 text-lg text-cream/70">You&apos;re all checked in.</p>
+      <p className="mt-1 text-cream/60">
         <span className="text-cream">{result.barberName}</span> will take care of your <span className="text-cream">{result.serviceName}</span>.
       </p>
       <div className="mt-8 grid grid-cols-2 gap-3">

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireKioskStaff } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { signOut } from "@/lib/auth";
@@ -41,14 +40,10 @@ export default async function KioskLayout({ children }: { children: React.ReactN
               <div className="text-xs uppercase tracking-wide text-cream/40">Self check-in</div>
             </div>
           </div>
-          {user.kioskOnly ? (
+          {user.kioskOnly && (
             <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
               <button className="text-xs text-cream/25 transition hover:text-cream/60">End session</button>
             </form>
-          ) : (
-            <Link href="/portal" className="text-xs text-cream/25 transition hover:text-cream/60">
-              ← Staff portal
-            </Link>
           )}
         </header>
 
