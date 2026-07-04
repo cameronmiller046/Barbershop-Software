@@ -1,74 +1,31 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
-import { signIn } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { ensureDemoData } from "@/lib/demo";
-import { MarketingHeader } from "@/components/MarketingHeader";
-import { MarketingFooter } from "@/components/MarketingFooter";
-import {
-  BrowserFrame, BookingScreen, DashboardScreen, ReportsPreview, TrendPreview, AnalyticsPreview,
-} from "@/components/marketing/Previews";
-import { ScissorsIcon, RazorIcon, CombIcon, PoleIcon } from "@/components/BarberIcons";
-import { FEATURES, type FeatureIcon } from "@/lib/featureContent";
+import type { Metadata } from "next";
+import { LuxNav } from "@/components/home/LuxNav";
+import { Hero } from "@/components/home/Hero";
+import { Features, Showcase, HowItWorks, Stats, Testimonials, Integrations, Pricing, FinalCTA } from "@/components/home/sections";
+import { Footer } from "@/components/home/Footer";
 
-export const metadata = { title: { absolute: "The Chair — Barbershop booking software 💈" } };
-
-// Log straight into the portal as a sample account (seeds demo data on first use).
-async function demoLogin(formData: FormData) {
-  "use server";
-  try { await ensureDemoData(prisma); } catch { /* best-effort */ }
-  try {
-    await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirectTo: "/portal",
-    });
-  } catch (err) {
-    if (err instanceof AuthError) redirect("/login?error=1");
-    throw err;
-  }
-}
-
-const FEATURE_ICONS: Record<FeatureIcon, typeof ScissorsIcon> = {
-  scissors: ScissorsIcon, razor: RazorIcon, comb: CombIcon, pole: PoleIcon,
+export const metadata: Metadata = {
+  title: { absolute: "The Chair — All-in-one barbershop software 💈" },
+  description:
+    "The Chair is the all-in-one platform for barbershops: online booking, customer management, staff, inventory, payments, and business growth. Flat monthly price, no per-booking fees. Start free.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "The Chair — All-in-one barbershop software",
+    description: "Bookings, customers, staff, payments, and growth — one premium platform built for barbershops.",
+    url: "/",
+    type: "website",
+  },
 };
 
-// A spinning barber pole.
-function Pole({ className = "" }: { className?: string }) {
-  return (
-    <div className={`flex flex-col items-center ${className}`}>
-      <span className="h-3 w-10 rounded-t-md bg-gradient-to-b from-brass to-brassDark" />
-      <div className="relative h-56 w-8 overflow-hidden border-x-2 border-cream/20">
-        <div className="barber-pole-v absolute inset-0" />
-        <div className="pole-glass absolute inset-0" />
-      </div>
-      <span className="h-3 w-10 rounded-b-md bg-gradient-to-t from-brass to-brassDark" />
-    </div>
-  );
-}
-
-function ShowcaseRow({
-  eyebrow, title, body, points, media, flip = false,
-}: {
-  eyebrow: string; title: string; body: string; points: string[]; media: React.ReactNode; flip?: boolean;
-}) {
-  return (
-    <div className="grid items-center gap-8 md:grid-cols-2">
-      <div className={flip ? "md:order-2" : ""}>
-        <div className="eyebrow">{eyebrow}</div>
-        <h3 className="mt-2 font-display text-3xl">{title}</h3>
-        <p className="mt-3 text-cream/70">{body}</p>
-        <ul className="mt-4 space-y-2 text-sm text-cream/75">
-          {points.map((p) => (
-            <li key={p} className="flex gap-2"><span className="text-barber">✦</span><span>{p}</span></li>
-          ))}
-        </ul>
-      </div>
-      <div className={flip ? "md:order-1" : ""}>{media}</div>
-    </div>
-  );
-}
+// Deterministic ember positions (no Math.random → no hydration mismatch).
+const EMBERS = [
+  { l: "8%", s: 3, d: 14, delay: 0 }, { l: "18%", s: 2, d: 18, delay: 3 },
+  { l: "28%", s: 4, d: 12, delay: 6 }, { l: "40%", s: 2, d: 20, delay: 1 },
+  { l: "52%", s: 3, d: 15, delay: 4 }, { l: "63%", s: 2, d: 19, delay: 8 },
+  { l: "72%", s: 4, d: 13, delay: 2 }, { l: "83%", s: 3, d: 17, delay: 5 },
+  { l: "92%", s: 2, d: 21, delay: 7 }, { l: "35%", s: 3, d: 16, delay: 9 },
+  { l: "58%", s: 2, d: 22, delay: 2.5 }, { l: "77%", s: 3, d: 14, delay: 6.5 },
+];
 
 const JSON_LD = {
   "@context": "https://schema.org",
@@ -76,167 +33,42 @@ const JSON_LD = {
   name: "The Chair",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
-  description: "Barbershop booking software — a branded website, online booking + QR, owner reports, and a chair-side portal.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  description:
+    "All-in-one barbershop software — online booking, customer management, staff, inventory, payments, reports, and growth tools.",
+  offers: { "@type": "Offer", price: "29", priceCurrency: "USD" },
   aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", ratingCount: "120", bestRating: "5" },
 };
 
 export default function Home() {
   return (
-    <div className="min-h-screen mkt">
+    <div className="lux relative min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
-      <MarketingHeader />
 
-      {/* Hero */}
-      <section className="container-page grid items-center gap-10 py-16 md:grid-cols-2 md:py-24">
-        <div className="flex gap-6">
-          <Pole className="hidden shrink-0 sm:flex" />
-          <div>
-            <div className="eyebrow">Barbershop software · Now in closed beta</div>
-            <h1 className="mt-4 font-display text-5xl leading-[1.05] md:text-6xl">
-              Run the whole shop from <span className="text-flame">one chair.</span>
-            </h1>
-            <p className="mt-5 max-w-md text-cream/70">
-              A branded website, effortless online booking, and a portal that runs the
-              business — built from the ground up for barbershops.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/beta" className="btn-barber px-7 py-3 text-base">✨ Request beta access</Link>
-              <Link href="/t/professional-barbershop" className="btn-ghost px-7 py-3 text-base">💈 View a live store</Link>
-            </div>
-            <div className="mt-4">
-              <div className="text-xs uppercase tracking-wide text-cream/40">Try the portal instantly</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <form action={demoLogin}>
-                  <input type="hidden" name="email" value="test1" />
-                  <input type="hidden" name="password" value="test1" />
-                  <button type="submit" className="btn-primary px-5 py-2 text-sm">👑 View as Demo Admin</button>
-                </form>
-                <form action={demoLogin}>
-                  <input type="hidden" name="email" value="test2" />
-                  <input type="hidden" name="password" value="test2" />
-                  <button type="submit" className="btn-ghost px-5 py-2 text-sm">✂️ View as Demo Barber</button>
-                </form>
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-cream/40">No credit card · Manual onboarding during beta</p>
-          </div>
-        </div>
+      {/* Cinematic atmosphere */}
+      <div className="lux-atmosphere" aria-hidden />
+      <div className="lux-grain" aria-hidden />
+      {/* Floating embers over the hero region */}
+      <div className="lux-embers absolute inset-x-0 top-0 h-[110vh]" aria-hidden>
+        {EMBERS.map((e, i) => (
+          <span key={i} className="lux-ember" style={{ left: e.l, width: e.s, height: e.s, animationDuration: `${e.d}s`, animationDelay: `${e.delay}s` }} />
+        ))}
+      </div>
 
-        <BrowserFrame url="professionalbarbershop.thechair.app/book">
-          <BookingScreen />
-        </BrowserFrame>
-      </section>
+      <LuxNav />
 
-      <div className="barber-stripe h-1.5 w-full" />
+      <main className="relative">
+        <Hero />
+        <Features />
+        <Showcase />
+        <HowItWorks />
+        <Stats />
+        <Testimonials />
+        <Integrations />
+        <Pricing />
+        <FinalCTA />
+      </main>
 
-      {/* Stat band */}
-      <section className="container-page py-12">
-        <div className="grid gap-4 text-center sm:grid-cols-4">
-          {[["💈 1 platform", "Every shop, isolated"], ["⚡ <60s", "To book a cut"], ["📊 Built-in", "Conversion analytics"], ["🗓️ 24/7", "Self-serve booking"]].map(([big, small]) => (
-            <div key={big} className="stat">
-              <div className="font-display text-3xl text-brass">{big}</div>
-              <div className="mt-1 text-xs text-cream/50">{small}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Feature showcase with real product renders */}
-      <section className="container-page space-y-20 py-12">
-        <div className="text-center">
-          <div className="eyebrow">See it in action</div>
-          <h2 className="mt-2 font-display text-4xl">What&apos;s under the cape</h2>
-          <p className="mx-auto mt-3 max-w-xl text-cream/60">
-            Real screens from the product — booking, the chair-side portal, owner
-            reports, and privacy-first analytics.
-          </p>
-        </div>
-
-        <ShowcaseRow
-          eyebrow="💈 For your customers"
-          title="A booking page they actually enjoy 📱"
-          body="Your brand, your barbers, your services — and a booking flow that takes under a minute on any phone."
-          points={["Pick a barber, service, and time", "Reschedule or cancel with a self-serve link", "Printable QR code for the front desk"]}
-          media={<BrowserFrame url="yourshop.thechair.app/book"><BookingScreen /></BrowserFrame>}
-        />
-
-        <ShowcaseRow
-          flip
-          eyebrow="✂️ For the barbers"
-          title="The chair-side portal"
-          body="Every barber sees their day at a glance; managers see the whole floor. Clients, notes, and schedules — all in one place."
-          points={["Today's schedule and upcoming bookings", "Client history with private notes", "Per-barber availability windows"]}
-          media={<BrowserFrame url="yourshop.thechair.app/portal"><DashboardScreen /></BrowserFrame>}
-        />
-
-        <ShowcaseRow
-          eyebrow="👑 For the owner"
-          title="Know your numbers cold 📈"
-          body="A CRM-style reports dashboard: last month vs this month, a monthly sales goal with pace tracking, and a daily revenue trend."
-          points={["Monthly sales goal + pace to hit it", "12-month revenue history", "Per-barber earnings breakdown"]}
-          media={
-            <div className="space-y-4">
-              <BrowserFrame url="yourshop.thechair.app/portal/reports"><ReportsPreview /></BrowserFrame>
-              <div className="card"><TrendPreview /></div>
-            </div>
-          }
-        />
-
-        <ShowcaseRow
-          flip
-          eyebrow="📊 For the platform team"
-          title="Analytics that convert 🎯"
-          body="A built-in, privacy-first analytics dashboard for the whole platform — consent-based cookies, no personal data. See exactly where visitors come from and what turns them into bookings."
-          points={["Visitors, pageviews, new vs returning", "Top shops, pages, sources, and devices", "Consent-based — with a cookie banner built in"]}
-          media={<BrowserFrame url="admin.thechair.app/analytics"><AnalyticsPreview /></BrowserFrame>}
-        />
-      </section>
-
-      {/* Quick feature grid */}
-      <section className="container-page py-12">
-        <h2 className="font-display text-3xl">Everything a shop needs</h2>
-        <p className="mt-2 text-cream/60">Tap any feature to see it in detail. 👇</p>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f) => {
-            const Icon = FEATURE_ICONS[f.icon];
-            return (
-              <Link key={f.slug} href={`/features/${f.slug}`} className="card card-hover group block">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-barber/20 text-flame"><Icon size={22} /></span>
-                <h3 className="mt-4 font-display text-lg text-brass">{f.emoji} {f.title}</h3>
-                <p className="mt-2 text-sm text-cream/70">{f.blurb}</p>
-                <span className="mt-3 inline-block text-sm text-flame group-hover:underline">Learn more →</span>
-              </Link>
-            );
-          })}
-        </div>
-        <div className="mt-8">
-          <Link href="/features" className="btn-ghost">See all features →</Link>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="container-page py-16">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-barber/15 via-charcoal to-charcoal p-10 text-center">
-          <div className="barber-stripe absolute inset-x-0 top-0 h-1.5" />
-          <h2 className="font-display text-4xl">Ready to modernize your shop? 💈</h2>
-          <p className="mx-auto mt-3 max-w-md text-cream/70">
-            Join shops filling more chairs with less no-shows. Bring your brand —
-            we&apos;ll handle the tech. 🚀
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/beta" className="btn-barber px-7 py-3 text-base">✨ Request beta access</Link>
-            <Link href="/pricing" className="btn-ghost px-7 py-3 text-base">See pricing 💰</Link>
-          </div>
-          <div className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-cream/50">
-            <span>⭐ Loved by barbers</span>
-            <span>🔒 Your data stays yours</span>
-            <span>📉 Fewer no-shows</span>
-          </div>
-        </div>
-      </section>
-
-      <MarketingFooter />
+      <Footer />
     </div>
   );
 }

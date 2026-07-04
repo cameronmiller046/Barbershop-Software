@@ -208,3 +208,173 @@ body {
   .reveal { opacity: 1; transform: none; transition: none; }
   .card-hover:hover { transform: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LUXURY HOMEPAGE — a self-contained black + gold design system (.lux).
+   Redefines the token vars to gold/rich-black so the token-driven Tailwind
+   classes (text-brass, bg-charcoal, text-cream…) render the premium look,
+   without affecting the rest of the marketing site.
+   ═══════════════════════════════════════════════════════════════════════ */
+.lux {
+  color-scheme: dark;
+  --ink: 8 8 9;          /* rich black base */
+  --charcoal: 17 16 18;  /* card surfaces */
+  --smoke: 28 26 30;     /* raised surfaces */
+  --cream: 244 240 231;  /* soft white text */
+  --brass: 216 178 92;   /* WARM GOLD accent (drives text-brass etc.) */
+  --brand: #d8b25c;      /* gold fills */
+  --brand-fg: #17130a;   /* near-black text on gold */
+  --gold-1: #f6dd93;     /* bright gold */
+  --gold-2: #d8b25c;     /* gold */
+  --gold-3: #a9772f;     /* bronze */
+  --line: rgba(216, 178, 92, 0.16);
+  position: relative;
+  color: rgb(var(--cream));
+  background: #08080a;
+  font-feature-settings: "ss01", "cv01";
+  overflow-x: clip;
+}
+
+/* Cinematic atmosphere: warm top glow, bronze side wash, deep vignette + grain,
+   all fixed so it feels like one lit room behind the whole page. */
+.lux-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 620px at 50% -6%, rgba(232, 196, 108, 0.16) 0%, transparent 60%),
+    radial-gradient(900px 700px at 90% 10%, rgba(169, 119, 47, 0.14) 0%, transparent 55%),
+    radial-gradient(700px 600px at 8% 30%, rgba(120, 82, 30, 0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #0a090b 0%, #08080a 40%, #060607 100%);
+}
+/* Vignette + fine grain over the top of the glow. */
+.lux-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 120% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  mix-blend-mode: multiply;
+}
+.lux-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Floating embers — a few warm motes drifting up through the hero. */
+.lux-embers { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.lux-ember {
+  position: absolute;
+  bottom: -8%;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(246, 221, 147, 0.9) 0%, rgba(216, 178, 92, 0.5) 40%, transparent 70%);
+  filter: blur(0.4px);
+  animation: ember-rise linear infinite;
+}
+@keyframes ember-rise {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.7; }
+  100% { transform: translateY(-115vh) translateX(24px); opacity: 0; }
+}
+
+/* Glass surfaces. */
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.glass-nav {
+  background: rgba(14, 13, 15, 0.55);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(216, 178, 92, 0.14);
+  box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.85);
+}
+
+/* Gold text + accents. */
+.gold-text {
+  background: linear-gradient(100deg, var(--gold-1) 0%, var(--gold-2) 45%, var(--gold-3) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.gold-script {
+  font-family: var(--font-script), cursive;
+  background: linear-gradient(100deg, #f8e3a0 0%, var(--gold-2) 55%, var(--gold-3) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 18px rgba(216, 178, 92, 0.25));
+}
+.gold-hairline { height: 1px; background: linear-gradient(90deg, transparent, rgba(216, 178, 92, 0.5), transparent); }
+
+/* Gold button with sheen. */
+.btn-gold {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.85rem 1.6rem;
+  font-weight: 600;
+  color: #17130a;
+  background: linear-gradient(180deg, #f4d585 0%, #d8b25c 55%, #b98a3c 100%);
+  box-shadow: 0 10px 30px -8px rgba(216, 178, 92, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  overflow: hidden;
+}
+.btn-gold:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -10px rgba(216, 178, 92, 0.6); filter: brightness(1.04); }
+.btn-outline-gold {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 9999px; padding: 0.85rem 1.6rem; font-weight: 600;
+  color: rgb(var(--cream));
+  border: 1px solid rgba(216, 178, 92, 0.4);
+  background: rgba(216, 178, 92, 0.04);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.btn-outline-gold:hover { transform: translateY(-2px); border-color: rgba(216, 178, 92, 0.8); background: rgba(216, 178, 92, 0.10); }
+
+/* Card with a gold ring on hover (feature grid). */
+.lux-card {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+  transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+}
+.lux-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(216, 178, 92, 0.45);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(216, 178, 92, 0.15);
+}
+
+/* Recommended pricing card — animated gold gradient border. */
+.lux-featured {
+  position: relative;
+  background:
+    linear-gradient(#0f0e10, #0f0e10) padding-box,
+    linear-gradient(135deg, #f6dd93, #a9772f, #f6dd93) border-box;
+  border: 1.5px solid transparent;
+  box-shadow: 0 40px 80px -40px rgba(216, 178, 92, 0.35);
+}
+
+/* Animated connector line for How It Works. */
+.lux-connector { position: relative; height: 2px; background: rgba(216, 178, 92, 0.18); overflow: hidden; }
+.lux-connector::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--gold-2), transparent);
+  transform: translateX(-100%);
+  animation: connector-sweep 3s ease-in-out infinite;
+}
+@keyframes connector-sweep { to { transform: translateX(100%); } }
+
+/* Gentle float for hero UI cards. */
+@keyframes lux-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.lux-float { animation: lux-float 6s ease-in-out infinite; }
+.lux-float-slow { animation: lux-float 8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lux-ember, .lux-connector::after, .lux-float, .lux-float-slow { animation: none; }
+}

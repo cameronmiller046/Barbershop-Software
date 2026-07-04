@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import { PublicAnalytics } from "@/components/PublicAnalytics";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Playfair_Display({ subsets: ["latin"], variable: "--font-display" });
+const script = Dancing_Script({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-script" });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable}`}>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${script.variable}`}>
       <body className="font-sans text-cream antialiased">
         {children}
         <PublicAnalytics />
