@@ -19,6 +19,7 @@ const PRIMARY: NavItem[] = [
 ];
 
 const MANAGEMENT: NavItem[] = [
+  { label: "Services", href: "/portal/services", icon: "scissors", perm: "shop.services" },
   { label: "Staff", href: "/portal/team", icon: "staff", perm: "shop.team" },
   { label: "Analytics", href: "/portal/reports", icon: "analytics", perm: "shop.viewAll", plan: true },
   { label: "Reports", href: "/portal/reports", icon: "reports", perm: "shop.viewAll", plan: true },
@@ -26,6 +27,7 @@ const MANAGEMENT: NavItem[] = [
   { label: "Marketing", href: "/portal/soon?s=Marketing", icon: "marketing", perm: "shop.settings", soon: true },
   { label: "Financials", href: "/portal/soon?s=Financials", icon: "dollar", perm: "shop.viewAll", soon: true },
   { label: "Website Content", href: "/portal/website", icon: "store", perm: "shop.settings" },
+  { label: "Booking Setup", href: "/portal/booking", icon: "clock", perm: "shop.settings" },
   { label: "Shop Settings", href: "/portal/settings", icon: "settings", perm: "shop.settings" },
   { label: "User Management", href: "/portal/team", icon: "users", perm: "shop.team" },
 ];
