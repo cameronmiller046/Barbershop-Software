@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
 :root {
   color-scheme: dark;
   --brand: #d1233a; /* barber red (platform default) */
