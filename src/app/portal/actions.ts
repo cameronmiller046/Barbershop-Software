@@ -11,12 +11,20 @@ import { audit } from "@/lib/audit";
 import { isSlotFree } from "@/lib/availability";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } from "@/lib/appointmentReasons";
 import { planLimits } from "@/lib/plans";
+import { isDemoAccount } from "@/lib/demoMode";
 import type { AppointmentStatus } from "@prisma/client";
 
-/** Load the acting staff member and confirm they hold a permission, else abort. */
+/**
+ * Load the acting staff member and confirm they hold a permission, else abort.
+ * The public demo logins can run the day (appointments, walk-ins, client notes)
+ * but MUST NOT persist changes to the shared showcase store's content, branding,
+ * services, staff, or settings — otherwise a demo visitor edits the real public
+ * store page. So we block every non-clients permission for demo accounts here.
+ */
 async function requirePerm(key: PermKey) {
   const user = await requirePortalStaff();
   if (!can(user, key)) return null;
+  if (key !== "shop.clients" && isDemoAccount(user.email)) return null;
   return user;
 }
 
@@ -503,6 +511,7 @@ export async function updateWebsiteContent(formData: FormData) {
 // ── Account self-service (any signed-in staff edits their OWN account) ──
 export async function updateOwnProfile(formData: FormData) {
   const user = await requirePortalStaff();
+  if (isDemoAccount(user.email)) redirect("/portal/account?demo=1"); // demo profile shows on the public store — don't persist
   const name = String(formData.get("name") || "").trim();
   await prisma.user.update({
     where: { id: user.id },
@@ -520,6 +529,7 @@ export async function updateOwnProfile(formData: FormData) {
 
 export async function changeOwnPassword(formData: FormData) {
   const user = await requirePortalStaff();
+  if (isDemoAccount(user.email)) redirect("/portal/account?demo=1"); // never let a visitor change the shared demo password
   const current = String(formData.get("current") || "");
   const next = String(formData.get("next") || "");
   if (next.length < 6) redirect("/portal/account?pw=short");

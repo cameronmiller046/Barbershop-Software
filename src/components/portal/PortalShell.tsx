@@ -176,7 +176,7 @@ export function PortalShell({
 
         {demo && (
           <div className="border-b border-brass/25 bg-brass/[0.07] px-5 py-2 text-center text-sm text-brass/90">
-            🎬 You&apos;re signed in to the sample shop — explore and try every feature.
+            🎬 Sample shop — explore and run the day freely. Changes to services, staff, branding &amp; website content aren&apos;t saved.
           </div>
         )}
 
