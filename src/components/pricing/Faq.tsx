@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 
 export type Qa = { q: string; a: string };
 
-export function Faq({ columns }: { columns: Qa[][] }) {
+export function Faq({ columns, gridClassName = "grid gap-4 md:grid-cols-2 lg:grid-cols-3" }: { columns: Qa[][]; gridClassName?: string }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className={gridClassName}>
       {columns.map((col, i) => (
         <div key={i} className="space-y-4">
           {col.map((qa) => <FaqItem key={qa.q} {...qa} />)}

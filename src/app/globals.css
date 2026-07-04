@@ -337,6 +337,22 @@ body {
 }
 .btn-outline-gold:hover { transform: translateY(-2px); border-color: rgba(216, 178, 92, 0.8); background: rgba(216, 178, 92, 0.10); }
 
+/* Premium form input (contact form etc.) */
+.c-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  color: rgb(var(--cream));
+  outline: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.c-input::placeholder { color: rgb(var(--cream) / 0.3); }
+.c-input:focus { border-color: rgba(216, 178, 92, 0.55); background: rgba(216, 178, 92, 0.05); }
+.c-input option { background: #14131a; color: rgb(var(--cream)); }
+
 /* Card with a gold ring on hover (feature grid). */
 .lux-card {
   border-radius: 1.25rem;
