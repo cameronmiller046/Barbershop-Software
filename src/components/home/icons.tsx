@@ -32,6 +32,22 @@ export const Icon = {
   spark: (p: P) => (<svg {...base} {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" /></svg>),
   shield: (p: P) => (<svg {...base} {...p}><path d="M12 3 5 6v5c0 4.4 3 8.3 7 10 4-1.7 7-5.6 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg>),
   scissors: (p: P) => (<svg {...base} {...p}><circle cx="6" cy="6" r="2.5" /><circle cx="6" cy="18" r="2.5" /><path d="M8 8l12 8M8 16 20 8M8.5 7.5 12 12" /></svg>),
+  // portal chrome
+  home: (p: P) => (<svg {...base} {...p}><path d="M4 11 12 4l8 7" /><path d="M6 10v9h12v-9" /><path d="M10 19v-5h4v5" /></svg>),
+  settings: (p: P) => (<svg {...base} {...p}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" /></svg>),
+  messages: (p: P) => (<svg {...base} {...p}><path d="M4 5h16v11H8l-4 3V5Z" /><path d="M8 9h8M8 12h5" /></svg>),
+  checkin: (p: P) => (<svg {...base} {...p}><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" /><path d="M14 8l4 4-4 4M18 12H9" /></svg>),
+  dollar: (p: P) => (<svg {...base} {...p}><path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.8 7 6.8s2 2.9 5 3.4 5 1.5 5 3.5-2.2 3.3-5 3.3-5-1.2-5-3" /></svg>),
+  users: (p: P) => (<svg {...base} {...p}><circle cx="8" cy="8" r="3" /><path d="M2.5 20a5.5 5.5 0 0 1 11 0" /><path d="M16 5.2a3 3 0 0 1 0 5.6M21.5 20a5.2 5.2 0 0 0-3.5-4.9" /></svg>),
+  store: (p: P) => (<svg {...base} {...p}><path d="M4 9 5 4h14l1 5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0Z" /><path d="M5 10v9h14v-9" /><path d="M10 19v-5h4v5" /></svg>),
+  bell: (p: P) => (<svg {...base} {...p}><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7Z" /><path d="M10.5 20a2 2 0 0 0 3 0" /></svg>),
+  logout: (p: P) => (<svg {...base} {...p}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 8l-4 4 4 4M6 12h9" /></svg>),
+  chevron: (p: P) => (<svg {...base} {...p}><path d="m15 6-6 6 6 6" /></svg>),
+  plus: (p: P) => (<svg {...base} {...p}><path d="M12 5v14M5 12h14" /></svg>),
+  menu: (p: P) => (<svg {...base} {...p}><path d="M4 7h16M4 12h16M4 17h16" /></svg>),
+  clock: (p: P) => (<svg {...base} {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>),
+  activity: (p: P) => (<svg {...base} {...p}><path d="M3 12h4l2 6 4-14 2 8h6" /></svg>),
+  gauge: (p: P) => (<svg {...base} {...p}><path d="M4 18a8 8 0 1 1 16 0" /><path d="m12 14 4-4" /><circle cx="12" cy="14" r="1" fill="currentColor" stroke="none" /></svg>),
 };
 
 export type IconName = keyof typeof Icon;

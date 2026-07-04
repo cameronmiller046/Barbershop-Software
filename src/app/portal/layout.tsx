@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { PortalNav } from "@/components/PortalNav";
+import { PortalShell } from "@/components/portal/PortalShell";
 import { signOut } from "@/lib/auth";
-import { appUrl, readableOn, hexToRgbTriple } from "@/lib/utils";
+import { appUrl } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
@@ -16,53 +15,29 @@ export default async function PortalLayout({ children }: { children: React.React
   const user = await requireStaffWithPerms();
   // Kiosk-locked accounts can only ever see the self-check-in surface.
   if (user.kioskOnly) redirect("/kiosk");
-  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { name: true, slug: true, plan: true } });
   const perms = permMap(user);
+  const limits = planLimits(tenant?.plan ?? "SOLO");
 
-  // Apply the store's own brand to their portal (accent + neutral black base),
-  // so each shop's portal matches their public site.
-  const brand = tenant?.primaryColor || "#d1233a";
-  const accent = tenant?.secondaryColor || brand;
+  async function signOutAction() {
+    "use server";
+    await signOut({ redirectTo: "/login" });
+  }
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        "--brand": brand,
-        "--brand-fg": readableOn(brand),
-        "--brass": hexToRgbTriple(accent),
-        background: "radial-gradient(1100px 520px at 50% -10%, #1a1a1e 0%, #0f0f10 60%)",
-      } as React.CSSProperties}
-    >
-      <header className="border-b border-white/10">
-        <div className="container-page flex h-16 items-center justify-between">
-          <Link href="/portal" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-brass font-display font-bold text-ink">
-              {tenant?.name.charAt(0) ?? "C"}
-            </span>
-            <span className="font-display text-lg">{tenant?.name ?? "Portal"}</span>
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-cream/50 sm:inline">{user.name} · {roleLabel(user.role)}</span>
-            <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
-              <button className="btn-ghost">Sign out</button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      {isDemoAccount(user.email) && (
-        <div className="border-b border-amber-500/30 bg-amber-500/10 px-5 py-2 text-center text-sm text-amber-200">
-          🎬 You&apos;re signed in to the sample shop — explore and try every feature.
-        </div>
-      )}
-
-      <div className="container-page grid gap-8 py-8 md:grid-cols-[200px_1fr]">
-        <aside className="md:sticky md:top-8 md:self-start">
-          <PortalNav perms={perms} siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)} reports={planLimits(tenant?.plan ?? "SOLO").reports} />
-        </aside>
-        <main>{children}</main>
-      </div>
+    <div className="portal min-h-screen">
+      <PortalShell
+        user={{ name: user.name, roleLabel: roleLabel(user.role), email: user.email }}
+        tenant={{ name: tenant?.name ?? "Portal" }}
+        perms={perms}
+        reports={limits.reports}
+        showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
+        siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
+        demo={isDemoAccount(user.email)}
+        signOutAction={signOutAction}
+      >
+        {children}
+      </PortalShell>
     </div>
   );
 }

@@ -218,6 +218,8 @@ model Appointment {
   // no-show) is always on record. `false` = removed from active views.
   active    Boolean @default(true)
 
+  // When the client physically arrived and is waiting (before the cut starts).
+  checkedInAt DateTime?
   // Turnaround clock: when the barber started/finished the cut. Duration is
   // finishedAt - startedAt (5-minute minimum for staff; admins can correct).
   startedAt  DateTime?

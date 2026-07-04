@@ -71,7 +71,7 @@ export async function reopenAppointment(id: string) {
   if (!ctx || !can(ctx.user, "shop.viewAll")) return; // managers/admins only — barbers can't reset the clock
   await prisma.appointment.update({
     where: { id },
-    data: { status: "CONFIRMED", active: true, statusReason: null, startedAt: null, finishedAt: null, collectedCents: null },
+    data: { status: "CONFIRMED", active: true, statusReason: null, checkedInAt: null, startedAt: null, finishedAt: null, collectedCents: null },
   });
   await audit({ action: "appointment.reopened", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
   revalidateAppointments();
@@ -105,6 +105,16 @@ export async function deleteAppointment(id: string, reason: string) {
 
 // ── Turnaround clock ──
 const MIN_DURATION_MS = 5 * 60 * 1000; // 5-minute minimum so the clock can't be gamed
+
+/** Mark the client as arrived and waiting (records checkedInAt). Does not start
+ *  the cut clock — that's Start Service. */
+export async function checkInAppointment(id: string) {
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx || ctx.appt.finishedAt || ctx.appt.startedAt) return;
+  await prisma.appointment.update({ where: { id }, data: { checkedInAt: new Date(), status: "CONFIRMED", active: true } });
+  await audit({ action: "appointment.checkedin", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
+  revalidateAppointments();
+}
 
 /** Start the haircut clock (records startedAt). */
 export async function startAppointment(id: string) {
@@ -169,6 +179,20 @@ export async function logWalkIn(formData: FormData) {
   await audit({ action: "appointment.walkin", tenantId: user.tenantId, userId: user.id, meta: { kind, referral, newClient: !existing } });
   revalidateAppointments();
   revalidatePath("/portal/clients");
+}
+
+/** Append a timestamped note to an appointment (does not overwrite existing). */
+export async function addAppointmentNote(id: string, note: string) {
+  const ctx = await loadOwnedAppointment(id);
+  if (!ctx) return;
+  const t = note.trim();
+  if (!t) return;
+  const cur = await prisma.appointment.findUnique({ where: { id }, select: { notes: true } });
+  const stamp = new Date().toLocaleString();
+  const next = `${cur?.notes ? cur.notes + "\n" : ""}[${stamp}] ${t}`.slice(0, 4000);
+  await prisma.appointment.update({ where: { id }, data: { notes: next } });
+  await audit({ action: "appointment.note", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
+  revalidateAppointments();
 }
 
 /** Admin correction of the clock — no 5-minute floor. Managers only. */
