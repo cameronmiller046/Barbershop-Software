@@ -10,6 +10,7 @@ import { roleLabel } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
 import { ImageUpload } from "@/components/ImageUpload";
+import { QMARK } from "@/lib/placeholder";
 
 export const dynamic = "force-dynamic";
 
@@ -80,12 +81,8 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
                 <details className="mt-3 border-t border-white/10 pt-3">
                   <summary className="cursor-pointer text-sm text-brass">Edit profile &amp; HR details</summary>
                   <div className="mt-3 flex items-center gap-3">
-                    {m.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.avatarUrl} alt={m.name} className="h-12 w-12 rounded-full object-cover" />
-                    ) : (
-                      <div className="grid h-12 w-12 place-items-center rounded-full bg-smoke text-cream/50">{m.name.charAt(0)}</div>
-                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={m.avatarUrl || QMARK} alt={m.name} className="h-12 w-12 rounded-full object-cover" />
                     <ImageUpload action={setStaffAvatar.bind(null, m.id)} label="photo" hasImage={!!m.avatarUrl} maxW={400} />
                   </div>
                   <form action={updateStaffProfile.bind(null, m.id)} className="mt-3 grid gap-3 sm:grid-cols-2">

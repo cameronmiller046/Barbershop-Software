@@ -13,12 +13,12 @@ export const DEMO_GOAL_CENTS = 1500000; // $15,000/mo demo sales goal
 
 // Loc / natural-hair services offered by the flagship shop (name is the key).
 export const LOC_SERVICES = [
-  { name: "Loc Retwist", description: "Root maintenance to keep your locs neat and tight.", durationMin: 60, priceCents: 6500, imageUrl: "https://loremflickr.com/600/400/dreadlocks,hair/all?lock=21" },
-  { name: "Loc Retwist & Style", description: "Retwist plus a fresh style — barrel rolls, updo, or curls.", durationMin: 90, priceCents: 9500, imageUrl: "https://loremflickr.com/600/400/dreadlocks,style/all?lock=22" },
-  { name: "Starter Locs", description: "Begin your loc journey — coils or two-strand starters.", durationMin: 120, priceCents: 15000, imageUrl: "https://loremflickr.com/600/400/dreadlocks,locs/all?lock=23" },
-  { name: "Two-Strand Twists", description: "Clean, defined twists for locs or natural hair.", durationMin: 75, priceCents: 7000, imageUrl: "https://loremflickr.com/600/400/twists,hair/all?lock=24" },
-  { name: "Loc Detox & Wash", description: "Deep cleanse and refresh to keep your locs healthy.", durationMin: 60, priceCents: 5500, imageUrl: "https://loremflickr.com/600/400/dreadlocks,wash/all?lock=25" },
-  { name: "Interlocking / Reattachment", description: "Interlocking maintenance and loc repair.", durationMin: 90, priceCents: 8500, imageUrl: "https://loremflickr.com/600/400/dreadlocks,hairstyle/all?lock=26" },
+  { name: "Loc Retwist", description: "Root maintenance to keep your locs neat and tight.", durationMin: 60, priceCents: 6500 },
+  { name: "Loc Retwist & Style", description: "Retwist plus a fresh style — barrel rolls, updo, or curls.", durationMin: 90, priceCents: 9500 },
+  { name: "Starter Locs", description: "Begin your loc journey — coils or two-strand starters.", durationMin: 120, priceCents: 15000 },
+  { name: "Two-Strand Twists", description: "Clean, defined twists for locs or natural hair.", durationMin: 75, priceCents: 7000 },
+  { name: "Loc Detox & Wash", description: "Deep cleanse and refresh to keep your locs healthy.", durationMin: 60, priceCents: 5500 },
+  { name: "Interlocking / Reattachment", description: "Interlocking maintenance and loc repair.", durationMin: 90, priceCents: 8500 },
 ];
 
 // Flagship store hours: Mon–Fri 10:00–19:30 · Sat 9:00–17:30 · Sun 12:00–18:00
@@ -74,6 +74,12 @@ export async function ensureDemoData(prisma: PrismaClient) {
   const flagship = await prisma.tenant.findUnique({ where: { slug: DEMO_SLUG }, select: { id: true, monthlyGoalCents: true } });
   if (!flagship) return;
   await ensureFlagshipStaff(prisma); // keep staff names/details current (cheap, idempotent)
+
+  // Reset auto-provided stock imagery so images show a "?" placeholder — only the
+  // seeded loremflickr/pravatar URLs, never an owner's real uploads.
+  await prisma.service.updateMany({ where: { tenantId: flagship.id, imageUrl: { contains: "loremflickr" } }, data: { imageUrl: null } });
+  await prisma.tenant.updateMany({ where: { id: flagship.id, heroImageUrl: { contains: "loremflickr" } }, data: { heroImageUrl: null } });
+  await prisma.user.updateMany({ where: { tenantId: flagship.id, avatarUrl: { contains: "pravatar" } }, data: { avatarUrl: null } });
 
   // Ensure the loc / natural-hair services exist (added after the initial seed).
   const svcCount = await prisma.service.count({ where: { tenantId: flagship.id } });
@@ -158,13 +164,13 @@ export async function ensureFlagshipStaff(prisma: PrismaClient) {
     update: {
       tenantId: tenant.id, role: "OWNER", name: "Aaron Anderson", active: true,
       bio: "Owner & master barber — runs the shop.", instagramHandle: "aaronanderson",
-      avatarUrl: "https://i.pravatar.cc/240?img=12", passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10),
+      avatarUrl: null, passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10),
       permissionOverrides: Prisma.JsonNull,
     },
     create: {
       tenantId: tenant.id, email: FLAGSHIP_MANAGER_EMAIL, name: "Aaron Anderson",
       role: "OWNER", passwordHash: await bcrypt.hash(FLAGSHIP_MANAGER_EMAIL, 10), bio: "Owner & master barber — runs the shop.",
-      instagramHandle: "aaronanderson", avatarUrl: "https://i.pravatar.cc/240?img=12",
+      instagramHandle: "aaronanderson", avatarUrl: null,
       hireDate: new Date("2017-05-01"), dateOfBirth: new Date("1985-11-20"),
     },
   });
@@ -173,13 +179,13 @@ export async function ensureFlagshipStaff(prisma: PrismaClient) {
     update: {
       tenantId: tenant.id, role: "BARBER", name: "Brandon Brooks", active: true,
       bio: "Senior barber — fades & beard work.", instagramHandle: "brandonbrooks",
-      avatarUrl: "https://i.pravatar.cc/240?img=53", passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10),
+      avatarUrl: null, passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10),
       permissionOverrides: Prisma.JsonNull,
     },
     create: {
       tenantId: tenant.id, email: FLAGSHIP_BARBER_EMAIL, name: "Brandon Brooks",
       role: "BARBER", passwordHash: await bcrypt.hash(FLAGSHIP_BARBER_EMAIL, 10), bio: "Senior barber — fades & beard work.",
-      instagramHandle: "brandonbrooks", avatarUrl: "https://i.pravatar.cc/240?img=53",
+      instagramHandle: "brandonbrooks", avatarUrl: null,
       hireDate: new Date("2019-03-15"), dateOfBirth: new Date("1991-08-02"),
     },
   });

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { formatMoney, formatDuration } from "@/lib/utils";
+import { QMARK } from "@/lib/placeholder";
 import { can } from "@/lib/permissions";
 import { toggleService, deleteService, createService, setServiceImage } from "@/app/portal/actions";
 import { AddServiceForm } from "@/components/AddServiceForm";
@@ -29,12 +30,8 @@ export default async function ServicesPage() {
             services.map((s) => (
               <div key={s.id} className="card flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  {s.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.imageUrl} alt={s.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-                  ) : (
-                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-smoke text-xl text-brass/40">✂</div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={s.imageUrl || QMARK} alt={s.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
                   <div>
                     <div className="font-medium">{s.name} {!s.active && <span className="chip ml-1">hidden</span>}</div>
                     <div className="text-sm text-cream/50">

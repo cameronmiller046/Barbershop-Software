@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug, getTenantServices, getTenantBarbers, getTenantGallery, getTenantReviews } from "@/lib/tenant";
 import { appUrl, readableOn, hexToRgbTriple } from "@/lib/utils";
+import { QMARK } from "@/lib/placeholder";
 import { Reveal, Stagger, Item, Counter } from "@/components/home/motion";
 import { LuxHeading } from "@/components/home/LuxBits";
 import { Icon } from "@/components/home/icons";
@@ -16,15 +17,9 @@ import { ReviewsCarousel } from "@/components/shop/ReviewsCarousel";
 
 export const dynamic = "force-dynamic";
 
-const HERO_FALLBACK = "https://loremflickr.com/1600/1000/barbershop,interior/all?lock=42";
-const STOCK: Shot[] = [
-  { src: "https://loremflickr.com/600/750/barber,fade/all?lock=11", alt: "Skin fade haircut" },
-  { src: "https://loremflickr.com/600/600/haircut,men/all?lock=12", alt: "Men's haircut and style" },
-  { src: "https://loremflickr.com/600/750/beard,barber/all?lock=13", alt: "Beard trim and lineup" },
-  { src: "https://loremflickr.com/600/700/barbershop,shave/all?lock=14", alt: "Hot towel shave" },
-  { src: "https://loremflickr.com/600/750/haircut,fade/all?lock=15", alt: "Fresh fade" },
-  { src: "https://loremflickr.com/600/600/barber,hairstyle/all?lock=16", alt: "Classic barber cut" },
-];
+// No stock photography — a shop shows neutral "?" placeholders until it uploads
+// its own hero + gallery images from the portal.
+const STOCK: Shot[] = Array.from({ length: 6 }, () => ({ src: QMARK, alt: "Photo coming soon" }));
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const fmtMin = (m: number) => { const h = Math.floor(m / 60), mm = m % 60; const ap = h < 12 ? "AM" : "PM"; const hr = ((h + 11) % 12) + 1; return `${hr}:${String(mm).padStart(2, "0")} ${ap}`; };
 const city = (a?: string | null) => { if (!a) return ""; const p = a.split(",").map((s) => s.trim()); return p.length >= 2 ? p[1] : p[0]; };
@@ -37,13 +32,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = `${tenant.name} — Barbershop${where ? ` in ${where}` : ""} | Book Online`;
   const description = `${tenant.tagline || `Sharp cuts, skin fades, and beard trims at ${tenant.name}.`} Book your appointment online in under a minute.${tenant.address ? ` Visit us at ${tenant.address}.` : ""}`;
   const url = appUrl(`/t/${tenant.slug}`);
-  const img = tenant.heroImageUrl || HERO_FALLBACK;
+  const img = tenant.heroImageUrl || undefined; // no stock OG image
   return {
     title, description,
     keywords: ["barber", "barbershop", "haircut", "skin fade", "beard trim", "men's haircut", "hot towel shave", where, tenant.name].filter(Boolean) as string[],
     alternates: { canonical: url },
-    openGraph: { title, description, url, siteName: tenant.name, type: "website", images: [{ url: img, width: 1600, height: 1000, alt: `${tenant.name} barbershop` }] },
-    twitter: { card: "summary_large_image", title, description, images: [img] },
+    openGraph: { title, description, url, siteName: tenant.name, type: "website", images: img ? [{ url: img, width: 1600, height: 1000, alt: `${tenant.name} barbershop` }] : undefined },
+    twitter: { card: "summary_large_image", title, description, images: img ? [img] : undefined },
     robots: { index: !tenant.isDemo, follow: true },
   };
 }
@@ -64,7 +59,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
   const base = `/t/${tenant.slug}`;
   const brand = tenant.primaryColor;
   const onBrand = readableOn(brand);
-  const heroImg = tenant.heroImageUrl || HERO_FALLBACK;
+  const heroImg = tenant.heroImageUrl || QMARK;
   const rating = tenant.googleRating ?? null;
   const reviewCount = reviews.length || 128;
 
@@ -211,12 +206,8 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
             {barbers.map((b) => (
               <Item key={b.id}>
                 <div className="lux-card group flex h-full flex-col items-center p-6 text-center">
-                  {b.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={b.avatarUrl} alt={b.name} loading="lazy" className="h-24 w-24 rounded-full object-cover ring-2 ring-brass/40" />
-                  ) : (
-                    <span className="grid h-24 w-24 place-items-center rounded-full bg-brass/15 font-display text-3xl text-brass">{b.name.charAt(0)}</span>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={b.avatarUrl || QMARK} alt={b.name} loading="lazy" className="h-24 w-24 rounded-full object-cover ring-2 ring-brass/40" />
                   <h3 className="mt-4 font-display text-xl text-cream">{b.name}</h3>
                   {b.bio && <p className="mt-1.5 line-clamp-3 flex-1 text-sm text-cream/55">{b.bio}</p>}
                   <div className="mt-4 flex items-center gap-3">

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatMoney, formatDuration } from "@/lib/utils";
 import { Icon } from "@/components/home/icons";
+import { QMARK } from "@/lib/placeholder";
 
 export type Svc = { id: string; name: string; description: string | null; durationMin: number; priceCents: number; imageUrl: string | null; barberName: string | null };
 
@@ -47,12 +48,8 @@ export function ShopServices({ services }: { services: Svc[] }) {
             <motion.div key={s.id} layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
               className="group flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] transition hover:border-brass/40">
               <div className="relative aspect-[16/10] overflow-hidden">
-                {s.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.imageUrl} alt={s.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                ) : (
-                  <div className="grid h-full w-full place-items-center bg-gradient-to-br from-brass/15 to-transparent text-brass/60"><Icon.scissors className="h-10 w-10" /></div>
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.imageUrl || QMARK} alt={s.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                 <span className="absolute left-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-cream/80 backdrop-blur">{s.cat}</span>
               </div>
               <div className="flex flex-1 flex-col p-5">
