@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 
@@ -15,6 +16,7 @@ const LINKS = [
 export function LuxNav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 24));
 
@@ -46,12 +48,15 @@ export function LuxNav() {
         </Link>
 
         <div className="hidden items-center gap-1 lg:flex">
-          {LINKS.map((l) => (
-            <Link key={l.href} href={l.href}
-              className="rounded-full px-3.5 py-2 text-sm text-cream/70 transition hover:bg-white/5 hover:text-cream">
-              {l.label}
-            </Link>
-          ))}
+          {LINKS.map((l) => {
+            const active = l.href.startsWith("/") && (pathname === l.href || pathname.startsWith(l.href + "/"));
+            return (
+              <Link key={l.href} href={l.href}
+                className={`rounded-full px-3.5 py-2 text-sm transition hover:bg-white/5 ${active ? "text-brass" : "text-cream/70 hover:text-cream"}`}>
+                {l.label}
+              </Link>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-2">
