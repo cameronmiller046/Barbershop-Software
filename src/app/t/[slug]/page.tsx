@@ -29,14 +29,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const tenant = await getTenantBySlug(slug);
   if (!tenant) return { title: "Shop not found" };
   const where = city(tenant.address);
-  const title = `${tenant.name} — Barbershop${where ? ` in ${where}` : ""} | Book Online`;
-  const description = `${tenant.tagline || `Sharp cuts, skin fades, and beard trims at ${tenant.name}.`} Book your appointment online in under a minute.${tenant.address ? ` Visit us at ${tenant.address}.` : ""}`;
+  const title = tenant.metaTitle?.trim() || `${tenant.name} — Barbershop${where ? ` in ${where}` : ""} | Book Online`;
+  const description = tenant.metaDescription?.trim() || `${tenant.tagline || `Sharp cuts, skin fades, and beard trims at ${tenant.name}.`} Book your appointment online in under a minute.${tenant.address ? ` Visit us at ${tenant.address}.` : ""}`;
   const url = appUrl(`/t/${tenant.slug}`);
-  const img = tenant.heroImageUrl || undefined; // no stock OG image
+  const img = tenant.coverImageUrl || tenant.heroImageUrl || undefined; // owner's cover/hero, no stock
   return {
     title, description,
     keywords: ["barber", "barbershop", "haircut", "skin fade", "beard trim", "men's haircut", "hot towel shave", where, tenant.name].filter(Boolean) as string[],
     alternates: { canonical: url },
+    icons: tenant.faviconUrl ? { icon: tenant.faviconUrl } : undefined,
     openGraph: { title, description, url, siteName: tenant.name, type: "website", images: img ? [{ url: img, width: 1600, height: 1000, alt: `${tenant.name} barbershop` }] : undefined },
     twitter: { card: "summary_large_image", title, description, images: img ? [img] : undefined },
     robots: { index: !tenant.isDemo, follow: true },
@@ -78,10 +79,25 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
 
   const svcForWizard = services.map((s) => ({ id: s.id, name: s.name, description: s.description, durationMin: s.durationMin, priceCents: s.priceCents, barberId: s.barberId, barberName: s.barber?.name ?? null }));
 
+  const showBarbers = tenant.showBarbers && barbers.length > 0;
+  const showReviews = tenant.showReviews && reviews.length > 0;
   const nav: NavSection[] = [
-    { id: "services", label: "Services" }, { id: "barbers", label: "Barbers" }, { id: "gallery", label: "Gallery" },
-    { id: "reviews", label: "Reviews" }, { id: "faq", label: "FAQ" }, { id: "contact", label: "Contact" },
+    ...(tenant.description ? [{ id: "about", label: "About" }] : []),
+    { id: "services", label: "Services" },
+    ...(showBarbers ? [{ id: "barbers", label: "Barbers" }] : []),
+    ...(tenant.showGallery ? [{ id: "gallery", label: "Gallery" }] : []),
+    ...(showReviews ? [{ id: "reviews", label: "Reviews" }] : []),
+    ...(tenant.showFaq ? [{ id: "faq", label: "FAQ" }] : []),
+    { id: "contact", label: "Contact" },
   ];
+  const heroTitle = tenant.heroHeadline?.trim();
+  const heroSub = tenant.heroSubheading?.trim() || tenant.tagline || "Precision fades, classic cuts, and beard work — in a shop that treats every chair like the main event.";
+  const bookLabel = tenant.heroCtaText?.trim() || "Book Appointment";
+  const socials = [
+    tenant.instagramUrl ? { href: tenant.instagramUrl, label: "Instagram" } : null,
+    tenant.facebookUrl ? { href: tenant.facebookUrl, label: "Facebook" } : null,
+    tenant.tiktokUrl ? { href: tenant.tiktokUrl, label: "TikTok" } : null,
+  ].filter(Boolean) as { href: string; label: string }[];
 
   const FAQ: Qa[][] = [
     [
@@ -102,9 +118,10 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
 
   const jsonLd = {
     "@context": "https://schema.org", "@type": "HairSalon",
-    name: tenant.name, description: tenant.tagline || `Barbershop — ${tenant.name}`,
+    name: tenant.name, description: tenant.description || tenant.tagline || `Barbershop — ${tenant.name}`,
     url: appUrl(base), telephone: tenant.phone || undefined, email: tenant.email || undefined,
-    image: heroImg, priceRange: "$$",
+    image: tenant.coverImageUrl || tenant.heroImageUrl || undefined, priceRange: "$$",
+    sameAs: [tenant.instagramUrl, tenant.facebookUrl, tenant.tiktokUrl, tenant.website].filter(Boolean),
     address: tenant.address ? { "@type": "PostalAddress", streetAddress: tenant.address } : undefined,
     openingHoursSpecification: [...byDay.entries()].map(([d, h]) => ({ "@type": "OpeningHoursSpecification", dayOfWeek: `https://schema.org/${DAYS[d]}`, opens: `${String(Math.floor(h.open / 60)).padStart(2, "0")}:${String(h.open % 60).padStart(2, "0")}`, closes: `${String(Math.floor(h.close / 60)).padStart(2, "0")}:${String(h.close % 60).padStart(2, "0")}` })),
     aggregateRating: rating != null ? { "@type": "AggregateRating", ratingValue: rating, reviewCount, bestRating: 5 } : undefined,
@@ -136,14 +153,23 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
 
         <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-5 py-24 lg:grid-cols-[1.35fr_1fr]">
           <Reveal>
+            {tenant.announcement && (
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brass/30 bg-brass/10 px-3.5 py-1.5 text-sm text-brass">
+                <span>📣</span> {tenant.announcement}
+              </div>
+            )}
             <div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-brass">
               <span className="h-px w-8 bg-brass" /> {city(tenant.address) || "Premium barbershop"}
             </div>
-            <h1 className="mt-5 font-display text-6xl font-medium leading-[0.95] tracking-tight text-cream sm:text-7xl xl:text-8xl">
-              Look Sharp.<br /><span className="gold-text">Feel the Part.</span>
-            </h1>
+            {heroTitle ? (
+              <h1 className="mt-5 font-display text-5xl font-medium leading-[0.98] tracking-tight text-cream sm:text-6xl xl:text-7xl">{heroTitle}</h1>
+            ) : (
+              <h1 className="mt-5 font-display text-6xl font-medium leading-[0.95] tracking-tight text-cream sm:text-7xl xl:text-8xl">
+                Look Sharp.<br /><span className="gold-text">Feel the Part.</span>
+              </h1>
+            )}
             <p className="mt-6 max-w-lg text-lg text-cream/75">
-              {tenant.tagline || "Precision fades, classic cuts, and beard work — in a shop that treats every chair like the main event."}
+              {heroSub}
             </p>
             {rating != null && (
               <div className="mt-5 flex items-center gap-2 text-sm text-cream/80">
@@ -152,7 +178,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
               </div>
             )}
             <div className="mt-9 flex flex-wrap gap-3">
-              <a href="#book" className="inline-flex items-center gap-2 rounded-full px-8 py-4 text-base font-semibold shadow-xl transition hover:brightness-105" style={cta}>Book Appointment <Icon.arrow className="h-4 w-4" /></a>
+              <a href="#book" className="inline-flex items-center gap-2 rounded-full px-8 py-4 text-base font-semibold shadow-xl transition hover:brightness-105" style={cta}>{bookLabel} <Icon.arrow className="h-4 w-4" /></a>
               {tenant.phone && <a href={`tel:${tenant.phone}`} className="btn-outline-gold text-base">Call Now</a>}
             </div>
           </Reveal>
@@ -188,6 +214,16 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
         </div>
       </section>
 
+      {/* ── About ── */}
+      {tenant.description && (
+        <section id="about" className="relative z-10 mx-auto max-w-4xl scroll-mt-24 px-5 py-20 text-center">
+          <LuxHeading eyebrow="About Us" title={<>Welcome to <span className="gold-text">{tenant.name}</span></>} />
+          <Reveal delay={0.05}>
+            <p className="mx-auto mt-6 max-w-2xl whitespace-pre-line text-lg leading-relaxed text-cream/70">{tenant.description}</p>
+          </Reveal>
+        </section>
+      )}
+
       {/* ── Services ── */}
       <section id="services" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-5 py-24">
         <LuxHeading eyebrow="The Menu" title={<>Services &amp; <span className="gold-text">prices</span></>} sub="Every service, with real times and prices. Filter by what you're after." />
@@ -199,7 +235,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
       </section>
 
       {/* ── Barbers ── */}
-      {barbers.length > 0 && (
+      {showBarbers && (
         <section id="barbers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-5 py-16">
           <LuxHeading eyebrow="The Team" title={<>Meet your <span className="gold-text">barbers</span></>} sub="Skilled pros who take pride in every fade, cut, and line-up." />
           <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" gap={0.07}>
@@ -222,13 +258,15 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
       )}
 
       {/* ── Gallery ── */}
-      <section id="gallery" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-5 py-16">
-        <LuxHeading eyebrow="Our Work" title={<>Fresh cuts, <span className="gold-text">every day</span></>} sub="A look inside the shop and the work that walks out the door." />
-        <ShopGallery shots={galleryShots} />
-      </section>
+      {tenant.showGallery && (
+        <section id="gallery" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-5 py-16">
+          <LuxHeading eyebrow="Our Work" title={<>Fresh cuts, <span className="gold-text">every day</span></>} sub="A look inside the shop and the work that walks out the door." />
+          <ShopGallery shots={galleryShots} />
+        </section>
+      )}
 
       {/* ── Reviews ── */}
-      {reviews.length > 0 && (
+      {showReviews && (
         <section id="reviews" className="relative z-10 mx-auto max-w-6xl scroll-mt-24 px-5 py-20">
           <LuxHeading eyebrow="Reviews" title={<>Loved by <span className="gold-text">locals</span></>} />
           <ReviewsCarousel reviews={reviews.map((r) => ({ id: r.id, authorName: r.authorName, rating: r.rating, body: r.body }))} rating={rating} count={reviewCount} />
@@ -236,10 +274,12 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
       )}
 
       {/* ── FAQ ── */}
-      <section id="faq" className="relative z-10 mx-auto max-w-4xl scroll-mt-24 px-5 py-16">
-        <LuxHeading eyebrow="Good to Know" title={<>Common <span className="gold-text">questions</span></>} />
-        <div className="mt-10"><Faq columns={FAQ} gridClassName="grid gap-4 md:grid-cols-2" /></div>
-      </section>
+      {tenant.showFaq && (
+        <section id="faq" className="relative z-10 mx-auto max-w-4xl scroll-mt-24 px-5 py-16">
+          <LuxHeading eyebrow="Good to Know" title={<>Common <span className="gold-text">questions</span></>} />
+          <div className="mt-10"><Faq columns={FAQ} gridClassName="grid gap-4 md:grid-cols-2" /></div>
+        </section>
+      )}
 
       {/* ── Contact ── */}
       <section id="contact" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-5 py-20">
@@ -296,7 +336,15 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
                 <span className="font-display text-lg text-cream">{tenant.name}</span>
               </div>
               {tenant.tagline && <p className="mt-3 text-sm text-cream/50">{tenant.tagline}</p>}
-              <a href="#book" className="mt-5 inline-flex rounded-full px-5 py-2.5 text-sm font-semibold" style={cta}>Book Appointment</a>
+              <a href="#book" className="mt-5 inline-flex rounded-full px-5 py-2.5 text-sm font-semibold" style={cta}>{bookLabel}</a>
+              {(socials.length > 0 || tenant.website) && (
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  {socials.map((s) => (
+                    <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="rounded-full border border-white/12 px-3 py-1.5 text-xs text-cream/60 transition hover:border-brass/40 hover:text-brass">{s.label}</a>
+                  ))}
+                  {tenant.website && <a href={tenant.website} target="_blank" rel="noreferrer" className="rounded-full border border-white/12 px-3 py-1.5 text-xs text-cream/60 transition hover:border-brass/40 hover:text-brass">Website</a>}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
               <div><div className="text-xs font-semibold uppercase tracking-[0.2em] text-cream/40">Explore</div><ul className="mt-3 space-y-2">{nav.map((n) => <li key={n.id}><a href={`#${n.id}`} className="text-cream/60 hover:text-brass">{n.label}</a></li>)}</ul></div>
@@ -312,7 +360,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
 
       {/* Sticky mobile book bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/85 p-3 backdrop-blur lg:hidden">
-        <a href="#book" className="block w-full rounded-full py-3 text-center text-sm font-semibold shadow-lg" style={cta}>Book Appointment</a>
+        <a href="#book" className="block w-full rounded-full py-3 text-center text-sm font-semibold shadow-lg" style={cta}>{bookLabel}</a>
       </div>
     </div>
   );

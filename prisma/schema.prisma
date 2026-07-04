@@ -96,6 +96,27 @@ model Tenant {
   // Social proof
   googleRating Float?
 
+  // ── Website Content (CMS) — drives the public storefront, all owner-editable ──
+  description   String? // "About us" / business description
+  website       String?
+  heroHeadline    String?
+  heroSubheading  String?
+  heroCtaText     String?
+  announcement    String? // dismissible banner across the top of the storefront
+  instagramUrl String?
+  facebookUrl  String?
+  tiktokUrl    String?
+  metaTitle       String? // SEO overrides (fall back to auto-generated)
+  metaDescription String?
+  accentColor  String? // optional 3rd brand color
+  faviconUrl   String?
+  coverImageUrl String? // OG / social share image
+  // Storefront section visibility toggles
+  showBarbers Boolean @default(true)
+  showGallery Boolean @default(true)
+  showReviews Boolean @default(true)
+  showFaq     Boolean @default(true)
+
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
   featureAnalytics Boolean @default(true)

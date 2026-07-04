@@ -25,7 +25,8 @@ const MANAGEMENT: NavItem[] = [
   { label: "Inventory", href: "/portal/soon?s=Inventory", icon: "inventory", perm: "shop.settings", soon: true },
   { label: "Marketing", href: "/portal/soon?s=Marketing", icon: "marketing", perm: "shop.settings", soon: true },
   { label: "Financials", href: "/portal/soon?s=Financials", icon: "dollar", perm: "shop.viewAll", soon: true },
-  { label: "Shop Settings", href: "/portal/settings", icon: "store", perm: "shop.settings" },
+  { label: "Website Content", href: "/portal/website", icon: "store", perm: "shop.settings" },
+  { label: "Shop Settings", href: "/portal/settings", icon: "settings", perm: "shop.settings" },
   { label: "User Management", href: "/portal/team", icon: "users", perm: "shop.team" },
 ];
 

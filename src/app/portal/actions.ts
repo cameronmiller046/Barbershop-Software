@@ -437,8 +437,8 @@ export async function updateTenant(formData: FormData) {
   revalidatePath("/portal/reports");
 }
 
-// Admin sets the shop's logo or hero photo (requires shop.settings).
-export async function setTenantImage(field: "logoUrl" | "heroImageUrl", formData: FormData) {
+// Admin sets one of the shop's images (requires shop.settings).
+export async function setTenantImage(field: "logoUrl" | "heroImageUrl" | "faviconUrl" | "coverImageUrl", formData: FormData) {
   const user = await requirePerm("shop.settings");
   if (!user) return;
   await prisma.tenant.update({
@@ -447,6 +447,7 @@ export async function setTenantImage(field: "logoUrl" | "heroImageUrl", formData
   });
   await audit({ action: "tenant.image", tenantId: user.tenantId, userId: user.id, meta: { field } });
   revalidatePath("/portal/settings");
+  revalidatePath("/portal/website");
 }
 
 // Admin sets the hero photo focal point ("X% Y%"), requires shop.settings.
@@ -458,6 +459,45 @@ export async function setHeroPosition(formData: FormData) {
   await prisma.tenant.update({ where: { id: user.tenantId }, data: { heroImagePosition: raw } });
   await audit({ action: "tenant.heroPosition", tenantId: user.tenantId, userId: user.id, meta: { position: raw } });
   revalidatePath("/portal/settings");
+}
+
+// ── Website Content CMS (requires shop.settings) — drives the public storefront ──
+const cmsStr = (formData: FormData, k: string, max = 2000) => { const v = String(formData.get(k) || "").trim(); return v ? v.slice(0, max) : null; };
+
+/** Save all Website Content (one tabbed form → whole storefront updates live). */
+export async function updateWebsiteContent(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const s = String(formData.get("accentColor") || "").trim();
+  const accent = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s) ? s : null;
+  const on = (k: string) => formData.get(k) === "on";
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: {
+      name: String(formData.get("name") || "").trim() || undefined,
+      tagline: cmsStr(formData, "tagline", 200),
+      description: cmsStr(formData, "description", 4000),
+      website: cmsStr(formData, "website", 300),
+      phone: cmsStr(formData, "phone", 40),
+      email: cmsStr(formData, "email", 200),
+      address: cmsStr(formData, "address", 300),
+      heroHeadline: cmsStr(formData, "heroHeadline", 120),
+      heroSubheading: cmsStr(formData, "heroSubheading", 300),
+      heroCtaText: cmsStr(formData, "heroCtaText", 40),
+      announcement: cmsStr(formData, "announcement", 200),
+      instagramUrl: cmsStr(formData, "instagramUrl", 300),
+      facebookUrl: cmsStr(formData, "facebookUrl", 300),
+      tiktokUrl: cmsStr(formData, "tiktokUrl", 300),
+      metaTitle: cmsStr(formData, "metaTitle", 120),
+      metaDescription: cmsStr(formData, "metaDescription", 320),
+      accentColor: accent,
+      showBarbers: on("showBarbers"), showGallery: on("showGallery"), showReviews: on("showReviews"), showFaq: on("showFaq"),
+    },
+  });
+  await audit({ action: "website.content", tenantId: user.tenantId, userId: user.id });
+  revalidatePath("/portal/website");
+  revalidatePath("/portal/settings");
+  redirect("/portal/website?saved=1");
 }
 
 // ── Account self-service (any signed-in staff edits their OWN account) ──
