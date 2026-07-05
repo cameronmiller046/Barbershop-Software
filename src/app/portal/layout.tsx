@@ -8,6 +8,7 @@ import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
 import { isDemoAccount } from "@/lib/demoMode";
+import { FeedbackFab } from "@/components/feedback/FeedbackFab";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function PortalLayout({ children }: { children: React.React
       >
         {children}
       </PortalShell>
+      <FeedbackFab user={{ name: user.name, email: user.email }} />
     </div>
   );
 }
