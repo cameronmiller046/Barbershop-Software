@@ -62,20 +62,27 @@ export function AreaTrend({ points, money }: { points: { label: string; value: n
   );
 }
 
-/* Vertical bars with hover tooltip. */
-export function Bars({ items, money, height = 150 }: { items: { label: string; value: number }[]; money?: boolean; height?: number }) {
+/* Vertical bars with hover tooltip. Optional `links` makes each bar navigable. */
+export function Bars({ items, money, height = 150, links }: { items: { label: string; value: number }[]; money?: boolean; height?: number; links?: (string | null)[] }) {
   const format = money ? asMoney : asNum;
   const [hi, setHi] = useState<number | null>(null);
   const max = Math.max(...items.map((i) => i.value), 1);
   return (
     <div>
       <div className="flex items-end gap-1.5" style={{ height }}>
-        {items.map((it, i) => (
-          <div key={i} className="group relative flex flex-1 flex-col items-center justify-end" onMouseEnter={() => setHi(i)} onMouseLeave={() => setHi(null)}>
-            {hi === i && <div className="absolute -top-9 z-10 whitespace-nowrap rounded-lg border border-white/10 bg-[#131217] px-2 py-1 text-xs font-semibold text-brass shadow-xl">{format(it.value)}</div>}
-            <div className="w-full rounded-t-md transition-all" style={{ height: `${(it.value / max) * 100}%`, minHeight: it.value > 0 ? 3 : 0, background: hi === i ? "linear-gradient(180deg,#f6dd93,#d8b25c)" : "linear-gradient(180deg,rgba(216,178,92,0.7),rgba(216,178,92,0.25))" }} />
-          </div>
-        ))}
+        {items.map((it, i) => {
+          const href = links?.[i] ?? null;
+          const inner = (
+            <>
+              {hi === i && <div className="absolute -top-9 z-10 whitespace-nowrap rounded-lg border border-white/10 bg-[#131217] px-2 py-1 text-xs font-semibold text-brass shadow-xl">{format(it.value)}</div>}
+              <div className="w-full rounded-t-md transition-all" style={{ height: `${(it.value / max) * 100}%`, minHeight: it.value > 0 ? 3 : 0, background: hi === i ? "linear-gradient(180deg,#f6dd93,#d8b25c)" : "linear-gradient(180deg,rgba(216,178,92,0.7),rgba(216,178,92,0.25))" }} />
+            </>
+          );
+          const cls = "group relative flex flex-1 flex-col items-center justify-end";
+          return href
+            ? <a key={i} href={href} className={cls} onMouseEnter={() => setHi(i)} onMouseLeave={() => setHi(null)}>{inner}</a>
+            : <div key={i} className={cls} onMouseEnter={() => setHi(i)} onMouseLeave={() => setHi(null)}>{inner}</div>;
+        })}
       </div>
       <div className="mt-1.5 flex gap-1.5">{items.map((it, i) => <div key={i} className="flex-1 truncate text-center text-[10px] text-cream/40">{it.label}</div>)}</div>
     </div>
@@ -83,7 +90,7 @@ export function Bars({ items, money, height = 150 }: { items: { label: string; v
 }
 
 /* Donut with legend. */
-export function Donut({ segments, money }: { segments: { label: string; value: number; color: string }[]; money?: boolean }) {
+export function Donut({ segments, money, links }: { segments: { label: string; value: number; color: string }[]; money?: boolean; links?: (string | null)[] }) {
   const format = money ? asMoney : null;
   const rawTotal = segments.reduce((s, x) => s + x.value, 0);
   const total = rawTotal || 1;
@@ -102,13 +109,19 @@ export function Donut({ segments, money }: { segments: { label: string; value: n
         <text x="60" y="72" textAnchor="middle" fill="rgba(245,241,232,0.4)" fontSize="9">total</text>
       </svg>
       <div className="space-y-1.5">
-        {segments.map((s) => (
-          <div key={s.label} className="flex items-center gap-2 text-sm">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
-            <span className="text-cream/70">{s.label}</span>
-            <span className="ml-auto font-medium text-cream">{format ? format(s.value) : s.value}</span>
-          </div>
-        ))}
+        {segments.map((s, i) => {
+          const href = links?.[i] ?? null;
+          const body = (
+            <>
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+              <span className={href ? "text-cream/70 group-hover:text-brass" : "text-cream/70"}>{s.label}</span>
+              <span className="ml-auto font-medium text-cream">{format ? format(s.value) : s.value}</span>
+            </>
+          );
+          return href
+            ? <a key={s.label} href={href} className="group flex items-center gap-2 text-sm">{body}</a>
+            : <div key={s.label} className="flex items-center gap-2 text-sm">{body}</div>;
+        })}
       </div>
     </div>
   );
