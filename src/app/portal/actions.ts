@@ -12,6 +12,7 @@ import { isSlotFree } from "@/lib/availability";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } from "@/lib/appointmentReasons";
 import { planLimits } from "@/lib/plans";
 import { isDemoAccount } from "@/lib/demoMode";
+import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
 import type { AppointmentStatus } from "@prisma/client";
 
 /**
@@ -226,6 +227,46 @@ export async function saveClientNotes(id: string, formData: FormData) {
   if (!user) return;
   const notes = String(formData.get("notes") || "");
   await prisma.client.updateMany({ where: { id, tenantId: user.tenantId }, data: { notes } });
+  revalidatePath("/portal/clients");
+}
+
+/** Full detail for one client (loaded on selection in the Clients workspace). */
+export async function clientDetail(clientId: string) {
+  const user = await requirePerm("shop.clients");
+  if (!user) return null;
+  const c = await prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, include: CLIENT_DETAIL_INCLUDE });
+  return c ? computeClientDetail(c) : null;
+}
+
+export async function createClient(formData: FormData) {
+  const user = await requirePerm("shop.clients");
+  if (!user) return;
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return;
+  await prisma.client.create({
+    data: {
+      tenantId: user.tenantId, name,
+      phone: String(formData.get("phone") || "").trim() || null,
+      email: String(formData.get("email") || "").trim().toLowerCase() || null,
+    },
+  });
+  await audit({ action: "client.created", tenantId: user.tenantId, userId: user.id });
+  revalidatePath("/portal/clients");
+}
+
+export async function updateClient(id: string, formData: FormData) {
+  const user = await requirePerm("shop.clients");
+  if (!user) return;
+  const name = String(formData.get("name") || "").trim();
+  await prisma.client.updateMany({
+    where: { id, tenantId: user.tenantId },
+    data: {
+      name: name || undefined,
+      phone: String(formData.get("phone") || "").trim() || null,
+      email: String(formData.get("email") || "").trim().toLowerCase() || null,
+    },
+  });
+  await audit({ action: "client.updated", tenantId: user.tenantId, userId: user.id, target: id });
   revalidatePath("/portal/clients");
 }
 
