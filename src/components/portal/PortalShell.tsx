@@ -5,8 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Icon, type IconName } from "@/components/home/icons";
+import { approveTimeEdit, rejectTimeEdit } from "@/app/portal/timeclock/actions";
 
 type NavItem = { label: string; href: string; icon: IconName; exact?: boolean; perm?: string; plan?: boolean; soon?: boolean };
+
+export type EditNotif = {
+  id: string; barberName: string; createdISO: string; reason: string | null;
+  currentIn: string; currentOut: string | null; proposedIn: string | null; proposedOut: string | null;
+};
 
 const PRIMARY: NavItem[] = [
   { label: "Dashboard", href: "/portal", icon: "home", exact: true },
@@ -32,7 +38,7 @@ const MANAGEMENT: NavItem[] = [
 ];
 
 export function PortalShell({
-  user, tenant, perms, reports, showUpgrade, siteUrl, demo, signOutAction, children,
+  user, tenant, perms, reports, showUpgrade, siteUrl, demo, notifications, signOutAction, children,
 }: {
   user: { name: string; roleLabel: string; email: string };
   tenant: { name: string };
@@ -41,12 +47,15 @@ export function PortalShell({
   showUpgrade: boolean;
   siteUrl: string;
   demo: boolean;
+  notifications: EditNotif[];
   signOutAction: () => Promise<void>;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  useEffect(() => { setNotifOpen(false); }, [pathname]);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem("portalNavCollapsed") === "1");
@@ -159,10 +168,30 @@ export function PortalShell({
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <a href={siteUrl} target="_blank" rel="noreferrer" className="hidden text-xs text-cream/50 hover:text-brass sm:inline">View shop site ↗</a>
-            <button className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-cream/70 transition hover:text-brass" aria-label="Notifications">
-              <Icon.bell className="h-5 w-5" />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-brass" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setNotifOpen((o) => !o)} className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-cream/70 transition hover:text-brass" aria-label="Notifications">
+                <Icon.bell className="h-5 w-5" />
+                {notifications.length > 0 && (
+                  <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brass px-1 text-[10px] font-bold text-[#17130a]">{notifications.length}</span>
+                )}
+              </button>
+              <AnimatePresence>
+                {notifOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                      className="p-scroll absolute right-0 z-50 mt-2 max-h-[70vh] w-[340px] overflow-y-auto rounded-2xl border border-white/10 bg-[#131217] p-2 shadow-2xl">
+                      <div className="px-3 py-2 text-sm font-semibold text-cream">Notifications</div>
+                      {notifications.length === 0 ? (
+                        <div className="px-3 pb-3 pt-1 text-sm text-cream/45">You&apos;re all caught up.</div>
+                      ) : (
+                        notifications.map((n) => <NotifCard key={n.id} n={n} />)
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="flex items-center gap-2.5 rounded-full border border-white/10 py-1 pl-1 pr-3">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-[#f4d585] to-[#b98a3c] text-xs font-bold text-[#17130a]">{initials(user.name)}</span>
               <span className="hidden leading-tight sm:block">
@@ -200,4 +229,29 @@ function NavLink({ item, active, compact }: { item: NavItem; active: boolean; co
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "U";
+}
+
+function NotifCard({ n }: { n: EditNotif }) {
+  const t = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
+  return (
+    <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+      <div className="flex items-center gap-2 text-sm text-cream">
+        <Icon.clock className="h-4 w-4 shrink-0 text-brass" />
+        <span className="font-medium">{n.barberName}</span> suggested a timeclock edit
+      </div>
+      <div className="mt-2 space-y-0.5 text-xs text-cream/60">
+        {n.proposedIn && <div>In: <span className="text-cream/40 line-through">{t(n.currentIn)}</span> → <span className="text-brass">{t(n.proposedIn)}</span></div>}
+        {n.proposedOut && <div>Out: <span className="text-cream/40 line-through">{t(n.currentOut)}</span> → <span className="text-brass">{t(n.proposedOut)}</span></div>}
+        {n.reason && <div className="text-cream/50">“{n.reason}”</div>}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <form action={approveTimeEdit.bind(null, n.id)} className="flex-1">
+          <button className="w-full rounded-full border border-emerald-400/30 bg-emerald-400/10 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-400/20">Approve</button>
+        </form>
+        <form action={rejectTimeEdit.bind(null, n.id)} className="flex-1">
+          <button className="w-full rounded-full border border-white/12 py-1.5 text-xs text-cream/70 transition hover:border-red-400/40 hover:text-red-200">Reject</button>
+        </form>
+      </div>
+    </div>
+  );
 }

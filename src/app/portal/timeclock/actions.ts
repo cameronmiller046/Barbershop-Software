@@ -38,3 +38,59 @@ export async function clockOutStaff(userId: string) {
   await audit({ action: "timeclock.out.admin", tenantId: user.tenantId, userId: user.id, target: userId });
   revalidate();
 }
+
+const parseLocal = (v: FormDataEntryValue | null): Date | null => {
+  const s = String(v || "").trim();
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+/** A barber suggests a correction to ONE of their own shifts (goes to admins). */
+export async function suggestTimeEdit(entryId: string, formData: FormData) {
+  const user = await requirePortalStaff();
+  const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, tenantId: user.tenantId, userId: user.id } });
+  if (!entry) return; // only your own entry
+  const proposedClockIn = parseLocal(formData.get("clockIn"));
+  const proposedClockOut = parseLocal(formData.get("clockOut"));
+  const reason = String(formData.get("reason") || "").trim().slice(0, 500) || null;
+  if (!proposedClockIn && !proposedClockOut) return;
+  if (proposedClockIn && proposedClockOut && proposedClockOut < proposedClockIn) return;
+  // Replace any existing pending request for this entry.
+  await prisma.timeEditRequest.deleteMany({ where: { entryId, status: "PENDING" } });
+  await prisma.timeEditRequest.create({
+    data: { tenantId: user.tenantId, entryId, userId: user.id, proposedClockIn, proposedClockOut, reason },
+  });
+  await audit({ action: "timeclock.edit.suggested", tenantId: user.tenantId, userId: user.id, target: entryId });
+  revalidate();
+}
+
+/** Admin approves a suggested edit — applies the proposed times (requires shop.team). */
+export async function approveTimeEdit(requestId: string) {
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.team")) return;
+  const req = await prisma.timeEditRequest.findFirst({ where: { id: requestId, tenantId: user.tenantId, status: "PENDING" } });
+  if (!req) return;
+  await prisma.timeEntry.update({
+    where: { id: req.entryId },
+    data: {
+      ...(req.proposedClockIn ? { clockIn: req.proposedClockIn } : {}),
+      ...(req.proposedClockOut ? { clockOut: req.proposedClockOut } : {}),
+    },
+  });
+  await prisma.timeEditRequest.update({ where: { id: req.id }, data: { status: "APPROVED", resolvedAt: new Date(), resolvedById: user.id } });
+  await audit({ action: "timeclock.edit.approved", tenantId: user.tenantId, userId: user.id, target: req.entryId });
+  revalidate();
+}
+
+/** Admin rejects a suggested edit (requires shop.team). */
+export async function rejectTimeEdit(requestId: string) {
+  const user = await requireStaffWithPerms();
+  if (!can(user, "shop.team")) return;
+  await prisma.timeEditRequest.updateMany({
+    where: { id: requestId, tenantId: user.tenantId, status: "PENDING" },
+    data: { status: "REJECTED", resolvedAt: new Date(), resolvedById: user.id },
+  });
+  await audit({ action: "timeclock.edit.rejected", tenantId: user.tenantId, userId: user.id, target: requestId });
+  revalidate();
+}

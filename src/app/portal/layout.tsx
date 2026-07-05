@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { PortalShell } from "@/components/portal/PortalShell";
+import { PortalShell, type EditNotif } from "@/components/portal/PortalShell";
 import { signOut } from "@/lib/auth";
 import { appUrl } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
@@ -19,6 +19,21 @@ export default async function PortalLayout({ children }: { children: React.React
   const perms = permMap(user);
   const limits = planLimits(tenant?.plan ?? "SOLO");
 
+  // Pending timeclock edit requests → the notifications bell (managers only).
+  let notifications: EditNotif[] = [];
+  if (perms["shop.team"]) {
+    const reqs = await prisma.timeEditRequest.findMany({
+      where: { tenantId: user.tenantId, status: "PENDING" },
+      orderBy: { createdAt: "desc" }, take: 25,
+      include: { user: { select: { name: true } }, entry: { select: { clockIn: true, clockOut: true } } },
+    });
+    notifications = reqs.map((r) => ({
+      id: r.id, barberName: r.user.name, createdISO: r.createdAt.toISOString(), reason: r.reason,
+      currentIn: r.entry.clockIn.toISOString(), currentOut: r.entry.clockOut?.toISOString() ?? null,
+      proposedIn: r.proposedClockIn?.toISOString() ?? null, proposedOut: r.proposedClockOut?.toISOString() ?? null,
+    }));
+  }
+
   async function signOutAction() {
     "use server";
     await signOut({ redirectTo: "/login" });
@@ -34,6 +49,7 @@ export default async function PortalLayout({ children }: { children: React.React
         showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
         siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
         demo={isDemoAccount(user.email)}
+        notifications={notifications}
         signOutAction={signOutAction}
       >
         {children}

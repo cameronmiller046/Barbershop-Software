@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { TimeClock } from "@/components/portal/TimeClock";
+import { SuggestTimeEdit } from "@/components/portal/SuggestTimeEdit";
 import { clockOutStaff } from "./actions";
 import { Icon } from "@/components/home/icons";
 
@@ -20,10 +21,12 @@ export default async function TimeClockPage() {
   const now = new Date();
   const dayStart = startOfDay(now), weekStart = startOfWeek(now), weekEnd = endOfWeek(now);
 
-  const [open, myWeek] = await Promise.all([
+  const [open, myWeek, pendingReqs] = await Promise.all([
     prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } }),
     prisma.timeEntry.findMany({ where: { tenantId, userId: user.id, clockIn: { gte: weekStart, lte: weekEnd } }, orderBy: { clockIn: "desc" } }),
+    prisma.timeEditRequest.findMany({ where: { tenantId, userId: user.id, status: "PENDING" }, select: { entryId: true } }),
   ]);
+  const pendingSet = new Set(pendingReqs.map((r) => r.entryId));
   const myTodayMin = myWeek.filter((e) => e.clockOut && e.clockIn >= dayStart).reduce((s, e) => s + durMin(e.clockIn, e.clockOut), 0);
   const myWeekMin = myWeek.reduce((s, e) => s + durMin(e.clockIn, e.clockOut), 0);
 
@@ -67,12 +70,15 @@ export default async function TimeClockPage() {
           ) : (
             <div className="mt-4 space-y-2">
               {myWeek.map((e) => (
-                <div key={e.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.02] p-3 text-sm">
-                  <div>
+                <div key={e.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3 text-sm">
+                  <div className="min-w-0">
                     <div className="text-cream">{fmtDay(e.clockIn)}</div>
                     <div className="text-xs text-cream/45">{fmtTime(e.clockIn)} – {e.clockOut ? fmtTime(e.clockOut) : <span className="text-emerald-300">on the clock</span>}</div>
                   </div>
-                  <div className={`font-medium ${e.clockOut ? "text-cream/80" : "text-emerald-300"}`}>{fmtDur(durMin(e.clockIn, e.clockOut))}</div>
+                  <div className="flex items-center gap-3">
+                    <div className={`font-medium ${e.clockOut ? "text-cream/80" : "text-emerald-300"}`}>{fmtDur(durMin(e.clockIn, e.clockOut))}</div>
+                    <SuggestTimeEdit entryId={e.id} clockInISO={e.clockIn.toISOString()} clockOutISO={e.clockOut?.toISOString() ?? null} pending={pendingSet.has(e.id)} />
+                  </div>
                 </div>
               ))}
             </div>

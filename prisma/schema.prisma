@@ -133,6 +133,7 @@ model Tenant {
   reviews      Review[]
   auditLogs    AuditLog[]
   timeEntries  TimeEntry[]
+  timeEditRequests TimeEditRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -180,6 +181,7 @@ model User {
   socialPosts        SocialPost[]
   auditLogs          AuditLog[]
   timeEntries        TimeEntry[]
+  timeEditRequests   TimeEditRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -309,10 +311,36 @@ model TimeEntry {
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId   String
 
+  editRequests TimeEditRequest[]
+
   createdAt DateTime @default(now())
 
   @@index([tenantId, clockIn])
   @@index([userId, clockIn])
+}
+
+// A barber's suggested correction to one of their time entries. Admins approve
+// or reject it from the notifications bell.
+model TimeEditRequest {
+  id               String    @id @default(cuid())
+  proposedClockIn  DateTime?
+  proposedClockOut DateTime?
+  reason           String?
+  status           String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  resolvedAt       DateTime?
+  resolvedById     String?
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+  entry    TimeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId  String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, status])
+  @@index([userId])
 }
 
 // ───────────────────────── Tenant site content ─────────────────────────
