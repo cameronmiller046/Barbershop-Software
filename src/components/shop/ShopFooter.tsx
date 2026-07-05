@@ -2,15 +2,10 @@ import Link from "next/link";
 import type { Tenant } from "@prisma/client";
 import { appUrl, readableOn } from "@/lib/utils";
 import type { NavLink } from "@/components/shop/ShopNav";
+import { SocialLinks } from "@/components/shop/SocialLinks";
 
 export function ShopFooter({ tenant, links, bookHref, bookLabel }: { tenant: Tenant; links: NavLink[]; bookHref: string; bookLabel: string }) {
   const cta = { background: tenant.primaryColor, color: readableOn(tenant.primaryColor) } as React.CSSProperties;
-  const socials = [
-    tenant.instagramUrl ? { href: tenant.instagramUrl, label: "Instagram" } : null,
-    tenant.facebookUrl ? { href: tenant.facebookUrl, label: "Facebook" } : null,
-    tenant.tiktokUrl ? { href: tenant.tiktokUrl, label: "TikTok" } : null,
-    tenant.website ? { href: tenant.website, label: "Website" } : null,
-  ].filter(Boolean) as { href: string; label: string }[];
 
   return (
     <footer className="relative z-10 border-t border-white/10 bg-[#070608]">
@@ -28,13 +23,7 @@ export function ShopFooter({ tenant, links, bookHref, bookLabel }: { tenant: Ten
             </Link>
             {tenant.tagline && <p className="mt-3 text-sm text-cream/50">{tenant.tagline}</p>}
             <Link href={bookHref} className="mt-5 inline-flex rounded-full px-5 py-2.5 text-sm font-semibold" style={cta}>{bookLabel}</Link>
-            {socials.length > 0 && (
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                {socials.map((s) => (
-                  <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="rounded-full border border-white/12 px-3 py-1.5 text-xs text-cream/60 transition hover:border-brass/40 hover:text-brass">{s.label}</a>
-                ))}
-              </div>
-            )}
+            <SocialLinks className="mt-5" instagram={tenant.instagramUrl} facebook={tenant.facebookUrl} tiktok={tenant.tiktokUrl} x={tenant.xUrl} youtube={tenant.youtubeUrl} website={tenant.website} />
           </div>
           <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
             <div>

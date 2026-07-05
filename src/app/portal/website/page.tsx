@@ -16,7 +16,7 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
     select: {
       name: true, slug: true, tagline: true, description: true, website: true, phone: true, email: true, address: true,
       heroHeadline: true, heroSubheading: true, heroCtaText: true, announcement: true,
-      instagramUrl: true, facebookUrl: true, tiktokUrl: true, metaTitle: true, metaDescription: true, accentColor: true,
+      instagramUrl: true, facebookUrl: true, tiktokUrl: true, xUrl: true, youtubeUrl: true, metaTitle: true, metaDescription: true, accentColor: true,
       logoUrl: true, faviconUrl: true, heroImageUrl: true, coverImageUrl: true,
       showBarbers: true, showGallery: true, showReviews: true, showFaq: true,
     },

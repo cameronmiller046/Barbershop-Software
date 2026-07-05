@@ -106,6 +106,8 @@ model Tenant {
   instagramUrl String?
   facebookUrl  String?
   tiktokUrl    String?
+  xUrl         String? // X / Twitter
+  youtubeUrl   String?
   metaTitle       String? // SEO overrides (fall back to auto-generated)
   metaDescription String?
   accentColor  String? // optional 3rd brand color

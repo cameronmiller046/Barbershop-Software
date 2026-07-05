@@ -496,6 +496,8 @@ export async function updateWebsiteContent(formData: FormData) {
       instagramUrl: cmsStr(formData, "instagramUrl", 300),
       facebookUrl: cmsStr(formData, "facebookUrl", 300),
       tiktokUrl: cmsStr(formData, "tiktokUrl", 300),
+      xUrl: cmsStr(formData, "xUrl", 300),
+      youtubeUrl: cmsStr(formData, "youtubeUrl", 300),
       metaTitle: cmsStr(formData, "metaTitle", 120),
       metaDescription: cmsStr(formData, "metaDescription", 320),
       accentColor: accent,

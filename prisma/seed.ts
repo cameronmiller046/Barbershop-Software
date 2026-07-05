@@ -29,6 +29,9 @@ async function main() {
     address: "4847 Memorial Dr, Stone Mountain, GA 30083",
     slotIntervalMin: 30,
     googleRating: 4.6,
+    instagramUrl: "https://instagram.com/professionalbarbershop",
+    facebookUrl: "https://facebook.com/professionalbarbershop",
+    tiktokUrl: "https://tiktok.com/@professionalbarbershop",
     // Monthly sales goal — drives the Reports goal + pace tracking.
     monthlyGoalCents: 1500000, // $15,000/mo
   };

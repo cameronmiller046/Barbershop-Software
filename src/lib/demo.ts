@@ -80,6 +80,11 @@ export async function ensureDemoData(prisma: PrismaClient) {
   await prisma.service.updateMany({ where: { tenantId: flagship.id, imageUrl: { contains: "loremflickr" } }, data: { imageUrl: null } });
   await prisma.tenant.updateMany({ where: { id: flagship.id, heroImageUrl: { contains: "loremflickr" } }, data: { heroImageUrl: null } });
   await prisma.user.updateMany({ where: { tenantId: flagship.id, avatarUrl: { contains: "pravatar" } }, data: { avatarUrl: null } });
+  // Seed example footer social links on the showcase (only if the owner hasn't set them).
+  await prisma.tenant.updateMany({
+    where: { id: flagship.id, instagramUrl: null },
+    data: { instagramUrl: "https://instagram.com/professionalbarbershop", facebookUrl: "https://facebook.com/professionalbarbershop", tiktokUrl: "https://tiktok.com/@professionalbarbershop" },
+  });
 
   // Ensure the loc / natural-hair services exist (added after the initial seed).
   const svcCount = await prisma.service.count({ where: { tenantId: flagship.id } });

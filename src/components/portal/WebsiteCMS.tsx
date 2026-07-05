@@ -10,7 +10,7 @@ export type CmsTenant = {
   name: string; slug: string; tagline: string | null; description: string | null; website: string | null;
   phone: string | null; email: string | null; address: string | null;
   heroHeadline: string | null; heroSubheading: string | null; heroCtaText: string | null; announcement: string | null;
-  instagramUrl: string | null; facebookUrl: string | null; tiktokUrl: string | null;
+  instagramUrl: string | null; facebookUrl: string | null; tiktokUrl: string | null; xUrl: string | null; youtubeUrl: string | null;
   metaTitle: string | null; metaDescription: string | null; accentColor: string | null;
   logoUrl: string | null; faviconUrl: string | null; heroImageUrl: string | null; coverImageUrl: string | null;
   showBarbers: boolean; showGallery: boolean; showReviews: boolean; showFaq: boolean;
@@ -80,6 +80,8 @@ export function WebsiteCMS({ t, siteUrl, saved }: { t: CmsTenant; siteUrl: strin
           <Field label="Instagram URL"><input name="instagramUrl" defaultValue={t.instagramUrl ?? ""} placeholder="https://instagram.com/yourshop" className="input" /></Field>
           <Field label="Facebook URL"><input name="facebookUrl" defaultValue={t.facebookUrl ?? ""} placeholder="https://facebook.com/yourshop" className="input" /></Field>
           <Field label="TikTok URL"><input name="tiktokUrl" defaultValue={t.tiktokUrl ?? ""} placeholder="https://tiktok.com/@yourshop" className="input" /></Field>
+          <Field label="X (Twitter) URL"><input name="xUrl" defaultValue={t.xUrl ?? ""} placeholder="https://x.com/yourshop" className="input" /></Field>
+          <Field label="YouTube URL"><input name="youtubeUrl" defaultValue={t.youtubeUrl ?? ""} placeholder="https://youtube.com/@yourshop" className="input" /></Field>
           <Field label="Accent color">
             <div className="flex items-center gap-2">
               <input name="accentColor" defaultValue={t.accentColor ?? ""} placeholder="#c9a24b" className="input" />
