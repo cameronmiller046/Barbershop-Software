@@ -10,6 +10,7 @@ import { Icon, type IconName } from "@/components/home/icons";
 import { WalkInLogger } from "@/components/WalkInLogger";
 import { CurrentClientPanel, CurrentClientEmpty } from "@/components/portal/CurrentClientPanel";
 import { QuickAction } from "@/components/portal/QuickAction";
+import { TimeClock } from "@/components/portal/TimeClock";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function DashboardPage() {
   const yStart = startOfDay(subDays(now, 1)), yEnd = endOfDay(subDays(now, 1));
   const weekStart = startOfWeek(now), weekEnd = endOfWeek(now);
 
-  const [tenant, services, clientList, barbers, todays, yesterday, weekRev] = await Promise.all([
+  const [tenant, services, clientList, barbers, todays, yesterday, weekRev, myClockOpen, myClockToday] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } }),
     prisma.service.findMany({ where: { tenantId, active: true }, select: { id: true, name: true, priceCents: true }, orderBy: { sortOrder: "asc" } }),
     prisma.client.findMany({ where: { tenantId }, select: { name: true }, orderBy: { name: "asc" }, take: 500 }),
@@ -44,7 +45,10 @@ export default async function DashboardPage() {
       where: { tenantId, active: true, status: "COMPLETED", startTime: { gte: weekStart, lte: weekEnd } },
       select: { collectedCents: true, service: { select: { priceCents: true } } },
     }),
+    prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } }),
+    prisma.timeEntry.findMany({ where: { tenantId, userId: user.id, clockOut: { not: null }, clockIn: { gte: dayStart } }, select: { clockIn: true, clockOut: true } }),
   ]);
+  const myClockTodayMin = myClockToday.reduce((s, e) => s + Math.max(0, Math.round(((e.clockOut as Date).getTime() - e.clockIn.getTime()) / 60_000)), 0);
 
   const revenueOf = (a: { collectedCents: number | null; service: { priceCents: number } }) => a.collectedCents ?? a.service.priceCents;
 
@@ -203,6 +207,8 @@ export default async function DashboardPage() {
 
         {/* Right widgets */}
         <section className="order-3 space-y-5 xl:order-3">
+          <TimeClock openSinceISO={myClockOpen?.clockIn.toISOString() ?? null} todayMinutes={myClockTodayMin} />
+
           {/* Live shop status */}
           <div className="p-panel p-5">
             <div className="flex items-center justify-between">

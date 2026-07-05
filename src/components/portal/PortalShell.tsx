@@ -12,6 +12,7 @@ const PRIMARY: NavItem[] = [
   { label: "Dashboard", href: "/portal", icon: "home", exact: true },
   { label: "Appointments", href: "/portal/appointments", icon: "booking" },
   { label: "Clients", href: "/portal/clients", icon: "customers", perm: "shop.clients" },
+  { label: "Time Clock", href: "/portal/timeclock", icon: "clock" },
   { label: "Messages", href: "/portal/soon?s=Messages", icon: "messages", soon: true },
   { label: "Settings", href: "/portal/account", icon: "settings" },
 ];

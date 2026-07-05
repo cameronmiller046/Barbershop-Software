@@ -132,6 +132,7 @@ model Tenant {
   galleryItems GalleryItem[]
   reviews      Review[]
   auditLogs    AuditLog[]
+  timeEntries  TimeEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -178,6 +179,7 @@ model User {
   workingHours       WorkingHour[]
   socialPosts        SocialPost[]
   auditLogs          AuditLog[]
+  timeEntries        TimeEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,6 +295,24 @@ model WorkingHour {
 
   @@unique([barberId, dayOfWeek])
   @@index([tenantId])
+}
+
+// Staff time clock: one row per shift. clockOut = null means still on the clock.
+model TimeEntry {
+  id       String    @id @default(cuid())
+  clockIn  DateTime  @default(now())
+  clockOut DateTime?
+  note     String?
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, clockIn])
+  @@index([userId, clockIn])
 }
 
 // ───────────────────────── Tenant site content ─────────────────────────
