@@ -51,6 +51,7 @@ export default async function PortalLayout({ children }: { children: React.React
         tenant={{ name: tenant?.name ?? "Portal" }}
         perms={perms}
         reports={limits.reports}
+        planLabel={limits.label}
         showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
         siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
         demo={isDemoAccount(user.email)}

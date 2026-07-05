@@ -28,9 +28,6 @@ const MANAGEMENT: NavItem[] = [
   { label: "Staff", href: "/portal/team", icon: "staff", perm: "shop.team" },
   { label: "Analytics", href: "/portal/reports", icon: "analytics", perm: "shop.viewAll", plan: true },
   { label: "Reports", href: "/portal/reports", icon: "reports", perm: "shop.viewAll", plan: true },
-  { label: "Inventory", href: "/portal/soon?s=Inventory", icon: "inventory", perm: "shop.settings", soon: true },
-  { label: "Marketing", href: "/portal/soon?s=Marketing", icon: "marketing", perm: "shop.settings", soon: true },
-  { label: "Financials", href: "/portal/soon?s=Financials", icon: "dollar", perm: "shop.viewAll", soon: true },
   { label: "Website Content", href: "/portal/website", icon: "store", perm: "shop.settings" },
   { label: "Booking Setup", href: "/portal/booking", icon: "clock", perm: "shop.settings" },
   { label: "Shop Settings", href: "/portal/settings", icon: "settings", perm: "shop.settings" },
@@ -38,12 +35,13 @@ const MANAGEMENT: NavItem[] = [
 ];
 
 export function PortalShell({
-  user, tenant, perms, reports, showUpgrade, siteUrl, demo, notifications, signOutAction, children,
+  user, tenant, perms, reports, planLabel, showUpgrade, siteUrl, demo, notifications, signOutAction, children,
 }: {
   user: { name: string; roleLabel: string; email: string };
   tenant: { name: string };
   perms: Record<string, boolean>;
   reports: boolean;
+  planLabel: string;
   showUpgrade: boolean;
   siteUrl: string;
   demo: boolean;
@@ -196,7 +194,10 @@ export function PortalShell({
               <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-[#f4d585] to-[#b98a3c] text-xs font-bold text-[#17130a]">{initials(user.name)}</span>
               <span className="hidden leading-tight sm:block">
                 <span className="block text-xs font-medium text-cream">{user.name}</span>
-                <span className="block text-[10px] text-cream/45">{user.roleLabel}</span>
+                <span className="flex items-center gap-1.5 text-[10px] text-cream/45">
+                  {user.roleLabel}
+                  <span className="rounded-full border border-brass/40 bg-brass/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-brass">{planLabel}</span>
+                </span>
               </span>
             </div>
           </div>
