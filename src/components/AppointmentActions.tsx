@@ -15,10 +15,10 @@ type Day = { date: string; slots: Slot[] };
 type Modal = null | "reschedule" | "cancel" | "delete" | "clock" | "collect";
 
 export function AppointmentActions({
-  id, slug, serviceId, barberId, status, startedISO, finishedISO, canCorrect, servicePriceCents,
+  id, slug, serviceId, barberId, status, startedISO, finishedISO, canCorrect, servicePriceCents, defaultTipCents,
 }: {
   id: string; slug: string; serviceId: string; barberId: string; status: string;
-  startedISO?: string | null; finishedISO?: string | null; canCorrect?: boolean; servicePriceCents?: number;
+  startedISO?: string | null; finishedISO?: string | null; canCorrect?: boolean; servicePriceCents?: number; defaultTipCents?: number;
 }) {
   const [modal, setModal] = useState<Modal>(null);
   const [pending, startT] = useTransition();
@@ -82,7 +82,7 @@ export function AppointmentActions({
           onSave={(s, f) => run(() => correctAppointmentClock(id, s, f))} />
       )}
       {modal === "collect" && (
-        <CollectModal defaultCents={servicePriceCents ?? 0} pending={pending}
+        <CollectModal defaultCents={servicePriceCents ?? 0} defaultTipCents={defaultTipCents ?? 0} pending={pending}
           onClose={() => setModal(null)}
           onConfirm={(cents, tip, method) => run(() => finishAppointment(id, cents, tip, method))} />
       )}
@@ -91,11 +91,11 @@ export function AppointmentActions({
 }
 
 // Check-out: confirm what the barber collected — service + tip + payment method.
-function CollectModal({ defaultCents, pending, onClose, onConfirm }: {
-  defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number, tipCents: number, method: string) => void;
+function CollectModal({ defaultCents, defaultTipCents, pending, onClose, onConfirm }: {
+  defaultCents: number; defaultTipCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number, tipCents: number, method: string) => void;
 }) {
   const [amt, setAmt] = useState(defaultCents ? String(Math.round(defaultCents / 100)) : "");
-  const [tip, setTip] = useState("");
+  const [tip, setTip] = useState(defaultTipCents ? String(defaultTipCents / 100) : "");
   const [method, setMethod] = useState<string>("Card");
   const cents = Math.max(0, Math.round(Number(amt || 0) * 100));
   const tipCents = Math.max(0, Math.round(Number(tip || 0) * 100));
@@ -107,7 +107,7 @@ function CollectModal({ defaultCents, pending, onClose, onConfirm }: {
           <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" /></div>
         </div>
         <div>
-          <div className="label">Tip</div>
+          <div className="label">Tip{defaultTipCents > 0 ? " · added at booking" : ""}</div>
           <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={tip} onChange={(e) => setTip(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
         </div>
         <div>

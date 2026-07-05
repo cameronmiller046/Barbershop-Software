@@ -13,6 +13,7 @@ const schema = z.object({
   serviceId: z.string().min(1),
   barberId: z.string().min(1),
   start: z.string().datetime(),
+  tipCents: z.number().int().min(0).max(1_000_000).optional(),
   name: z.string().trim().min(1).max(120),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().trim().min(7).max(40).refine((v) => v.replace(/\D/g, "").length >= 7, "A valid phone number is required"),
@@ -30,7 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid booking details" }, { status: 400 });
-  const { serviceId, barberId, start, name, email, phone, notes } = parsed.data;
+  const { serviceId, barberId, start, tipCents, name, email, phone, notes } = parsed.data;
 
   // Validate service + barber belong to THIS tenant (isolation).
   const [service, barber] = await Promise.all([
@@ -71,6 +72,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       startTime,
       endTime,
       notes: notes || null,
+      tipCents: tipCents && tipCents > 0 ? tipCents : null,
       status: "CONFIRMED",
     },
   });
@@ -85,6 +87,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       html: emailLayout("You're booked!", `
         <p>Hi ${name}, your appointment at <b>${tenant.name}</b> is confirmed.</p>
         <p><b>${service.name}</b> with ${barber.name}<br/>${startTime.toLocaleString()}</p>
+        ${tipCents && tipCents > 0 ? `<p>Includes a $${(tipCents / 100).toFixed(2)} tip for ${barber.name}. Thank you!</p>` : ""}
         <p>Manage your appointment: <a href="${manageUrl}" style="color:#c9a24b">${manageUrl}</a></p>
       `),
     });

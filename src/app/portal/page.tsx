@@ -180,7 +180,7 @@ export default async function DashboardPage() {
           {current ? (
             <CurrentClientPanel
               id={current.id} clientName={current.client.name} serviceName={current.service.name}
-              priceCents={current.collectedCents ?? current.service.priceCents} durationMin={current.service.durationMin}
+              priceCents={current.collectedCents ?? current.service.priceCents} tipCents={current.tipCents ?? 0} durationMin={current.service.durationMin}
               startedISO={current.startedAt?.toISOString() ?? null} checkedInISO={current.checkedInAt?.toISOString() ?? null}
               barberName={seesAll ? current.barber.name : null}
             />
