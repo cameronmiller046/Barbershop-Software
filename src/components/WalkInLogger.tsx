@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { logWalkIn } from "@/app/portal/actions";
 import { REFERRAL_TYPES } from "@/lib/appointmentMeta";
+import { PAYMENT_METHODS } from "@/lib/payments";
 
 type Svc = { id: string; name: string; priceCents: number };
 
@@ -17,6 +18,8 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
   const [kind, setKind] = useState("WALKIN");
   const [referral, setReferral] = useState("");
   const [collected, setCollected] = useState("");
+  const [tip, setTip] = useState("");
+  const [method, setMethod] = useState<string>("Card");
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -35,6 +38,8 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
     fd.set("kind", kind);
     fd.set("referral", referral);
     fd.set("collected", collected);
+    fd.set("tip", tip);
+    fd.set("paymentMethod", method);
     start(async () => { await logWalkIn(fd); setOpen(false); reset(); });
   }
 
@@ -84,10 +89,27 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
                   {REFERRAL_TYPES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="label">Amount collected</div>
+                  <div className="flex items-center gap-2"><span className="text-cream/60">$</span>
+                    <input value={collected} onChange={(e) => setCollected(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
+                </div>
+                <div>
+                  <div className="label">Tip</div>
+                  <div className="flex items-center gap-2"><span className="text-cream/60">$</span>
+                    <input value={tip} onChange={(e) => setTip(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
+                </div>
+              </div>
               <div>
-                <div className="label">Amount collected</div>
-                <div className="flex items-center gap-2"><span className="text-cream/60">$</span>
-                  <input value={collected} onChange={(e) => setCollected(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
+                <div className="label">Payment method</div>
+                <div className="flex flex-wrap gap-2">
+                  {PAYMENT_METHODS.map((m) => (
+                    <button type="button" key={m} onClick={() => setMethod(m)}
+                      className="rounded-full border px-3 py-1.5 text-sm transition"
+                      style={method === m ? { background: "var(--brand)", color: "var(--brand-fg)", borderColor: "var(--brand)" } : { borderColor: "rgba(255,255,255,0.15)" }}>{m}</button>
+                  ))}
+                </div>
               </div>
             </div>
 

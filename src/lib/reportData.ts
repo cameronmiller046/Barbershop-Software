@@ -5,6 +5,7 @@ import type { Gran, Range } from "@/lib/reportRange";
 
 export type ApptRow = {
   startTime: Date; startedAt: Date | null; finishedAt: Date | null; collectedCents: number | null;
+  tipCents: number | null; paymentMethod: string | null;
   status: string; kind: string; referral: string | null; clientId: string; clientName: string;
   barberId: string; barberName: string; serviceName: string; servicePriceCents: number; serviceDurationMin: number;
 };
@@ -12,18 +13,20 @@ export type ClientRow = { id: string; createdAt: Date };
 export type TimeRow = { userId: string; clockIn: Date; clockOut: Date | null };
 
 export type WindowStats = {
-  revenue: number; apptCount: number; completedCount: number; cancelled: number; noShow: number;
+  revenue: number; tips: number; apptCount: number; completedCount: number; cancelled: number; noShow: number;
   walkin: number; online: number; avgTicket: number; avgServiceMin: number; noShowRate: number;
   activeClients: number; newClients: number; returningClients: number; utilization: number | null;
 };
 
 const rev = (a: ApptRow) => a.collectedCents ?? a.servicePriceCents;
+const tip = (a: ApptRow) => a.tipCents ?? 0;
 const mins = (a: ApptRow) => (a.startedAt && a.finishedAt ? (a.finishedAt.getTime() - a.startedAt.getTime()) / 60_000 : null);
 
 function windowStats(appts: ApptRow[], from: Date, to: Date, clientCreated: Map<string, Date>, times: TimeRow[]): WindowStats {
   const inWin = appts.filter((a) => a.startTime >= from && a.startTime <= to);
   const completed = inWin.filter((a) => a.status === "COMPLETED");
   const revenue = completed.reduce((s, a) => s + rev(a), 0);
+  const tips = completed.reduce((s, a) => s + tip(a), 0);
   const completedCount = completed.length;
   const confirmed = inWin.filter((a) => a.status === "CONFIRMED").length;
   const cancelled = inWin.filter((a) => a.status === "CANCELLED").length;
@@ -40,7 +43,7 @@ function windowStats(appts: ApptRow[], from: Date, to: Date, clientCreated: Map<
   const clockedMin = times.filter((e) => e.clockIn >= from && e.clockIn <= to && e.clockOut).reduce((s, e) => s + (e.clockOut!.getTime() - e.clockIn.getTime()) / 60_000, 0);
   const totalOutcome = completedCount + noShow + cancelled;
   return {
-    revenue, apptCount: completedCount + confirmed, completedCount, cancelled, noShow,
+    revenue, tips, apptCount: completedCount + confirmed, completedCount, cancelled, noShow,
     walkin, online: completedCount - walkin,
     avgTicket: completedCount ? Math.round(revenue / completedCount) : 0,
     avgServiceMin: svc.length ? Math.round(svc.reduce((s, x) => s + x, 0) / svc.length) : 0,
@@ -88,10 +91,10 @@ export function buildReport(appts: ApptRow[], clients: ClientRow[], times: TimeR
   const apptSeries = curB.map((b) => ({ label: b.label, value: cntInBucket(b, inWin.filter((a) => a.status === "COMPLETED" || a.status === "CONFIRMED")) }));
 
   // Barber breakdown
-  const barberMap = new Map<string, { id: string; name: string; revenue: number; appts: number; clients: Set<string>; svc: number[]; noShow: number; cancelled: number }>();
+  const barberMap = new Map<string, { id: string; name: string; revenue: number; tips: number; appts: number; clients: Set<string>; svc: number[]; noShow: number; cancelled: number }>();
   for (const a of inWin) {
-    const r = barberMap.get(a.barberId) ?? { id: a.barberId, name: a.barberName, revenue: 0, appts: 0, clients: new Set<string>(), svc: [], noShow: 0, cancelled: 0 };
-    if (a.status === "COMPLETED") { r.revenue += rev(a); r.appts++; r.clients.add(a.clientId); const m = mins(a); if (m != null) r.svc.push(m); }
+    const r = barberMap.get(a.barberId) ?? { id: a.barberId, name: a.barberName, revenue: 0, tips: 0, appts: 0, clients: new Set<string>(), svc: [], noShow: 0, cancelled: 0 };
+    if (a.status === "COMPLETED") { r.revenue += rev(a); r.tips += tip(a); r.appts++; r.clients.add(a.clientId); const m = mins(a); if (m != null) r.svc.push(m); }
     if (a.status === "NO_SHOW") r.noShow++;
     if (a.status === "CANCELLED") r.cancelled++;
     barberMap.set(a.barberId, r);
@@ -102,7 +105,7 @@ export function buildReport(appts: ApptRow[], clients: ClientRow[], times: TimeR
     const booked = r.svc.reduce((s, x) => s + x, 0);
     const clocked = clockedByUser.get(r.id) ?? 0;
     return {
-      id: r.id, name: r.name, revenue: r.revenue, appts: r.appts, clients: r.clients.size,
+      id: r.id, name: r.name, revenue: r.revenue, tips: r.tips, appts: r.appts, clients: r.clients.size,
       avgServiceMin: r.svc.length ? Math.round(booked / r.svc.length) : 0,
       noShow: r.noShow, cancelled: r.cancelled,
       utilization: clocked > 0 ? Math.min(1, booked / clocked) : null,
@@ -143,6 +146,15 @@ export function buildReport(appts: ApptRow[], clients: ClientRow[], times: TimeR
   };
   const channel = { walkin: cur.walkin, online: cur.online };
 
+  // Payment-method mix (by completed revenue, incl. tips)
+  const payMap = new Map<string, { revenue: number; count: number }>();
+  for (const a of completed) {
+    const key = a.paymentMethod ?? "Unrecorded";
+    const r = payMap.get(key) ?? { revenue: 0, count: 0 };
+    r.revenue += rev(a) + tip(a); r.count++; payMap.set(key, r);
+  }
+  const byPayment = [...payMap.entries()].map(([label, r]) => ({ label, revenue: r.revenue, count: r.count })).sort((a, b) => b.revenue - a.revenue);
+
   // Top clients + referrals
   const clientMap = new Map<string, { name: string; spend: number; visits: number }>();
   for (const a of completed) {
@@ -156,7 +168,7 @@ export function buildReport(appts: ApptRow[], clients: ClientRow[], times: TimeR
 
   const insights = buildInsights(cur, prev, byBarber, byService, byDow, byHour, cur.utilization);
 
-  return { cur, prev, revenueSeries, apptSeries, byBarber, byService, byDow, byHour, heatmap, status, channel, topClients, referrals, insights };
+  return { cur, prev, revenueSeries, apptSeries, byBarber, byService, byDow, byHour, heatmap, status, channel, byPayment, topClients, referrals, insights };
 }
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : a > 0 ? 100 : 0);
@@ -168,6 +180,7 @@ function buildInsights(cur: WindowStats, prev: WindowStats, byBarber: { name: st
   const revP = pct(cur.revenue, prev.revenue);
   if (cur.revenue > 0 || prev.revenue > 0) out.push(`Revenue is ${revP >= 0 ? "up" : "down"} ${Math.abs(revP)}% (${money(cur.revenue)}) versus the previous period.`);
   if (cur.avgTicket && prev.avgTicket) { const d = cur.avgTicket - prev.avgTicket; if (Math.abs(d) >= 100) out.push(`Your average ticket ${d >= 0 ? "increased" : "decreased"} by ${money(Math.abs(d))} to ${money(cur.avgTicket)}.`); }
+  if (cur.tips > 0 && cur.revenue > 0) { const tp = Math.round((cur.tips / cur.revenue) * 100); out.push(`Tips added ${money(cur.tips)} (${tp}% of service revenue) this period.`); }
   const dows = [...byDow].filter((d) => d.revenue > 0).sort((a, b) => b.revenue - a.revenue);
   if (dows.length >= 2) { const best = dows[0], worst = dows[dows.length - 1]; if (worst.revenue > 0) { const p = pct(best.revenue, worst.revenue); if (p >= 15) out.push(`${best.label}s generate ${p}% more revenue than ${worst.label}s — your strongest day.`); } }
   const busyHour = [...byHour].sort((a, b) => b.count - a.count)[0]; if (busyHour && busyHour.count > 0) out.push(`Your busiest hour is around ${hr(busyHour.hour)}.`);

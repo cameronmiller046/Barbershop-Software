@@ -16,6 +16,7 @@ import { startOfDay, endOfDay, startOfWeek, startOfMonth, startOfYear, subYears 
 export const dynamic = "force-dynamic";
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : a > 0 ? 100 : 0);
+const PAY_COLORS = ["#d8b25c", "#34d399", "#60a5fa", "#c084fc", "#94a3b8"];
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ preset?: string; from?: string; to?: string }> }) {
   const user = await requireStaffWithPerms();
@@ -30,10 +31,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const sumRev = (f: Date, t: Date) => prisma.appointment.aggregate({ where: { tenantId, active: true, status: "COMPLETED", startTime: { gte: f, lte: t } }, _sum: { collectedCents: true } }).then((r) => r._sum.collectedCents ?? 0);
   const yoyFrom = subYears(range.from, 1), yoyTo = subYears(range.to, 1);
 
-  const [apptRows, clients, times, snapT, snapW, snapM, snapY, yoyRev, yoyAppts] = await Promise.all([
+  const sumTips = (f: Date, t: Date) => prisma.appointment.aggregate({ where: { tenantId, active: true, status: "COMPLETED", startTime: { gte: f, lte: t } }, _sum: { tipCents: true } }).then((r) => r._sum.tipCents ?? 0);
+  const [apptRows, clients, times, snapT, snapW, snapM, snapY, yoyRev, yoyAppts, yoyTips] = await Promise.all([
     prisma.appointment.findMany({
       where: { tenantId, active: true, startTime: { gte: range.prevFrom, lte: range.to } },
-      select: { startTime: true, startedAt: true, finishedAt: true, collectedCents: true, status: true, kind: true, referral: true, clientId: true, client: { select: { name: true } }, barberId: true, barber: { select: { name: true } }, service: { select: { name: true, priceCents: true, durationMin: true } } },
+      select: { startTime: true, startedAt: true, finishedAt: true, collectedCents: true, tipCents: true, paymentMethod: true, status: true, kind: true, referral: true, clientId: true, client: { select: { name: true } }, barberId: true, barber: { select: { name: true } }, service: { select: { name: true, priceCents: true, durationMin: true } } },
       orderBy: { startTime: "asc" },
     }),
     prisma.client.findMany({ where: { tenantId }, select: { id: true, createdAt: true }, take: 20000 }),
@@ -41,10 +43,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     sumRev(startOfDay(now), endOfDay(now)), sumRev(startOfWeek(now), endOfDay(now)), sumRev(startOfMonth(now), endOfDay(now)), sumRev(startOfYear(now), endOfDay(now)),
     sumRev(yoyFrom, yoyTo),
     prisma.appointment.count({ where: { tenantId, active: true, status: "COMPLETED", startTime: { gte: yoyFrom, lte: yoyTo } } }),
+    sumTips(yoyFrom, yoyTo),
   ]);
 
   const appts: ApptRow[] = apptRows.map((a) => ({
     startTime: a.startTime, startedAt: a.startedAt, finishedAt: a.finishedAt, collectedCents: a.collectedCents,
+    tipCents: a.tipCents, paymentMethod: a.paymentMethod,
     status: a.status, kind: a.kind, referral: a.referral, clientId: a.clientId, clientName: a.client.name,
     barberId: a.barberId, barberName: a.barber.name, serviceName: a.service.name, servicePriceCents: a.service.priceCents, serviceDurationMin: a.service.durationMin,
   }));
@@ -56,6 +60,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     { label: "Appointments", icon: "booking", value: String(cur.apptCount), delta: pct(cur.apptCount, prev.apptCount), spark: R.apptSeries.map((s) => s.value) },
     { label: "Completed Cuts", icon: "check", value: String(cur.completedCount), delta: pct(cur.completedCount, prev.completedCount) },
     { label: "Avg Ticket", icon: "gauge", value: formatMoney(cur.avgTicket), delta: pct(cur.avgTicket, prev.avgTicket) },
+    { label: "Tips Collected", icon: "loyalty", value: formatMoney(cur.tips), delta: pct(cur.tips, prev.tips) },
     { label: "New Clients", icon: "customers", value: String(cur.newClients), delta: pct(cur.newClients, prev.newClients) },
     { label: "Returning Clients", icon: "loyalty", value: String(cur.returningClients), delta: pct(cur.returningClients, prev.returningClients) },
     { label: "Avg Service Time", icon: "clock", value: `${cur.avgServiceMin}m`, delta: pct(cur.avgServiceMin, prev.avgServiceMin) },
@@ -154,6 +159,37 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </Reveal>
       </div>
 
+      {/* Payment mix */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+        <Reveal className="p-panel p-5">
+          <h3 className="font-display text-lg text-cream">Payment methods</h3>
+          <p className="mt-1 text-xs text-cream/45">Collected revenue including tips.</p>
+          <div className="mt-5"><Donut segments={R.byPayment.map((p, i) => ({ label: p.label, value: p.revenue, color: PAY_COLORS[i % PAY_COLORS.length] }))} format={formatMoney} /></div>
+        </Reveal>
+        <Reveal delay={0.05} className="p-panel overflow-hidden p-0">
+          <div className="p-5 pb-3"><h3 className="font-display text-lg text-cream">Payment breakdown</h3></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-y border-white/8 text-left text-cream/45"><th className="px-5 py-2.5 font-medium">Method</th><th className="px-5 py-2.5 text-right font-medium">Transactions</th><th className="px-5 py-2.5 text-right font-medium">Collected</th><th className="px-5 py-2.5 text-right font-medium">Share</th></tr></thead>
+              <tbody className="divide-y divide-white/5">
+                {R.byPayment.length === 0 ? <tr><td colSpan={4} className="px-5 py-6 text-center text-cream/45">No completed payments in this period.</td></tr> :
+                  R.byPayment.map((p, i) => {
+                    const total = R.byPayment.reduce((s, x) => s + x.revenue, 0) || 1;
+                    return (
+                      <tr key={p.label}>
+                        <td className="px-5 py-2.5"><span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: PAY_COLORS[i % PAY_COLORS.length] }} />{p.label}</span></td>
+                        <td className="px-5 py-2.5 text-right text-cream/70">{p.count}</td>
+                        <td className="px-5 py-2.5 text-right font-medium text-brass">{formatMoney(p.revenue)}</td>
+                        <td className="px-5 py-2.5 text-right text-cream/60">{Math.round((p.revenue / total) * 100)}%</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
+      </div>
+
       {/* Peak hours heatmap */}
       <Reveal className="mt-5 p-panel p-5">
         <h3 className="font-display text-lg text-cream">Peak booking times</h3>
@@ -168,16 +204,18 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <table className="w-full min-w-[720px] text-sm">
             <thead><tr className="border-y border-white/8 text-left text-cream/45">
               <th className="px-5 py-2.5 font-medium">Barber</th><th className="px-5 py-2.5 text-right font-medium">Revenue</th><th className="px-5 py-2.5 font-medium">Share</th>
+              <th className="px-5 py-2.5 text-right font-medium">Tips</th>
               <th className="px-5 py-2.5 text-right font-medium">Cuts</th><th className="px-5 py-2.5 text-right font-medium">Clients</th>
               <th className="px-5 py-2.5 text-right font-medium">Avg time</th><th className="px-5 py-2.5 text-right font-medium">No-shows</th><th className="px-5 py-2.5 text-right font-medium">Utilization</th>
             </tr></thead>
             <tbody className="divide-y divide-white/5">
-              {R.byBarber.length === 0 ? <tr><td colSpan={8} className="px-5 py-6 text-center text-cream/45">No activity in this period.</td></tr> :
+              {R.byBarber.length === 0 ? <tr><td colSpan={9} className="px-5 py-6 text-center text-cream/45">No activity in this period.</td></tr> :
                 R.byBarber.map((b, i) => (
                   <tr key={b.id}>
                     <td className="px-5 py-3"><span className="flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-brass/15 text-[10px] font-bold text-brass">{i + 1}</span>{b.name}</span></td>
                     <td className="px-5 py-3 text-right font-semibold text-brass">{formatMoney(b.revenue)}</td>
                     <td className="w-40 px-5 py-3"><RankBar value={b.revenue} max={maxBarberRev} /></td>
+                    <td className="px-5 py-3 text-right text-cream/70">{formatMoney(b.tips)}</td>
                     <td className="px-5 py-3 text-right text-cream/80">{b.appts}</td>
                     <td className="px-5 py-3 text-right text-cream/80">{b.clients}</td>
                     <td className="px-5 py-3 text-right text-cream/70">{b.avgServiceMin}m</td>
@@ -258,12 +296,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <p className="mt-1 text-xs text-cream/45">{range.label} vs. same period last year.</p>
           <div className="mt-4 space-y-3">
             <YoY label="Revenue" cur={formatMoney(cur.revenue)} delta={pct(cur.revenue, yoyRev)} />
+            <YoY label="Tips" cur={formatMoney(cur.tips)} delta={pct(cur.tips, yoyTips)} />
             <YoY label="Completed cuts" cur={String(cur.completedCount)} delta={pct(cur.completedCount, yoyAppts)} />
           </div>
         </Reveal>
       </div>
 
-      <p className="mt-8 text-center text-xs text-cream/30">Revenue is realized from completed appointments. Retail, tips, memberships, taxes and forecasting are on the roadmap.</p>
+      <p className="mt-8 text-center text-xs text-cream/30">Revenue is realized from completed appointments; tips are tracked separately. Retail, memberships, taxes and forecasting are on the roadmap.</p>
     </div>
   );
 }

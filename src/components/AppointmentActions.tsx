@@ -8,6 +8,7 @@ import {
 } from "@/app/portal/actions";
 import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS } from "@/lib/appointmentReasons";
 import { BookingCalendar } from "@/components/BookingCalendar";
+import { PAYMENT_METHODS } from "@/lib/payments";
 
 type Slot = { start: string; end: string };
 type Day = { date: string; slots: Slot[] };
@@ -83,31 +84,47 @@ export function AppointmentActions({
       {modal === "collect" && (
         <CollectModal defaultCents={servicePriceCents ?? 0} pending={pending}
           onClose={() => setModal(null)}
-          onConfirm={(cents) => run(() => finishAppointment(id, cents))} />
+          onConfirm={(cents, tip, method) => run(() => finishAppointment(id, cents, tip, method))} />
       )}
     </div>
   );
 }
 
-// Check-out: confirm how much the barber collected (they often take payment directly).
+// Check-out: confirm what the barber collected — service + tip + payment method.
 function CollectModal({ defaultCents, pending, onClose, onConfirm }: {
-  defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number) => void;
+  defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number, tipCents: number, method: string) => void;
 }) {
   const [amt, setAmt] = useState(defaultCents ? String(Math.round(defaultCents / 100)) : "");
+  const [tip, setTip] = useState("");
+  const [method, setMethod] = useState<string>("Card");
   const cents = Math.max(0, Math.round(Number(amt || 0) * 100));
+  const tipCents = Math.max(0, Math.round(Number(tip || 0) * 100));
   return (
-    <Modal title="Check out — amount collected" hint="Enter what you collected for this cut. Are you sure this is correct?" onClose={onClose}>
-      <div>
-        <div className="label">Amount collected</div>
-        <div className="flex items-center gap-2">
-          <span className="text-cream/60">$</span>
-          <input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" />
+    <Modal title="Check out" hint="Confirm the payment for this cut." onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <div className="label">Amount collected</div>
+          <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" /></div>
+        </div>
+        <div>
+          <div className="label">Tip</div>
+          <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={tip} onChange={(e) => setTip(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
+        </div>
+        <div>
+          <div className="label">Payment method</div>
+          <div className="flex flex-wrap gap-2">
+            {PAYMENT_METHODS.map((m) => (
+              <button type="button" key={m} onClick={() => setMethod(m)}
+                className="rounded-full border px-3 py-1.5 text-sm transition"
+                style={method === m ? { background: "var(--brand)", color: "var(--brand-fg)", borderColor: "var(--brand)" } : { borderColor: "rgba(255,255,255,0.15)" }}>{m}</button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="mt-6 flex justify-end gap-2">
         <button onClick={onClose} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
-        <button disabled={pending} onClick={() => onConfirm(cents)} className="btn-primary px-5 py-2 text-sm disabled:opacity-40">
-          {pending ? "Saving…" : `Yes, I collected $${(cents / 100).toLocaleString()}`}
+        <button disabled={pending} onClick={() => onConfirm(cents, tipCents, method)} className="btn-primary px-5 py-2 text-sm disabled:opacity-40">
+          {pending ? "Saving…" : `Collected $${((cents + tipCents) / 100).toLocaleString()}`}
         </button>
       </div>
     </Modal>

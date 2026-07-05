@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { startAppointment, finishAppointment, addAppointmentNote } from "@/app/portal/actions";
 import { Icon } from "@/components/home/icons";
+import { PAYMENT_METHODS } from "@/lib/payments";
 
 type Props = {
   id: string;
@@ -65,7 +66,7 @@ export function CurrentClientPanel(p: Props) {
       {modal === "complete" && (
         <CompleteModal defaultCents={p.priceCents} pending={pending}
           onClose={() => setModal(null)}
-          onConfirm={(cents) => start(async () => { await finishAppointment(p.id, cents); setModal(null); })} />
+          onConfirm={(cents, tip, method) => start(async () => { await finishAppointment(p.id, cents, tip, method); setModal(null); })} />
       )}
       {modal === "note" && (
         <NoteModal pending={pending}
@@ -157,19 +158,35 @@ function Shell({ title, hint, children, onClose }: { title: string; hint?: strin
   );
 }
 
-function CompleteModal({ defaultCents, pending, onClose, onConfirm }: { defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number) => void }) {
+function CompleteModal({ defaultCents, pending, onClose, onConfirm }: { defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number, tipCents: number, method: string) => void }) {
   const [amt, setAmt] = useState(defaultCents ? String(Math.round(defaultCents / 100)) : "");
+  const [tip, setTip] = useState("");
+  const [method, setMethod] = useState<string>("Card");
   const cents = Math.max(0, Math.round(Number(amt || 0) * 100));
+  const tipCents = Math.max(0, Math.round(Number(tip || 0) * 100));
   return (
-    <Shell title="Complete cut" hint="Confirm what you collected for this service." onClose={onClose}>
-      <div className="label">Amount collected</div>
-      <div className="flex items-center gap-2">
-        <span className="text-cream/60">$</span>
-        <input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" />
+    <Shell title="Complete cut" hint="Confirm the payment for this service." onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <div className="label">Amount collected</div>
+          <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" /></div>
+        </div>
+        <div>
+          <div className="label">Tip</div>
+          <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={tip} onChange={(e) => setTip(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
+        </div>
+        <div>
+          <div className="label">Payment method</div>
+          <div className="flex flex-wrap gap-2">
+            {PAYMENT_METHODS.map((m) => (
+              <button type="button" key={m} onClick={() => setMethod(m)} className={`rounded-full border px-3 py-1.5 text-sm transition ${method === m ? "border-brass/60 bg-brass/12 text-brass" : "border-white/12 text-cream/60 hover:border-white/25"}`}>{m}</button>
+            ))}
+          </div>
+        </div>
       </div>
       <div className="mt-6 flex justify-end gap-2">
         <button onClick={onClose} className="p-btn-ghost">Cancel</button>
-        <button disabled={pending} onClick={() => onConfirm(cents)} className="p-btn-gold">{pending ? "Saving…" : `Collected $${(cents / 100).toLocaleString()}`}</button>
+        <button disabled={pending} onClick={() => onConfirm(cents, tipCents, method)} className="p-btn-gold">{pending ? "Saving…" : `Collect $${((cents + tipCents) / 100).toLocaleString()}`}</button>
       </div>
     </Shell>
   );

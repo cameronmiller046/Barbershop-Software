@@ -257,8 +257,10 @@ model Appointment {
   startedAt  DateTime?
   finishedAt DateTime?
 
-  // What the barber actually collected (they often take payment directly).
+  // What the barber actually collected (service amount, excludes tip).
   collectedCents Int?
+  tipCents       Int? // tip on top of the service
+  paymentMethod  String? // Card | Cash | Digital wallet | Other
   // How the visit happened + how the client found the shop (walk-in logging).
   kind     String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
   referral String?

@@ -13,6 +13,7 @@ import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } fr
 import { planLimits } from "@/lib/plans";
 import { isDemoAccount } from "@/lib/demoMode";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
+import { isPaymentMethod } from "@/lib/payments";
 import type { AppointmentStatus } from "@prisma/client";
 
 /**
@@ -134,24 +135,27 @@ export async function startAppointment(id: string) {
   revalidateAppointments();
 }
 
-/** Check out — finish + mark complete, recording what the barber collected.
- *  Turnaround (with a 5-minute minimum) is logged only if they checked in. */
-export async function finishAppointment(id: string, collectedCents?: number) {
+/** Check out — finish + mark complete, recording what the barber collected, the
+ *  tip, and the payment method. Turnaround is logged only if they checked in. */
+export async function finishAppointment(id: string, collectedCents?: number, tipCents?: number, paymentMethod?: string) {
   const ctx = await loadOwnedAppointment(id);
   if (!ctx) return;
   const started = ctx.appt.startedAt;
   const finishedAt = started
     ? (Date.now() - started.getTime() < MIN_DURATION_MS ? new Date(started.getTime() + MIN_DURATION_MS) : new Date())
     : undefined;
+  const method = paymentMethod && isPaymentMethod(paymentMethod) ? paymentMethod : undefined;
   await prisma.appointment.update({
     where: { id },
     data: {
       status: "COMPLETED",
       ...(finishedAt ? { finishedAt } : {}),
       ...(typeof collectedCents === "number" && collectedCents >= 0 ? { collectedCents: Math.round(collectedCents) } : {}),
+      ...(typeof tipCents === "number" && tipCents >= 0 ? { tipCents: Math.round(tipCents) } : {}),
+      ...(method ? { paymentMethod: method } : {}),
     },
   });
-  await audit({ action: "appointment.finished", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { collectedCents } });
+  await audit({ action: "appointment.finished", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { collectedCents, tipCents, paymentMethod: method } });
   revalidateAppointments();
 }
 
@@ -165,6 +169,8 @@ export async function logWalkIn(formData: FormData) {
   const kind = String(formData.get("kind") || "");
   const referral = String(formData.get("referral") || "").trim();
   const collected = Number(formData.get("collected") || 0);
+  const tip = Number(formData.get("tip") || 0);
+  const pm = String(formData.get("paymentMethod") || "");
   if (!name || !serviceId || !referral) return;
   if (kind !== "WALKIN" && kind !== "APPOINTMENT") return;
 
@@ -182,6 +188,8 @@ export async function logWalkIn(formData: FormData) {
       startTime: now, endTime: new Date(now.getTime() + service.durationMin * 60000),
       status: "COMPLETED", kind, referral,
       collectedCents: collected > 0 ? Math.round(collected * 100) : service.priceCents,
+      tipCents: tip > 0 ? Math.round(tip * 100) : null,
+      paymentMethod: isPaymentMethod(pm) ? pm : null,
       startedAt: now, finishedAt: new Date(now.getTime() + Math.max(5, service.durationMin) * 60000),
     },
   });

@@ -76,8 +76,9 @@ export function Bars({ items, format, height = 150 }: { items: { label: string; 
 }
 
 /* Donut with legend. */
-export function Donut({ segments }: { segments: { label: string; value: number; color: string }[] }) {
-  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+export function Donut({ segments, format }: { segments: { label: string; value: number; color: string }[]; format?: (n: number) => string }) {
+  const rawTotal = segments.reduce((s, x) => s + x.value, 0);
+  const total = rawTotal || 1;
   const r = 42, c = 2 * Math.PI * r;
   let off = 0;
   return (
@@ -89,7 +90,7 @@ export function Donut({ segments }: { segments: { label: string; value: number; 
           const el = <circle key={i} cx="60" cy="60" r={r} fill="none" stroke={s.color} strokeWidth="14" strokeDasharray={`${(frac * c).toFixed(1)} ${c.toFixed(1)}`} strokeDashoffset={(-off * c).toFixed(1)} transform="rotate(-90 60 60)" />;
           off += frac; return el;
         })}
-        <text x="60" y="56" textAnchor="middle" fill="#f4f0e7" fontSize="20" fontWeight="700">{total}</text>
+        <text x="60" y="56" textAnchor="middle" fill="#f4f0e7" fontSize={format ? 14 : 20} fontWeight="700">{format ? format(rawTotal) : rawTotal}</text>
         <text x="60" y="72" textAnchor="middle" fill="rgba(245,241,232,0.4)" fontSize="9">total</text>
       </svg>
       <div className="space-y-1.5">
@@ -97,7 +98,7 @@ export function Donut({ segments }: { segments: { label: string; value: number; 
           <div key={s.label} className="flex items-center gap-2 text-sm">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
             <span className="text-cream/70">{s.label}</span>
-            <span className="ml-auto font-medium text-cream">{s.value}</span>
+            <span className="ml-auto font-medium text-cream">{format ? format(s.value) : s.value}</span>
           </div>
         ))}
       </div>
