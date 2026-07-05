@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { formatMoney } from "@/lib/utils";
 
 const GOLD = "#d8b25c";
+// Formatters live here (client side): functions can't be passed as props from
+// a Server Component to a Client Component, so callers pass a `money` flag.
+const asMoney = (v: number) => formatMoney(v);
+const asNum = (v: number) => String(v);
 
 /* Tiny inline sparkline for KPI cards. */
 export function Sparkline({ values, up = true }: { values: number[]; up?: boolean }) {
@@ -22,7 +27,8 @@ export function Sparkline({ values, up = true }: { values: number[]; up?: boolea
 }
 
 /* Revenue trend — area + line with a dashed previous-period overlay and hover. */
-export function AreaTrend({ points, format }: { points: { label: string; value: number; prevValue: number }[]; format: (c: number) => string }) {
+export function AreaTrend({ points, money }: { points: { label: string; value: number; prevValue: number }[]; money?: boolean }) {
+  const format = money ? asMoney : asNum;
   const [hi, setHi] = useState<number | null>(null);
   const w = 720, h = 220, padB = 22;
   const max = Math.max(...points.map((p) => Math.max(p.value, p.prevValue)), 1);
@@ -57,7 +63,8 @@ export function AreaTrend({ points, format }: { points: { label: string; value: 
 }
 
 /* Vertical bars with hover tooltip. */
-export function Bars({ items, format, height = 150 }: { items: { label: string; value: number }[]; format: (v: number) => string; height?: number }) {
+export function Bars({ items, money, height = 150 }: { items: { label: string; value: number }[]; money?: boolean; height?: number }) {
+  const format = money ? asMoney : asNum;
   const [hi, setHi] = useState<number | null>(null);
   const max = Math.max(...items.map((i) => i.value), 1);
   return (
@@ -76,7 +83,8 @@ export function Bars({ items, format, height = 150 }: { items: { label: string; 
 }
 
 /* Donut with legend. */
-export function Donut({ segments, format }: { segments: { label: string; value: number; color: string }[]; format?: (n: number) => string }) {
+export function Donut({ segments, money }: { segments: { label: string; value: number; color: string }[]; money?: boolean }) {
+  const format = money ? asMoney : null;
   const rawTotal = segments.reduce((s, x) => s + x.value, 0);
   const total = rawTotal || 1;
   const r = 42, c = 2 * Math.PI * r;

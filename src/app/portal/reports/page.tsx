@@ -124,14 +124,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-white/30" /> Previous</span>
           </span>
         </div>
-        <div className="mt-4"><AreaTrend points={R.revenueSeries} format={formatMoney} /></div>
+        <div className="mt-4"><AreaTrend points={R.revenueSeries} money /></div>
       </Reveal>
 
       {/* Mid grid: day-of-week + status donut + channel */}
       <div className="mt-5 grid gap-5 lg:grid-cols-3">
         <Reveal className="p-panel p-5">
           <h3 className="font-display text-lg text-cream">Revenue by day of week</h3>
-          <div className="mt-5"><Bars items={R.byDow.map((d) => ({ label: d.label, value: d.revenue }))} format={formatMoney} /></div>
+          <div className="mt-5"><Bars items={R.byDow.map((d) => ({ label: d.label, value: d.revenue }))} money /></div>
         </Reveal>
         <Reveal delay={0.05} className="p-panel p-5">
           <h3 className="font-display text-lg text-cream">Appointment outcomes</h3>
@@ -164,7 +164,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         <Reveal className="p-panel p-5">
           <h3 className="font-display text-lg text-cream">Payment methods</h3>
           <p className="mt-1 text-xs text-cream/45">Collected revenue including tips.</p>
-          <div className="mt-5"><Donut segments={R.byPayment.map((p, i) => ({ label: p.label, value: p.revenue, color: PAY_COLORS[i % PAY_COLORS.length] }))} format={formatMoney} /></div>
+          <div className="mt-5"><Donut segments={R.byPayment.map((p, i) => ({ label: p.label, value: p.revenue, color: PAY_COLORS[i % PAY_COLORS.length] }))} money /></div>
         </Reveal>
         <Reveal delay={0.05} className="p-panel overflow-hidden p-0">
           <div className="p-5 pb-3"><h3 className="font-display text-lg text-cream">Payment breakdown</h3></div>
