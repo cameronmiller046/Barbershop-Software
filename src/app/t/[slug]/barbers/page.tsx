@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { getTenantBySlug, getTenantBarbers } from "@/lib/tenant";
 import { appUrl } from "@/lib/utils";
 import { Stagger, Item } from "@/components/home/motion";
-import { Icon } from "@/components/home/icons";
 import { ShopHeader } from "@/components/shop/ShopHeader";
+import { SocialLinks } from "@/components/shop/SocialLinks";
 import { QMARK } from "@/lib/placeholder";
 
 export const dynamic = "force-dynamic";
@@ -39,8 +39,8 @@ export default async function BarbersPage({ params }: { params: Promise<{ slug: 
                   <img src={b.avatarUrl || QMARK} alt={b.name} loading="lazy" className="h-28 w-28 rounded-full object-cover ring-2 ring-brass/40" />
                   <h3 className="mt-4 font-display text-xl text-cream">{b.name}</h3>
                   {b.bio && <p className="mt-2 flex-1 text-sm leading-relaxed text-cream/55">{b.bio}</p>}
-                  <div className="mt-5 flex items-center gap-3">
-                    {b.instagramHandle && <a href={`https://instagram.com/${b.instagramHandle}`} target="_blank" rel="noreferrer" className="text-cream/40 transition hover:text-brass" aria-label={`${b.name} on Instagram`}><Icon.spark className="h-4 w-4" /></a>}
+                  <div className="mt-5 flex flex-col items-center gap-3">
+                    <SocialLinks instagram={b.instagramHandle ? `https://instagram.com/${b.instagramHandle}` : null} facebook={b.facebookUrl} tiktok={b.tiktokUrl} x={b.xUrl} youtube={b.youtubeUrl} />
                     <Link href={bookHref} className="text-sm font-semibold text-brass hover:underline">Book with {b.name.split(" ")[0]} →</Link>
                   </div>
                 </div>

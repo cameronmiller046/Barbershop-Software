@@ -163,6 +163,11 @@ model User {
   bio            String?
   avatarUrl      String?
   instagramHandle String?
+  // Barber social links (shown on their public storefront profile).
+  facebookUrl String?
+  tiktokUrl   String?
+  xUrl        String?
+  youtubeUrl  String?
 
   // HR fields — set by admins, read-only to the user themselves
   hireDate    DateTime?

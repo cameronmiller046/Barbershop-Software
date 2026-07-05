@@ -522,6 +522,10 @@ export async function updateOwnProfile(formData: FormData) {
       bio: String(formData.get("bio") || "") || null,
       avatarUrl: String(formData.get("avatarUrl") || "") || null,
       instagramHandle: String(formData.get("instagramHandle") || "").replace(/^@/, "").trim() || null,
+      facebookUrl: String(formData.get("facebookUrl") || "").trim() || null,
+      tiktokUrl: String(formData.get("tiktokUrl") || "").trim() || null,
+      xUrl: String(formData.get("xUrl") || "").trim() || null,
+      youtubeUrl: String(formData.get("youtubeUrl") || "").trim() || null,
     },
   });
   await audit({ action: "account.updated", tenantId: user.tenantId, userId: user.id });

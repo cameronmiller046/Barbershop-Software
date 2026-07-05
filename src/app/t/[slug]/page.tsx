@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getTenantBySlug, getTenantServices, getTenantBarbers, getTenantReviews } from "@/lib/tenant";
 import { formatMoney, formatDuration, appUrl } from "@/lib/utils";
 import { Reveal, Counter } from "@/components/home/motion";
+import { SocialLinks } from "@/components/shop/SocialLinks";
 import { LuxHeading } from "@/components/home/LuxBits";
 import { Icon } from "@/components/home/icons";
 import { QrCode } from "@/components/QrCode";
@@ -170,6 +171,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
                   <img src={b.avatarUrl || QMARK} alt={b.name} loading="lazy" className="h-24 w-24 rounded-full object-cover ring-2 ring-brass/40" />
                   <h3 className="mt-4 font-display text-xl text-cream">{b.name}</h3>
                   {b.bio && <p className="mt-1.5 line-clamp-2 text-sm text-cream/55">{b.bio}</p>}
+                  <SocialLinks className="mt-3 justify-center" instagram={b.instagramHandle ? `https://instagram.com/${b.instagramHandle}` : null} facebook={b.facebookUrl} tiktok={b.tiktokUrl} x={b.xUrl} youtube={b.youtubeUrl} />
                 </div>
               </Reveal>
             ))}

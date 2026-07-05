@@ -52,6 +52,17 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <label className="label">Bio</label>
           <textarea name="bio" defaultValue={user.bio ?? ""} className="input min-h-[80px]" />
         </div>
+
+        <div className="border-t border-white/10 pt-4">
+          <div className="label">Your social links <span className="text-cream/40">(shown on your profile on the shop site)</span></div>
+          <div className="mt-2 grid gap-4 sm:grid-cols-2">
+            <div><label className="label">Facebook URL</label><input name="facebookUrl" defaultValue={user.facebookUrl ?? ""} placeholder="https://facebook.com/you" className="input" /></div>
+            <div><label className="label">TikTok URL</label><input name="tiktokUrl" defaultValue={user.tiktokUrl ?? ""} placeholder="https://tiktok.com/@you" className="input" /></div>
+            <div><label className="label">X (Twitter) URL</label><input name="xUrl" defaultValue={user.xUrl ?? ""} placeholder="https://x.com/you" className="input" /></div>
+            <div><label className="label">YouTube URL</label><input name="youtubeUrl" defaultValue={user.youtubeUrl ?? ""} placeholder="https://youtube.com/@you" className="input" /></div>
+          </div>
+        </div>
+
         <button className="btn-primary">Save profile</button>
       </form>
 
