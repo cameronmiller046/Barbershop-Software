@@ -20,18 +20,23 @@ export default async function PortalLayout({ children }: { children: React.React
   const limits = planLimits(tenant?.plan ?? "SOLO");
 
   // Pending timeclock edit requests → the notifications bell (managers only).
+  // The bell is non-essential: never let a failure here 500 the whole portal.
   let notifications: EditNotif[] = [];
   if (perms["shop.team"]) {
-    const reqs = await prisma.timeEditRequest.findMany({
-      where: { tenantId: user.tenantId, status: "PENDING" },
-      orderBy: { createdAt: "desc" }, take: 25,
-      include: { user: { select: { name: true } }, entry: { select: { clockIn: true, clockOut: true } } },
-    });
-    notifications = reqs.map((r) => ({
-      id: r.id, barberName: r.user.name, createdISO: r.createdAt.toISOString(), reason: r.reason,
-      currentIn: r.entry.clockIn.toISOString(), currentOut: r.entry.clockOut?.toISOString() ?? null,
-      proposedIn: r.proposedClockIn?.toISOString() ?? null, proposedOut: r.proposedClockOut?.toISOString() ?? null,
-    }));
+    try {
+      const reqs = await prisma.timeEditRequest.findMany({
+        where: { tenantId: user.tenantId, status: "PENDING" },
+        orderBy: { createdAt: "desc" }, take: 25,
+        include: { user: { select: { name: true } }, entry: { select: { clockIn: true, clockOut: true } } },
+      });
+      notifications = reqs.map((r) => ({
+        id: r.id, barberName: r.user.name, createdISO: r.createdAt.toISOString(), reason: r.reason,
+        currentIn: r.entry.clockIn.toISOString(), currentOut: r.entry.clockOut?.toISOString() ?? null,
+        proposedIn: r.proposedClockIn?.toISOString() ?? null, proposedOut: r.proposedClockOut?.toISOString() ?? null,
+      }));
+    } catch (err) {
+      console.error("[portal/layout] failed to load timeclock notifications:", err);
+    }
   }
 
   async function signOutAction() {
