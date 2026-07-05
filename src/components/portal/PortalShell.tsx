@@ -11,9 +11,7 @@ type NavItem = { label: string; href: string; icon: IconName; exact?: boolean; p
 const PRIMARY: NavItem[] = [
   { label: "Dashboard", href: "/portal", icon: "home", exact: true },
   { label: "Appointments", href: "/portal/appointments", icon: "booking" },
-  { label: "Calendar", href: "/portal/appointments", icon: "calendar" },
   { label: "Clients", href: "/portal/clients", icon: "customers", perm: "shop.clients" },
-  { label: "Check-In / Out", href: "/portal/appointments", icon: "checkin" },
   { label: "Messages", href: "/portal/soon?s=Messages", icon: "messages", soon: true },
   { label: "Settings", href: "/portal/account", icon: "settings" },
 ];
