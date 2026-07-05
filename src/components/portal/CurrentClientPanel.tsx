@@ -11,7 +11,6 @@ type Props = {
   clientName: string;
   serviceName: string;
   priceCents: number;
-  tipCents?: number;
   durationMin: number;
   startedISO: string | null;
   checkedInISO: string | null;
@@ -65,7 +64,7 @@ export function CurrentClientPanel(p: Props) {
       </div>
 
       {modal === "complete" && (
-        <CompleteModal defaultCents={p.priceCents} defaultTipCents={p.tipCents ?? 0} pending={pending}
+        <CompleteModal defaultCents={p.priceCents} pending={pending}
           onClose={() => setModal(null)}
           onConfirm={(cents, tip, method) => start(async () => { await finishAppointment(p.id, cents, tip, method); setModal(null); })} />
       )}
@@ -159,9 +158,9 @@ function Shell({ title, hint, children, onClose }: { title: string; hint?: strin
   );
 }
 
-function CompleteModal({ defaultCents, defaultTipCents, pending, onClose, onConfirm }: { defaultCents: number; defaultTipCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number, tipCents: number, method: string) => void }) {
+function CompleteModal({ defaultCents, pending, onClose, onConfirm }: { defaultCents: number; pending: boolean; onClose: () => void; onConfirm: (cents: number, tipCents: number, method: string) => void }) {
   const [amt, setAmt] = useState(defaultCents ? String(Math.round(defaultCents / 100)) : "");
-  const [tip, setTip] = useState(defaultTipCents ? String(defaultTipCents / 100) : "");
+  const [tip, setTip] = useState("");
   const [method, setMethod] = useState<string>("Card");
   const cents = Math.max(0, Math.round(Number(amt || 0) * 100));
   const tipCents = Math.max(0, Math.round(Number(tip || 0) * 100));
@@ -173,7 +172,7 @@ function CompleteModal({ defaultCents, defaultTipCents, pending, onClose, onConf
           <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={amt} onChange={(e) => setAmt(e.target.value)} inputMode="decimal" placeholder="0" autoFocus className="input" /></div>
         </div>
         <div>
-          <div className="label">Tip{defaultTipCents > 0 ? " · added at booking" : ""}</div>
+          <div className="label">Tip</div>
           <div className="flex items-center gap-2"><span className="text-cream/60">$</span><input value={tip} onChange={(e) => setTip(e.target.value)} inputMode="decimal" placeholder="0" className="input" /></div>
         </div>
         <div>

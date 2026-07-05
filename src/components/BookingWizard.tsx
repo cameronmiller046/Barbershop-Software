@@ -31,20 +31,11 @@ export function BookingWizard({
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
-  const [tipPct, setTipPct] = useState<number | null>(null); // preset percentage, or null when none / custom
-  const [customTip, setCustomTip] = useState(""); // dollars, when the customer types an exact amount
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const service = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [services, serviceId]);
   const serviceLocksBarber = Boolean(service?.barberId);
-
-  // Resolve the tip to cents: a chosen percentage of the service, or a typed custom amount.
-  const tipCents = useMemo(() => {
-    if (tipPct != null && service) return Math.round((service.priceCents * tipPct) / 100);
-    const c = Math.round(Number(customTip || 0) * 100);
-    return Number.isFinite(c) && c > 0 ? c : 0;
-  }, [tipPct, customTip, service]);
 
   // Load availability when service or chosen barber changes.
   useEffect(() => {
@@ -76,7 +67,7 @@ export function BookingWizard({
       const res = await fetch(`/api/t/${slug}/appointments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceId: service.id, barberId: resolvedBarberId, start: slot.start, tipCents, ...form }),
+        body: JSON.stringify({ serviceId: service.id, barberId: resolvedBarberId, start: slot.start, ...form }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSubmitting(false); return; }
@@ -187,33 +178,6 @@ export function BookingWizard({
             </div>
           </section>
         )}
-
-        {/* Step 5: gratuity (optional) */}
-        {service && slot && (
-          <section className="card">
-            <StepHeading n={serviceLocksBarber || barbers.length <= 1 ? 4 : 5} title="Add a tip (optional)" brand={brand} />
-            <p className="mt-2 text-sm text-cream/50">Show your barber some love — your tip goes straight to them. You can also tip in person.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <TipChip label="No tip" active={tipPct === null && !customTip} brand={brand}
-                onClick={() => { setTipPct(null); setCustomTip(""); }} />
-              {[15, 18, 20, 25].map((p) => (
-                <TipChip key={p} label={`${p}%`}
-                  sub={formatMoney(Math.round((service.priceCents * p) / 100))}
-                  active={tipPct === p} brand={brand}
-                  onClick={() => { setTipPct(p); setCustomTip(""); }} />
-              ))}
-            </div>
-            <div className="mt-3 max-w-[220px]">
-              <label className="label">Custom amount</label>
-              <div className="flex items-center gap-2">
-                <span className="text-cream/60">$</span>
-                <input className="input" inputMode="decimal" placeholder="0"
-                  value={customTip}
-                  onChange={(e) => { setCustomTip(e.target.value); setTipPct(null); }} />
-              </div>
-            </div>
-          </section>
-        )}
       </div>
 
       {/* Summary */}
@@ -225,14 +189,7 @@ export function BookingWizard({
             <Row label="Barber" value={service?.barberName ?? (barberId ? barbers.find((b) => b.id === barberId)?.name ?? "—" : service ? "Next available" : "—")} />
             <Row label="When" value={slot ? new Date(slot.start).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"} />
             <Row label="Price" value={service ? formatMoney(service.priceCents) : "—"} />
-            {tipCents > 0 && <Row label="Tip" value={formatMoney(tipCents)} />}
           </dl>
-          {service && tipCents > 0 && (
-            <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-sm font-semibold">
-              <span>Total</span>
-              <span style={{ color: brand }}>{formatMoney(service.priceCents + tipCents)}</span>
-            </div>
-          )}
           {error && <p className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>}
           <button disabled={!service || !slot || !form.name.trim() || submitting} onClick={submit}
             className="mt-5 w-full rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40"
@@ -253,17 +210,6 @@ function StepHeading({ n, title, brand }: { n: number; title: string; brand: str
       <span className="grid h-7 w-7 place-items-center rounded-full text-sm font-bold" style={{ background: brand, color: "#0f0f10" }}>{n}</span>
       <h2 className="font-display text-2xl">{title}</h2>
     </div>
-  );
-}
-
-function TipChip({ label, sub, active, brand, onClick }: { label: string; sub?: string; active: boolean; brand: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick}
-      className="rounded-xl border px-4 py-2 text-center text-sm transition"
-      style={active ? { borderColor: brand, background: `${brand}1a` } : { borderColor: "rgba(255,255,255,0.1)" }}>
-      <span className="font-medium">{label}</span>
-      {sub && <span className="block text-[11px] text-cream/50">{sub}</span>}
-    </button>
   );
 }
 

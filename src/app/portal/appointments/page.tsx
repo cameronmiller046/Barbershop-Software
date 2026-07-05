@@ -139,7 +139,7 @@ export default async function AppointmentsPage({
                 <AppointmentActions id={a.id} slug={tenant?.slug ?? ""}
                   serviceId={a.serviceId} barberId={a.barberId} status={a.status}
                   startedISO={a.startedAt?.toISOString() ?? null} finishedISO={a.finishedAt?.toISOString() ?? null}
-                  canCorrect={seesAll} servicePriceCents={a.collectedCents ?? a.service.priceCents} defaultTipCents={a.tipCents ?? 0} />
+                  canCorrect={seesAll} servicePriceCents={a.collectedCents ?? a.service.priceCents} />
               </div>
             </div>
           ))}

@@ -45,12 +45,6 @@ export default async function ManagePage({
           <div className="flex justify-between"><dt className="text-cream/50">When</dt>
             <dd className="text-cream/90">{new Date(appt.startTime).toLocaleString(undefined, { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}</dd></div>
           <div className="flex justify-between"><dt className="text-cream/50">Price</dt><dd className="text-cream/90">{formatMoney(appt.service.priceCents)}</dd></div>
-          {appt.tipCents ? (
-            <>
-              <div className="flex justify-between"><dt className="text-cream/50">Tip</dt><dd className="text-cream/90">{formatMoney(appt.tipCents)}</dd></div>
-              <div className="flex justify-between border-t border-white/10 pt-2 font-semibold"><dt className="text-cream/70">Total</dt><dd className="text-brass">{formatMoney(appt.service.priceCents + appt.tipCents)}</dd></div>
-            </>
-          ) : null}
         </dl>
       </div>
 
