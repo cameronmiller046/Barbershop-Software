@@ -20,7 +20,7 @@ function categoryOf(name: string): string {
   return "Haircuts";
 }
 
-export function ShopServices({ services }: { services: Svc[] }) {
+export function ShopServices({ services, bookBase }: { services: Svc[]; bookBase: string }) {
   const withCat = useMemo(() => services.map((s) => ({ ...s, cat: categoryOf(s.name) })), [services]);
   const cats = useMemo(() => {
     const present = new Set(withCat.map((s) => s.cat));
@@ -62,7 +62,7 @@ export function ShopServices({ services }: { services: Svc[] }) {
                   <span className="inline-flex items-center gap-1"><Icon.clock className="h-3.5 w-3.5" /> {formatDuration(s.durationMin)}</span>
                   {s.barberName && <span>· with {s.barberName}</span>}
                 </div>
-                <a href="#book" className="mt-4 rounded-full py-2.5 text-center text-sm font-semibold shadow-lg transition hover:brightness-105" style={{ background: "var(--brand)", color: "var(--brand-fg)" }}>Book Now</a>
+                <a href={`${bookBase}?service=${s.id}`} className="mt-4 rounded-full py-2.5 text-center text-sm font-semibold shadow-lg transition hover:brightness-105" style={{ background: "var(--brand)", color: "var(--brand-fg)" }}>Book Now</a>
               </div>
             </motion.div>
           ))}

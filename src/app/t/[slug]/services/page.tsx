@@ -1,49 +1,36 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { TenantShell } from "@/components/TenantShell";
 import { getTenantBySlug, getTenantServices } from "@/lib/tenant";
-import { formatMoney, formatDuration } from "@/lib/utils";
+import { appUrl } from "@/lib/utils";
+import { ShopHeader } from "@/components/shop/ShopHeader";
+import { ShopServices } from "@/components/shop/ShopServices";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const t = await getTenantBySlug(slug);
+  if (!t) return { title: "Services" };
+  return { title: `Services & Prices — ${t.name}`, description: `Browse haircuts, beard services, and more at ${t.name}. See prices and book online in under a minute.`, alternates: { canonical: appUrl(`/t/${t.slug}/services`) } };
+}
+
 export default async function ServicesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) notFound();
-  const services = await getTenantServices(tenant.id);
+  const t = await getTenantBySlug(slug);
+  if (!t) notFound();
+  const services = await getTenantServices(t.id);
+  const base = `/t/${t.slug}`;
 
   return (
-    <TenantShell tenant={tenant} active="services">
-      <section className="container-page py-14">
-        <h1 className="font-display text-4xl">Services</h1>
-        <p className="mt-2 text-cream/60">Every service includes a consultation.</p>
+    <main className="pb-24">
+      <ShopHeader eyebrow="The Menu" title={<>Services &amp; <span className="gold-text">prices</span></>} sub="Every service, with real times and prices. Filter by what you're after." />
+      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-10">
         {services.length === 0 ? (
-          <div className="card mt-8 text-cream/60">Services coming soon.</div>
+          <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-cream/50">Services coming soon.</div>
         ) : (
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s) => (
-              <div key={s.id} className="card flex flex-col">
-                {s.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.imageUrl} alt={s.name} className="mb-4 h-40 w-full rounded-xl object-cover" />
-                ) : (
-                  <div className="mb-4 grid h-40 w-full place-items-center rounded-xl bg-smoke text-4xl text-brass/40">✂</div>
-                )}
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-display text-xl">{s.name}</h3>
-                  <span style={{ color: tenant.primaryColor }}>{formatMoney(s.priceCents)}</span>
-                </div>
-                {s.description && <p className="mt-1 text-sm text-cream/60">{s.description}</p>}
-                <div className="mt-3 flex gap-2 text-xs">
-                  <span className="chip">{formatDuration(s.durationMin)}</span>
-                  {s.barber && <span className="chip">with {s.barber.name}</span>}
-                </div>
-                <Link href={`/t/${tenant.slug}/book?service=${s.id}`} className="btn-primary mt-5">Book this</Link>
-              </div>
-            ))}
-          </div>
+          <ShopServices services={services.map((s) => ({ id: s.id, name: s.name, description: s.description, durationMin: s.durationMin, priceCents: s.priceCents, imageUrl: s.imageUrl, barberName: s.barber?.name ?? null }))} bookBase={`${base}/book`} />
         )}
       </section>
-    </TenantShell>
+    </main>
   );
 }

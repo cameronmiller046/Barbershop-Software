@@ -1,50 +1,42 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { TenantShell } from "@/components/TenantShell";
-import { BookingWizard } from "@/components/BookingWizard";
 import { getTenantBySlug, getTenantServices, getTenantBarbers } from "@/lib/tenant";
+import { appUrl } from "@/lib/utils";
+import { ShopHeader } from "@/components/shop/ShopHeader";
+import { BookingWizard } from "@/components/BookingWizard";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ service?: string }>;
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const t = await getTenantBySlug(slug);
+  if (!t) return { title: "Book" };
+  return { title: `Book an Appointment — ${t.name}`, description: `Book your appointment at ${t.name} in under a minute — pick a service, barber, and time.`, alternates: { canonical: appUrl(`/t/${t.slug}/book`) } };
+}
+
+export default async function BookPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ service?: string }> }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) notFound();
-
-  const [services, barbers] = await Promise.all([
-    getTenantServices(tenant.id),
-    getTenantBarbers(tenant.id),
-  ]);
+  const t = await getTenantBySlug(slug);
+  if (!t) notFound();
+  const [services, barbers] = await Promise.all([getTenantServices(t.id), getTenantBarbers(t.id)]);
 
   return (
-    <TenantShell tenant={tenant} active="book">
-      <section className="container-page py-12">
-        <Link href={`/t/${tenant.slug}`} className="text-sm text-cream/50 hover:text-cream">← Back</Link>
-        <h1 className="mt-3 font-display text-4xl">Book your chair</h1>
-        <p className="mt-1 text-cream/60">Pick a service, barber, and time.</p>
-
+    <main className="pb-24">
+      <ShopHeader eyebrow="Book Now" title={<>Reserve your <span className="gold-text">chair</span></>} sub="Pick a service, barber, and time — it takes under a minute. No account needed." />
+      <section className="relative z-10 mx-auto max-w-5xl px-5 py-10">
         {services.length === 0 ? (
-          <div className="card mt-8 text-cream/60">No services are available to book yet.</div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-cream/50">Online booking is coming soon — give us a call to reserve.</div>
         ) : (
           <BookingWizard
-            slug={tenant.slug}
-            brand={tenant.primaryColor}
-            services={services.map((s) => ({
-              id: s.id, name: s.name, description: s.description, durationMin: s.durationMin,
-              priceCents: s.priceCents, barberId: s.barberId, barberName: s.barber?.name ?? null,
-            }))}
+            slug={t.slug}
+            brand={t.primaryColor}
+            services={services.map((s) => ({ id: s.id, name: s.name, description: s.description, durationMin: s.durationMin, priceCents: s.priceCents, barberId: s.barberId, barberName: s.barber?.name ?? null }))}
             barbers={barbers.map((b) => ({ id: b.id, name: b.name }))}
             preselectedServiceId={sp.service ?? null}
           />
         )}
       </section>
-    </TenantShell>
+    </main>
   );
 }
