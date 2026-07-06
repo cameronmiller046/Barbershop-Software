@@ -3,6 +3,7 @@ import { z } from "zod";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { sendEmail, emailLayout } from "@/lib/email";
 import { audit } from "@/lib/audit";
+import { escapeHtml } from "@/lib/utils";
 
 const schema = z.object({
   name: z.string().min(1).max(120),
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   await sendEmail({
     to,
     subject: `New contact from ${name}`,
-    html: emailLayout("New contact message", `<p><b>${name}</b> (${email}) wrote:</p><p>${message}</p>`),
+    html: emailLayout("New contact message", `<p><b>${escapeHtml(name)}</b> (${escapeHtml(email)}) wrote:</p><p>${escapeHtml(message)}</p>`),
   });
 
   return NextResponse.json({ ok: true });

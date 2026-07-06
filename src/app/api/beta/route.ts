@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { audit } from "@/lib/audit";
 import { sendEmail, emailLayout } from "@/lib/email";
+import { escapeHtml } from "@/lib/utils";
 
 const schema = z.object({
   businessName: z.string().min(2).max(120),
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     to: email,
     subject: "We received your beta request",
     html: emailLayout("Thanks for your interest", `
-      <p>Hi ${ownerName}, we got your request for <b>${businessName}</b>.</p>
+      <p>Hi ${escapeHtml(ownerName)}, we got your request for <b>${escapeHtml(businessName)}</b>.</p>
       <p>Our team reviews applications manually during the closed beta. We&apos;ll be
       in touch at this address once your shop is approved.</p>
     `),

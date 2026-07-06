@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -14,10 +15,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const email = String(credentials?.email ?? "").toLowerCase().trim();
         const password = String(credentials?.password ?? "");
         if (!email || !password) return null;
+
+        // Throttle credential attempts per source IP to blunt brute-force /
+        // credential-stuffing. Fail open if the limiter itself errors so a bug
+        // here can never lock legitimate users out.
+        try {
+          const ip = request ? clientIp(request as unknown as Request) : "unknown";
+          if (!rateLimit(`login:${ip}`, 20, 60_000).ok) return null;
+        } catch { /* fail open */ }
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.active) return null;
