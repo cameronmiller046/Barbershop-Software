@@ -1,8 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { clearDemoData, seedFlagshipDemo, DEMO_SLUG, LOC_SERVICES } from "../src/lib/demo";
 
 const prisma = new PrismaClient();
+
+const DEMO_SLUG = "professional-barbershop";
+
+// Loc / natural-hair services offered by the flagship shop.
+const LOC_SERVICES = [
+  { name: "Loc Retwist", description: "Root maintenance to keep your locs neat and tight.", durationMin: 60, priceCents: 6500 },
+  { name: "Loc Retwist & Style", description: "Retwist plus a fresh style — barrel rolls, updo, or curls.", durationMin: 90, priceCents: 9500 },
+  { name: "Starter Locs", description: "Begin your loc journey — coils or two-strand starters.", durationMin: 120, priceCents: 15000 },
+  { name: "Two-Strand Twists", description: "Clean, defined twists for locs or natural hair.", durationMin: 75, priceCents: 7000 },
+  { name: "Loc Detox & Wash", description: "Deep cleanse and refresh to keep your locs healthy.", durationMin: 60, priceCents: 5500 },
+  { name: "Interlocking / Reattachment", description: "Interlocking maintenance and loc repair.", durationMin: 90, priceCents: 8500 },
+];
 
 async function main() {
   // ── Superadmin (internal role PLATFORM_ADMIN, presented as "Superadmin") ──
@@ -41,8 +52,12 @@ async function main() {
     create: { slug: DEMO_SLUG, email: "hello@professionalbarbershop.com", storeNumber: Math.floor(Math.random() * 999) + 1, ...tenantFields },
   });
 
-  // ── Clean baseline: remove all other stores + all non-superadmin users ──
-  await clearDemoData(prisma);
+  // ── Clean baseline: keep only the flagship store + the Superadmin ──
+  await prisma.tenant.deleteMany({ where: { slug: { not: DEMO_SLUG } } });
+  await prisma.user.deleteMany({ where: { role: { not: "PLATFORM_ADMIN" } } });
+  await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });
+  await prisma.client.deleteMany({ where: { tenantId: tenant.id } });
+  await prisma.workingHour.deleteMany({ where: { tenantId: tenant.id } });
 
   // Flagship services + featured reviews (these persist in the clean state).
   await prisma.service.deleteMany({ where: { tenantId: tenant.id } });
@@ -69,16 +84,10 @@ async function main() {
     ],
   });
 
-  // Populate the flagship with staff + clients + appointments so the demo
-  // Admin/Barber portal has real data immediately (no "Try the demo" needed).
-  await seedFlagshipDemo(prisma);
-
   const stores = await prisma.tenant.count();
   const users = await prisma.user.count();
-  const appts = await prisma.appointment.count();
-  console.log(`✓ Baseline: ${stores} store, ${users} users, ${appts} appointments.`);
-  console.log(`  Portal: test1 / test1 (Manager) · test2 / test2 (Barber).`);
-  console.log(`  Use "Try the demo" in /admin to also load the 8 extra stores + traffic.`);
+  console.log(`✓ Baseline: ${stores} store, ${users} user(s).`);
+  console.log(`  Public sandbox demo: /demo/admin and /demo/barber (no login needed).`);
 }
 
 main()

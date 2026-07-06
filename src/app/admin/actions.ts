@@ -9,28 +9,8 @@ import { provisionTenant } from "@/lib/provision";
 import { audit } from "@/lib/audit";
 import { SUPERADMIN_ASSIGNABLE, isMasterAdmin } from "@/lib/roles";
 import { isPermKey, overridesOf } from "@/lib/permissions";
-import { loadDemoData, clearDemoData } from "@/lib/demo";
 import { Prisma } from "@prisma/client";
 import type { TenantStatus, Role } from "@prisma/client";
-
-// ── Demo data (Superadmin) ──
-export async function loadDemo() {
-  const admin = await requirePlatformAdmin();
-  await loadDemoData(prisma);
-  await audit({ action: "admin.demo.loaded", userId: admin.id });
-  revalidatePath("/admin");
-  revalidatePath("/admin/tenants");
-  revalidatePath("/admin/users");
-}
-
-export async function clearDemo() {
-  const admin = await requirePlatformAdmin();
-  await clearDemoData(prisma);
-  await audit({ action: "admin.demo.cleared", userId: admin.id });
-  revalidatePath("/admin");
-  revalidatePath("/admin/tenants");
-  revalidatePath("/admin/users");
-}
 
 export async function approveApplication(id: string) {
   const admin = await requirePlatformAdmin();

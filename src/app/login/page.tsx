@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signIn, auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureDemoData } from "@/lib/demo";
 import { AuthError } from "next-auth";
 import { StoreFinder } from "@/components/StoreFinder";
 
@@ -55,17 +54,6 @@ export default async function LoginPage({
     }
   }
 
-  async function demoLogin(formData: FormData) {
-    "use server";
-    try { await ensureDemoData(prisma); } catch { /* best-effort */ }
-    try {
-      await signIn("credentials", { email: formData.get("email"), password: formData.get("password"), redirectTo: "/portal" });
-    } catch (err) {
-      if (err instanceof AuthError) redirect("/login?error=1");
-      throw err;
-    }
-  }
-
   return (
     <div className="grid min-h-screen place-items-center px-5 py-10">
       <div className="w-full max-w-md">
@@ -92,21 +80,13 @@ export default async function LoginPage({
           <button type="submit" className="btn-primary w-full">Sign in</button>
         </form>
 
-        {/* Try the demo — log straight in as a sample account */}
+        {/* Try the demo — launch an isolated, in-browser sandbox (no account, no sign-in) */}
         <div className="card mt-4">
           <h2 className="font-display text-lg">Try the demo</h2>
-          <p className="mt-1 text-sm text-cream/50">Jump in as a sample account.</p>
+          <p className="mt-1 text-sm text-cream/50">Explore a live sandbox — no sign-in. Nothing you do is saved.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <form action={demoLogin}>
-              <input type="hidden" name="email" value="test1" />
-              <input type="hidden" name="password" value="test1" />
-              <button type="submit" className="btn-primary w-full">Admin / Manager / Owner Demo</button>
-            </form>
-            <form action={demoLogin}>
-              <input type="hidden" name="email" value="test2" />
-              <input type="hidden" name="password" value="test2" />
-              <button type="submit" className="btn-ghost w-full">Barber Demo</button>
-            </form>
+            <Link href="/demo/admin" className="btn-primary w-full text-center">Admin / Manager Demo</Link>
+            <Link href="/demo/barber" className="btn-ghost w-full text-center">Barber Demo</Link>
           </div>
         </div>
 

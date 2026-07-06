@@ -7,7 +7,6 @@ import { appUrl } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
-import { isDemoAccount } from "@/lib/demoMode";
 import { FeedbackFab } from "@/components/feedback/FeedbackFab";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +54,7 @@ export default async function PortalLayout({ children }: { children: React.React
         planLabel={limits.label}
         showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
         siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
-        demo={isDemoAccount(user.email)}
+        demo={false}
         notifications={notifications}
         signOutAction={signOutAction}
       >
