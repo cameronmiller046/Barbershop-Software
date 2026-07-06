@@ -57,15 +57,16 @@ npm run dev
 Levels are assigned in the Superadmin **Users** console (`/admin/users`); capabilities
 are enforced in `src/lib/rbac.ts` and described at `/admin/roles`.
 
-Default seeded logins:
-- **Superadmin** → `cameronmiller046@gmail.com` / `Ieokkyz7` → `/admin`
-  (override via env before seeding)
-- **Demo shop portal (Standard user / barber)** → `Admin123` / `Admin123` → `/portal`.
-  A barber of the demo shop "Professional Barbershop & Salon" — the account behind the
-  storefront's "Powered by The Chair" footer link, for demoing the shop portal.
+Seeded login:
+- **Superadmin** → email from `PLATFORM_ADMIN_EMAIL`, password from
+  `PLATFORM_ADMIN_PASSWORD` → `/admin`. Both are **required** in the environment
+  before seeding — the seed refuses to run without a strong password (no default
+  is shipped). Rotate the password after first login.
 
-The demo shop (`/t/professional-barbershop`) is **public** — anyone can browse and
-book without logging in.
+Trying the product doesn't need an account: the **sandbox demo** at `/demo/admin`
+and `/demo/barber` is a fully in-browser, no-login environment that resets on
+refresh (see `src/app/demo/`). The flagship shop (`/t/professional-barbershop`)
+is a **public** storefront — anyone can browse and book without logging in.
 
 ## Deploy to Railway
 

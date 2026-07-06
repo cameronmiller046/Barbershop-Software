@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTenantBySlug, getTenantServices, getTenantBarbers, getTenantReviews } from "@/lib/tenant";
-import { formatMoney, formatDuration, appUrl } from "@/lib/utils";
+import { formatMoney, formatDuration, appUrl, jsonLdSafe } from "@/lib/utils";
 import { Reveal, Counter } from "@/components/home/motion";
 import { SocialLinks } from "@/components/shop/SocialLinks";
 import { LuxHeading } from "@/components/home/LuxBits";
@@ -71,7 +71,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(jsonLd) }} />
 
       {/* ── Hero ── */}
       <section className="relative flex min-h-[92vh] items-center overflow-hidden">
