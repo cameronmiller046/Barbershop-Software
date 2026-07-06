@@ -13,7 +13,7 @@ const LINKS = [
   { href: "/admin/tenants", label: "Stores" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/applications", label: "Applications" },
-  { href: "/admin/dev", label: "Dev Center" },
+  { href: "/dev", label: "Dev Center" },
   { href: "/admin/roles", label: "Roles" },
 ];
 

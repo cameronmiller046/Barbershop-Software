@@ -42,6 +42,20 @@ export const STATUS_META: Record<TicketStatus, { label: string; color: string }>
 // Statuses a reporter considers "open" (still being worked).
 export const OPEN_STATUSES: TicketStatus[] = STATUS_ORDER.filter((s) => s !== "RELEASED" && s !== "CLOSED" && s !== "ARCHIVED");
 
+// The 12 pipeline statuses collapse into 5 board columns (Linear/Jira style).
+// Dropping a card into a column sets it to that column's `drop` status.
+export type BoardColumn = { key: string; label: string; statuses: TicketStatus[]; drop: TicketStatus; wip?: number };
+export const BOARD_COLUMNS: BoardColumn[] = [
+  { key: "backlog", label: "Backlog", statuses: ["NEW", "NEEDS_REVIEW", "APPROVED", "BACKLOG"], drop: "BACKLOG" },
+  { key: "ready", label: "Ready for Development", statuses: ["READY"], drop: "READY", wip: 5 },
+  { key: "in_progress", label: "In Progress", statuses: ["IN_PROGRESS", "CODE_REVIEW"], drop: "IN_PROGRESS", wip: 5 },
+  { key: "in_review", label: "In Review", statuses: ["QA", "READY_FOR_RELEASE"], drop: "QA", wip: 3 },
+  { key: "done", label: "Done", statuses: ["RELEASED", "CLOSED", "ARCHIVED"], drop: "RELEASED" },
+];
+export function columnOf(status: TicketStatus): string {
+  return BOARD_COLUMNS.find((c) => c.statuses.includes(status))?.key ?? "backlog";
+}
+
 export const PRIORITY_ORDER: TicketPriority[] = ["LOWEST", "LOW", "MEDIUM", "HIGH", "CRITICAL", "BLOCKER"];
 export const PRIORITY_META: Record<TicketPriority, { label: string; color: string }> = {
   LOWEST: { label: "Lowest", color: "#94a3b8" },
