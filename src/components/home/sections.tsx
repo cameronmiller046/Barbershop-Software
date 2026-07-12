@@ -90,8 +90,11 @@ export function HowItWorks() {
   return (
     <section id="how-it-works" className="relative z-10 mx-auto max-w-6xl px-5 py-24">
       <Heading eyebrow="How It Works" title={<>Get started in <span className="gold-text">3 simple steps</span></>} />
-      <div className="relative mt-16 grid gap-10 md:grid-cols-3">
-        <div className="lux-connector absolute left-[16%] right-[16%] top-8 hidden md:block" />
+      <div className="relative mt-16">
+        {/* Connector sits ABOVE the grid (not inside it) and is forced absolute
+            so .lux-connector's position:relative can't make it a grid cell. */}
+        <div className="lux-connector !absolute left-[16%] right-[16%] top-8 z-0 hidden md:block" />
+        <div className="grid gap-10 md:grid-cols-3">
         {STEPS.map((s, i) => {
           const I = Icon[s.icon];
           return (
@@ -105,6 +108,7 @@ export function HowItWorks() {
             </Reveal>
           );
         })}
+        </div>
       </div>
     </section>
   );
