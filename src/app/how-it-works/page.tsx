@@ -82,9 +82,11 @@ export default function HowItWorksPage() {
       {/* Timeline */}
       <section className="mx-auto max-w-7xl px-5 py-20">
         <LuxHeading eyebrow="The Workflow" title={<>From booking to growth in <span className="gold-text">four steps</span></>} sub="A single flow that carries a client from their first tap to a five-star review." />
-        <div className="relative mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <div className="lux-connector absolute left-[12%] right-[12%] top-8 hidden lg:block" />
-          <Stagger className="contents" gap={0.1}>
+        <div className="relative mt-16">
+          {/* Connector is forced absolute (so .lux-connector's position:relative
+              can't turn it into a grid cell) and kept out of the Stagger grid. */}
+          <div className="lux-connector !absolute left-[12%] right-[12%] top-8 z-0 hidden lg:block" />
+          <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-4" gap={0.1}>
             {STEPS.map((s) => {
               const I = Icon[s.icon];
               return (
