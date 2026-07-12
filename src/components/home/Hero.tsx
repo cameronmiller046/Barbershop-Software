@@ -26,7 +26,7 @@ export function Hero() {
         <Reveal delay={0.05}>
           <h1 className="mt-6 font-display text-[2.9rem] font-medium leading-[1.02] tracking-tight text-cream sm:text-6xl xl:text-7xl">
             Run Your Shop.<br />Book More.
-            <span className="mt-1 block gold-script text-[3.4rem] font-bold leading-[1.1] sm:text-7xl xl:text-[5.2rem]">
+            <span className="mt-1 block gold-script text-[3.4rem] font-bold leading-[1.3] pb-[0.22em] sm:text-7xl xl:text-[5.2rem]">
               Grow Every Day.
             </span>
           </h1>

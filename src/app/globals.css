@@ -313,6 +313,9 @@ body {
   background: linear-gradient(100deg, #f8e3a0 0%, var(--gold-2) 55%, var(--gold-3) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 4px 18px rgba(216, 178, 92, 0.25));
+  /* Script descenders/swashes hang below the line box; without this the
+     text-clipped gradient stops painting them and the tails get cut off. */
+  padding-bottom: 0.12em;
 }
 .gold-hairline { height: 1px; background: linear-gradient(90deg, transparent, rgba(216, 178, 92, 0.5), transparent); }
 

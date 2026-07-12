@@ -131,7 +131,7 @@ export default function PricingPage() {
           <Reveal delay={0.05}>
             <h1 className="mt-4 font-display text-[2.6rem] font-medium leading-[1.05] tracking-tight text-cream sm:text-6xl">
               Simple pricing that
-              <span className="mt-1 block gold-script text-[3rem] font-bold leading-[1.15] sm:text-[4.4rem]">grows with your barbershop.</span>
+              <span className="mt-1 block gold-script text-[3rem] font-bold leading-[1.3] pb-[0.22em] sm:text-[4.4rem]">grows with your barbershop.</span>
             </h1>
           </Reveal>
           <Reveal delay={0.12}>
