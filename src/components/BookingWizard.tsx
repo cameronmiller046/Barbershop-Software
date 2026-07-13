@@ -9,7 +9,7 @@ type ServiceLite = {
   priceCents: number; barberId: string | null; barberName: string | null;
 };
 type BarberLite = { id: string; name: string };
-type Slot = { start: string; end: string };
+type Slot = { start: string; end: string; barberId?: string };
 type Day = { date: string; slots: Slot[] };
 
 export function BookingWizard({
@@ -36,6 +36,11 @@ export function BookingWizard({
 
   const service = useMemo(() => services.find((s) => s.id === serviceId) ?? null, [services, serviceId]);
   const serviceLocksBarber = Boolean(service?.barberId);
+  // Offer a barber request whenever the service doesn't already fix one.
+  const showBarberStep = !!service && !serviceLocksBarber && barbers.length >= 1;
+  // The barber a booking will actually go to: the slot's assigned barber (for a
+  // "no preference" pick), else the specifically requested/resolved barber.
+  const bookBarberId = slot?.barberId ?? resolvedBarberId;
 
   // Load availability when service or chosen barber changes.
   useEffect(() => {
@@ -58,7 +63,7 @@ export function BookingWizard({
   const activeSlots = days.find((d) => d.date === activeDay)?.slots ?? [];
 
   async function submit() {
-    if (!service || !resolvedBarberId || !slot || !form.name.trim() || !form.phone.trim()) return;
+    if (!service || !bookBarberId || !slot || !form.name.trim() || !form.phone.trim()) return;
     if (form.phone.replace(/\D/g, "").length < 7) {
       setError("Enter a valid phone number so we can reach you."); return;
     }
@@ -67,7 +72,7 @@ export function BookingWizard({
       const res = await fetch(`/api/t/${slug}/appointments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceId: service.id, barberId: resolvedBarberId, start: slot.start, ...form }),
+        body: JSON.stringify({ serviceId: service.id, barberId: bookBarberId, start: slot.start, ...form }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSubmitting(false); return; }
@@ -102,15 +107,16 @@ export function BookingWizard({
           </div>
         </section>
 
-        {/* Step 2: barber (hidden if service locks a barber) */}
-        {service && !serviceLocksBarber && barbers.length > 1 && (
+        {/* Step 2: request a barber (hidden if the service locks a barber) */}
+        {showBarberStep && (
           <section className="card">
-            <StepHeading n={2} title="Choose your barber" brand={brand} />
+            <StepHeading n={2} title="Request a barber" brand={brand} />
+            <p className="mt-1 text-sm text-cream/50">Pick who you&apos;d like — times update to their real availability.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button onClick={() => setBarberId(null)}
                 className="rounded-full border px-4 py-2 text-sm"
                 style={barberId === null ? sel : { borderColor: "rgba(255,255,255,0.1)" }}>
-                Next available
+                No preference
               </button>
               {barbers.map((b) => (
                 <button key={b.id} onClick={() => setBarberId(b.id)}
@@ -126,7 +132,7 @@ export function BookingWizard({
         {/* Step 3: time */}
         {service && (
           <section className="card">
-            <StepHeading n={serviceLocksBarber || barbers.length <= 1 ? 2 : 3} title="Pick a time" brand={brand} />
+            <StepHeading n={showBarberStep ? 3 : 2} title="Pick a time" brand={brand} />
             {loadingSlots ? (
               <p className="mt-4 text-sm text-cream/50">Loading available times…</p>
             ) : days.length === 0 ? (
@@ -165,7 +171,7 @@ export function BookingWizard({
         {/* Step 4: details */}
         {service && slot && (
           <section className="card">
-            <StepHeading n={serviceLocksBarber || barbers.length <= 1 ? 3 : 4} title="Your details" brand={brand} />
+            <StepHeading n={showBarberStep ? 4 : 3} title="Your details" brand={brand} />
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div><label className="label">Name <span style={{ color: brand }}>*</span></label>
                 <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jordan Smith" /></div>
@@ -186,7 +192,12 @@ export function BookingWizard({
           <h3 className="font-display text-xl">Summary</h3>
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Service" value={service?.name ?? "—"} />
-            <Row label="Barber" value={service?.barberName ?? (barberId ? barbers.find((b) => b.id === barberId)?.name ?? "—" : service ? "Next available" : "—")} />
+            <Row label="Barber" value={
+              service?.barberName
+                ?? (barberId ? (barbers.find((b) => b.id === barberId)?.name ?? "—")
+                  : slot?.barberId ? (barbers.find((b) => b.id === slot.barberId)?.name ?? "Next available")
+                  : service ? "No preference" : "—")
+            } />
             <Row label="When" value={slot ? new Date(slot.start).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"} />
             <Row label="Price" value={service ? formatMoney(service.priceCents) : "—"} />
           </dl>

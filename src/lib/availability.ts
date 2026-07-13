@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { addMinutes, addDays } from "date-fns";
 
-export type Slot = { start: string; end: string };
+export type Slot = { start: string; end: string; barberId?: string };
 
 // ── Timezone helpers (shop hours are wall-clock in the shop's timezone) ──
 
@@ -72,7 +72,7 @@ export async function getDaySlots(
     const slotEnd = addMinutes(cursor, serviceDurationMin);
     const inPast = cursor.getTime() <= now.getTime();
     const overlaps = existing.some((a) => cursor < a.endTime && slotEnd > a.startTime);
-    if (!inPast && !overlaps) slots.push({ start: cursor.toISOString(), end: slotEnd.toISOString() });
+    if (!inPast && !overlaps) slots.push({ start: cursor.toISOString(), end: slotEnd.toISOString(), barberId });
     cursor = addMinutes(cursor, step);
   }
   return slots;
@@ -93,6 +93,37 @@ export async function getUpcomingDays(
     const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin, timeZone);
     if (slots.length) {
       // Label with the shop-local midnight so the client renders the right day.
+      const { year, month0, day } = zonedYmd(d, timeZone);
+      result.push({ date: zonedWallToUtc(year, month0, day, 0, timeZone).toISOString(), slots });
+    }
+  }
+  return result;
+}
+
+/**
+ * "No preference" availability: the union of open slots across several barbers.
+ * Each returned slot is tagged with a barberId who is actually free at that time
+ * (first free barber wins), so booking assigns the right person. Every slot still
+ * comes from a barber's real working hours and open time — nothing is invented.
+ */
+export async function getUpcomingDaysAnyBarber(
+  tenantId: string,
+  barberIds: string[],
+  serviceDurationMin: number,
+  days = 21,
+  stepMin = 15,
+  timeZone = "America/New_York",
+) {
+  const result: { date: string; slots: Slot[] }[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = addDays(new Date(), i);
+    const byStart = new Map<string, Slot>();
+    for (const barberId of barberIds) {
+      const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin, timeZone);
+      for (const s of slots) if (!byStart.has(s.start)) byStart.set(s.start, s);
+    }
+    if (byStart.size) {
+      const slots = [...byStart.values()].sort((a, b) => a.start.localeCompare(b.start));
       const { year, month0, day } = zonedYmd(d, timeZone);
       result.push({ date: zonedWallToUtc(year, month0, day, 0, timeZone).toISOString(), slots });
     }

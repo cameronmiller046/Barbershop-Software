@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug } from "@/lib/tenant";
-import { getUpcomingDays } from "@/lib/availability";
+import { getUpcomingDays, getUpcomingDaysAnyBarber } from "@/lib/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +19,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const service = await prisma.service.findFirst({ where: { id: serviceId, tenantId: tenant.id } });
   if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
 
-  // Service tied to a barber wins; else use requested barber; else first barber.
+  // A service tied to a specific barber always wins over any request.
   if (service.barberId) barberId = service.barberId;
-  if (!barberId) {
-    const first = await prisma.user.findFirst({
-      where: { tenantId: tenant.id, role: "BARBER", active: true, kioskOnly: false },
-    });
-    barberId = first?.id ?? null;
-  }
-  if (!barberId) return NextResponse.json({ barberId: null, days: [] });
 
-  const days = await getUpcomingDays(tenant.id, barberId, service.durationMin, 21, tenant.slotIntervalMin, tenant.timezone);
-  return NextResponse.json({ barberId, durationMin: service.durationMin, days });
+  // Specific barber requested (or locked): show only their real availability.
+  if (barberId) {
+    const days = await getUpcomingDays(tenant.id, barberId, service.durationMin, 21, tenant.slotIntervalMin, tenant.timezone);
+    return NextResponse.json({ barberId, durationMin: service.durationMin, days });
+  }
+
+  // "No preference": union of every active barber's real openings. Each slot is
+  // tagged with a barber who is free at that time so booking assigns correctly.
+  const barbers = await prisma.user.findMany({
+    where: { tenantId: tenant.id, role: "BARBER", active: true, kioskOnly: false },
+    select: { id: true },
+  });
+  if (barbers.length === 0) return NextResponse.json({ barberId: null, days: [] });
+
+  const days = await getUpcomingDaysAnyBarber(tenant.id, barbers.map((b) => b.id), service.durationMin, 21, tenant.slotIntervalMin, tenant.timezone);
+  return NextResponse.json({ barberId: null, durationMin: service.durationMin, days });
 }
