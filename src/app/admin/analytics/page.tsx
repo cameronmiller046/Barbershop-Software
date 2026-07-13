@@ -5,7 +5,11 @@ import { monthlyBuckets } from "@/lib/reporting";
 import { BarChart } from "@/components/charts/BarChart";
 import { Breakdown, type BreakdownRow } from "@/components/charts/Breakdown";
 import { KIND_LABEL } from "@/lib/appointmentMeta";
+import { DEMO_ACCOUNT_EMAILS } from "@/lib/demoMode";
 import { subDays, subMonths, startOfMonth, eachDayOfInterval, format } from "date-fns";
+
+// Demo showcase logins (test1/test2) must never skew real platform metrics.
+const notDemoBarber = { barber: { email: { notIn: DEMO_ACCOUNT_EMAILS } } };
 
 export const dynamic = "force-dynamic";
 
@@ -37,23 +41,23 @@ export default async function AnalyticsPage() {
   ] = await Promise.all([
     prisma.tenant.count(),
     prisma.tenant.count({ where: { status: "ACTIVE" } }),
-    prisma.user.count({ where: { role: { in: ["OWNER", "BARBER", "RECEPTIONIST"] } } }),
+    prisma.user.count({ where: { role: { in: ["OWNER", "BARBER", "RECEPTIONIST"] }, email: { notIn: DEMO_ACCOUNT_EMAILS } } }),
     prisma.betaApplication.count({ where: { status: "PENDING" } }),
     prisma.betaApplication.count(),
     prisma.betaApplication.count({ where: { status: "APPROVED" } }),
     prisma.appointment.findMany({
-      where: { active: true, status: "COMPLETED", startTime: { gte: startOfMonth(subMonths(now, 11)) } },
+      where: { active: true, status: "COMPLETED", startTime: { gte: startOfMonth(subMonths(now, 11)) }, ...notDemoBarber },
       select: { startTime: true, service: { select: { priceCents: true } } },
     }),
     // Rich 90-day window powers the operations reports (outcomes, barber
     // leaderboard, top services, turnaround, busy times).
     prisma.appointment.findMany({
-      where: { active: true, startTime: { gte: since90, lte: now } },
+      where: { active: true, startTime: { gte: since90, lte: now }, ...notDemoBarber },
       select: {
         status: true, startTime: true, startedAt: true, finishedAt: true,
         collectedCents: true, kind: true, referral: true,
         service: { select: { name: true, priceCents: true } },
-        barber: { select: { id: true, name: true } },
+        barber: { select: { id: true, name: true, role: true } },
         tenant: { select: { name: true } },
       },
     }),
@@ -96,9 +100,12 @@ export default async function AnalyticsPage() {
   const decided = doneN + cancelledN + noShowN;
   const noShowRate = decided ? Math.round((noShowN / decided) * 100) : 0;
 
-  // Most profitable barbers — by what they actually collected.
+  // Most profitable barbers — by what they actually collected. Only real barbers
+  // count here: owners/admins are never treated as barbers, even if a shop
+  // assigned them appointments.
   const barberMap = new Map<string, { name: string; shop: string; revenue: number; cuts: number }>();
   for (const a of rc) {
+    if (a.barber.role !== "BARBER") continue;
     const row = barberMap.get(a.barber.id) ?? { name: a.barber.name, shop: a.tenant.name, revenue: 0, cuts: 0 };
     row.revenue += rev(a); row.cuts += 1;
     barberMap.set(a.barber.id, row);
