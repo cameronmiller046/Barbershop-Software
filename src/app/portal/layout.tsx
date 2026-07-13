@@ -40,9 +40,12 @@ export default async function PortalLayout({ children }: { children: React.React
     }
   }
 
+  const isDemo = isDemoAccount(user.email);
   async function signOutAction() {
     "use server";
-    await signOut({ redirectTo: "/login" });
+    // Demo visitors flow back into the funnel (book a free demo) instead of
+    // landing on a staff login they have no credentials for.
+    await signOut({ redirectTo: isDemo ? "/beta" : "/login" });
   }
 
   return (
@@ -55,7 +58,7 @@ export default async function PortalLayout({ children }: { children: React.React
         planLabel={limits.label}
         showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
         siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
-        demo={isDemoAccount(user.email)}
+        demo={isDemo}
         notifications={notifications}
         signOutAction={signOutAction}
       >
