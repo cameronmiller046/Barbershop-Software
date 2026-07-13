@@ -83,18 +83,18 @@ const WHY: { icon: IconName; title: string; desc: string }[] = [
   { icon: "building", title: "Scale Without Limits", desc: "Manage multiple locations, empower your team with permissions, and access enterprise tools built for long-term growth." },
 ];
 
+// Two balanced columns (5 + 5) so the FAQ stays symmetric and centered:
+// billing/plan questions on the left, product/support on the right.
 const FAQ_COLUMNS: Qa[][] = [
   [
     { q: "Can I change plans later?", a: "Yes — upgrade or downgrade anytime from your dashboard. Changes take effect immediately and we prorate the difference." },
     { q: "Is there a free trial?", a: "Paid plans include a 14-day free trial, and the Starter plan is free forever. No credit card required to start." },
     { q: "Are there setup fees?", a: "Never. There are no setup fees, onboarding fees, or hidden charges — just one flat monthly price per shop." },
-  ],
-  [
     { q: "Can I cancel anytime?", a: "Absolutely. Cancel in one click; you keep access through the end of your billing period and can export your data." },
     { q: "Do you charge booking fees?", a: "No. Unlike Squire and Booksy, we never charge per-booking fees. Your online bookings are always free." },
-    { q: "Is support included?", a: "Yes. Every plan includes support, and Professional and above get priority support with faster response times." },
   ],
   [
+    { q: "Is support included?", a: "Yes. Every plan includes support, and Professional and above get priority support with faster response times." },
     { q: "Can I import customers?", a: "Yes — import your existing client list from a spreadsheet in minutes, and we'll help during onboarding." },
     { q: "Can I accept walk-ins?", a: "Of course. Walk-in management and self check-in are built in, so you can log walk-ins and manage the queue with ease." },
     { q: "Can multiple barbers share one shop?", a: "Yes. Add barbers to your shop (up to 5 on Professional, unlimited on Shop) with their own schedules and logins." },
@@ -216,7 +216,7 @@ export default function PricingPage() {
           <Reveal className="mb-10 text-center">
             <h2 className="font-display text-4xl font-medium tracking-tight text-cream">Frequently Asked <span className="gold-text">Questions</span></h2>
           </Reveal>
-          <Reveal delay={0.05}><Faq columns={FAQ_COLUMNS} /></Reveal>
+          <Reveal delay={0.05} className="mx-auto max-w-4xl"><Faq columns={FAQ_COLUMNS} gridClassName="grid gap-4 md:grid-cols-2" /></Reveal>
         </section>
 
         {/* Final CTA */}
