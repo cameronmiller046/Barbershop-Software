@@ -95,9 +95,11 @@ export async function ensureDemoData(prisma: PrismaClient) {
   }
 
   const count = await prisma.appointment.count({ where: { tenantId: flagship.id } });
-  // Reseed if empty OR if the demo is out of date (goal not yet the current
-  // target) — this refreshes stale live demos to the latest data + $15k goal.
-  if (count < 20 || flagship.monthlyGoalCents !== DEMO_GOAL_CENTS) {
+  // Reseed if empty OR if the demo is out of date: goal not yet the current
+  // target, or the history predates tips/payment-method tracking (those power
+  // the Reports payment mix + Tips KPI, which investors see).
+  const enriched = await prisma.appointment.count({ where: { tenantId: flagship.id, paymentMethod: { not: null } } });
+  if (count < 20 || enriched === 0 || flagship.monthlyGoalCents !== DEMO_GOAL_CENTS) {
     await seedFlagshipDemo(prisma);
   }
 }
@@ -225,12 +227,19 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
 
   const clientFirst = ["Jordan", "Avery", "Sam", "Taylor", "Casey", "Marcus", "Andre", "Devon", "Isaiah", "Malik", "Xavier", "Terrence", "Damon", "Elijah", "Corey", "Trey", "Rashad", "Darius", "Omar", "Julian", "Kevin", "Brandon", "Chris", "Tyrone"];
   const clientLast = ["Smith", "Brooks", "Rivera", "Quinn", "Morgan", "Hayes", "Reed", "Carter", "Foster", "Bryant", "Cole", "Webb", "Nash", "Cruz", "Ford", "Stone", "Diaz", "Bennett", "Walker", "Reyes", "Murphy", "Harris", "Bell", "Grant"];
-  const clientNames: [string, string, string][] = clientFirst.map((f, i) => [
-    `${f} ${clientLast[i % clientLast.length]}`, `${f.toLowerCase()}${i}@example.com`, `(555) 200-${1001 + i}`,
-  ]);
+  // 60 clients (first/last combos), joined at a steady clip over the past year
+  // so new-vs-returning and retention analytics read like a real book of business.
+  const clientNames: [string, string, string][] = Array.from({ length: 60 }, (_, i) => {
+    const f = clientFirst[i % clientFirst.length];
+    const l = clientLast[(i + Math.floor(i / clientFirst.length) + 3) % clientLast.length];
+    return [`${f} ${l}`, `${f.toLowerCase()}.${l.toLowerCase()}${i}@example.com`, `(555) 200-${1001 + i}`];
+  });
   const clients: Client[] = [];
-  for (const [name, email, phone] of clientNames) {
-    clients.push(await prisma.client.create({ data: { tenantId: tenant.id, name, email, phone } }));
+  for (let i = 0; i < clientNames.length; i++) {
+    const [name, email, phone] = clientNames[i];
+    clients.push(await prisma.client.create({
+      data: { tenantId: tenant.id, name, email, phone, createdAt: subDays(startOfDay(new Date()), 4 + i * 6) },
+    }));
   }
 
   const now = new Date();
@@ -265,19 +274,33 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
   //    growing shop. Built in bulk via createMany. ──
   const staffPair = [manager, barber];
   const REFERRALS = ["Walk-by / sign", "Google", "Instagram", "Friend / referral", "Returning customer", "Other"];
+  // Payment mix ≈ 50% card / 30% cash / 10% wallet / 10% other.
+  const PAYMENTS = ["Card", "Card", "Card", "Card", "Card", "Cash", "Cash", "Cash", "Digital wallet", "Other"];
   const hist: Prisma.AppointmentCreateManyInput[] = [];
   const pushCompleted = (start: Date, svcIdx: number, staffIdx: number, clientIdx: number) => {
     const svc = services[svcIdx % services.length];
-    // Turnaround: service duration ± a little variance, 5-minute floor.
-    const durMin = Math.max(5, svc.durationMin + ((svcIdx * 7) % 15) - 5);
-    hist.push({
+    const base = {
       tenantId: tenant.id, serviceId: svc.id, barberId: staffPair[staffIdx % staffPair.length].id,
       clientId: clients[clientIdx % clients.length].id, startTime: start,
-      endTime: new Date(start.getTime() + svc.durationMin * 60000), status: "COMPLETED",
-      startedAt: start, finishedAt: new Date(start.getTime() + durMin * 60000),
-      collectedCents: svc.priceCents + ((clientIdx % 3) * 500), // list price + occasional tip
+      endTime: new Date(start.getTime() + svc.durationMin * 60000),
       kind: svcIdx % 4 === 0 ? "WALKIN" : "APPOINTMENT",
       referral: REFERRALS[(svcIdx + clientIdx) % REFERRALS.length],
+    } as const;
+    // Deterministic per-visit "randomness" — stable across reseeds.
+    const h = (svcIdx * 31 + clientIdx * 17 + start.getDate() * 7) % 100;
+    // Real shops aren't perfect: ~4% no-shows, ~5% cancellations.
+    if (h < 4) { hist.push({ ...base, status: "NO_SHOW", statusReason: "No show" }); return; }
+    if (h < 9) { hist.push({ ...base, status: "CANCELLED", statusReason: "Client cancelled" }); return; }
+    // Turnaround: service duration ± a little variance, 5-minute floor.
+    const durMin = Math.max(5, svc.durationMin + ((svcIdx * 7) % 15) - 5);
+    // ~60% of clients tip, 15–25% of the ticket.
+    const tip = h % 10 < 6 ? Math.round((svc.priceCents * (15 + (h % 3) * 5)) / 100) : 0;
+    hist.push({
+      ...base, status: "COMPLETED",
+      startedAt: start, finishedAt: new Date(start.getTime() + durMin * 60000),
+      collectedCents: svc.priceCents + (h % 7 === 0 ? 500 : 0), // list price + occasional upsell
+      tipCents: tip || null,
+      paymentMethod: PAYMENTS[h % PAYMENTS.length],
     });
   };
 
@@ -307,6 +330,54 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
     }
   }
   if (hist.length) await prisma.appointment.createMany({ data: hist });
+
+  // ── A busy upcoming week: 3 more bookings per chair per day (on the :30 so
+  //    they never collide with the curated bookings above). ──
+  const upcoming: Prisma.AppointmentCreateManyInput[] = [];
+  for (let d = 0; d <= 6; d++) {
+    staffPair.forEach((staffM, si) => {
+      const hours = si === 0 ? [10, 14, 18] : [9, 13, 16];
+      hours.forEach((hour, k) => {
+        const svc = services[(d + k + si) % services.length];
+        const start = setMinutes(setHours(startOfDay(addDays(now, d)), hour), 30);
+        if (start <= now) return; // keep future-only so today's list stays clean
+        upcoming.push({
+          tenantId: tenant.id, serviceId: svc.id, barberId: staffM.id,
+          clientId: clients[(d * 7 + k * 3 + si) % clients.length].id,
+          startTime: start, endTime: new Date(start.getTime() + svc.durationMin * 60000),
+          status: "CONFIRMED", kind: (d + k) % 5 === 0 ? "WALKIN" : "APPOINTMENT",
+          referral: REFERRALS[(d + k + si) % REFERRALS.length],
+        });
+      });
+    });
+  }
+  if (upcoming.length) await prisma.appointment.createMany({ data: upcoming });
+
+  // ── Time clock history (past 30 days) so utilization + the Time Clock page
+  //    have real data. Manager rests Sundays, barber rests Mondays. ──
+  await prisma.timeEntry.deleteMany({ where: { tenantId: tenant.id } });
+  const shifts: Prisma.TimeEntryCreateManyInput[] = [];
+  for (let d = 30; d >= 1; d--) {
+    const day = startOfDay(subDays(now, d));
+    const dow = day.getDay();
+    staffPair.forEach((staffM, si) => {
+      if (dow === (si === 0 ? 0 : 1)) return; // weekly day off
+      const [startMin, endMin] = STORE_HOURS[dow];
+      shifts.push({
+        tenantId: tenant.id, userId: staffM.id,
+        clockIn: new Date(day.getTime() + (startMin - 10 + ((d + si) % 3) * 5) * 60000),
+        clockOut: new Date(day.getTime() + (endMin + 5 + ((d + si) % 4) * 5) * 60000),
+      });
+    });
+  }
+  if (shifts.length) await prisma.timeEntry.createMany({ data: shifts });
+
+  // Keep client "joined" dates consistent with their visit history: never after
+  // their first appointment (client analytics stay truthful).
+  await prisma.$executeRaw`
+    UPDATE "Client" c SET "createdAt" = LEAST(c."createdAt", sub.first)
+    FROM (SELECT "clientId", MIN("startTime") AS first FROM "Appointment" WHERE "tenantId" = ${tenant.id} GROUP BY "clientId") sub
+    WHERE sub."clientId" = c."id"`;
 }
 
 // ───────────────────────── Extra stores (platform view) ─────────────────────────

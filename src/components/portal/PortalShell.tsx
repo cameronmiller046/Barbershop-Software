@@ -97,9 +97,13 @@ export function PortalShell({
       <Link href="/portal/account" className={`p-nav ${isActive({ label: "", href: "/portal/account", icon: "settings" }) ? "p-nav-active" : ""}`} title="Settings">
         <Icon.settings className="h-5 w-5 shrink-0" />{!compact && <span>Settings</span>}
       </Link>
-      <form action={signOutAction}>
-        <button className="p-nav w-full text-left" title="Log out"><Icon.logout className="h-5 w-5 shrink-0" />{!compact && <span>Log out</span>}</button>
-      </form>
+      {/* Demo visitors browse the sample portal without a log-out — they leave
+          by navigating away; the marketing site brought them here signed in. */}
+      {!demo && (
+        <form action={signOutAction}>
+          <button className="p-nav w-full text-left" title="Log out"><Icon.logout className="h-5 w-5 shrink-0" />{!compact && <span>Log out</span>}</button>
+        </form>
+      )}
     </div>
   );
 
