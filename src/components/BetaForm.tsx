@@ -32,50 +32,60 @@ export function BetaForm() {
 
   if (status === "done") {
     return (
-      <div className="card">
-        <h2 className="font-display text-2xl text-brass">Application received</h2>
-        <p className="mt-2 text-cream/75">
-          Thanks! We&apos;ll review your shop and email you once it&apos;s approved.
+      <div className="lux-card p-8 text-center">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-[#f4d585] to-[#b98a3c] text-2xl text-[#17130a]">✓</span>
+        <h2 className="mt-4 font-display text-2xl text-cream">Application received</h2>
+        <p className="mt-2 text-cream/65">
+          Thanks! We&apos;ll review your shop by hand and email you once it&apos;s approved.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="card space-y-4">
-      <div>
-        <label className="label">Business name</label>
-        <input className="input" required value={form.businessName}
+    <form onSubmit={submit} className="lux-card space-y-4 p-6 sm:p-7">
+      <Field label="Business name" required>
+        <input className={INPUT} required value={form.businessName}
           onChange={(e) => setForm({ ...form, businessName: e.target.value })} />
-      </div>
+      </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="label">Your name</label>
-          <input className="input" required value={form.ownerName}
+        <Field label="Your name" required>
+          <input className={INPUT} required value={form.ownerName}
             onChange={(e) => setForm({ ...form, ownerName: e.target.value })} />
-        </div>
-        <div>
-          <label className="label">Phone</label>
-          <input className="input" value={form.phone}
+        </Field>
+        <Field label="Phone">
+          <input className={INPUT} value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        </div>
+        </Field>
       </div>
-      <div>
-        <label className="label">Email</label>
-        <input className="input" type="email" required value={form.email}
+      <Field label="Email" required>
+        <input className={INPUT} type="email" required value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })} />
-      </div>
-      <div>
-        <label className="label">Anything we should know? (optional)</label>
-        <textarea className="input min-h-[90px]" value={form.message}
+      </Field>
+      <Field label="Anything we should know? (optional)">
+        <textarea className={`${INPUT} min-h-[100px]`} value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })} />
-      </div>
+      </Field>
       {error && (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
       )}
-      <button disabled={status === "loading"} className="btn-primary w-full disabled:opacity-50">
+      <button disabled={status === "loading"} className="btn-gold w-full disabled:opacity-50">
         {status === "loading" ? "Submitting…" : "Submit application"}
       </button>
     </form>
+  );
+}
+
+const INPUT =
+  "w-full rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-sm text-cream placeholder:text-cream/25 transition focus:border-brass/60 focus:outline-none";
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-cream/45">
+        {label}{required && <span className="text-brass"> *</span>}
+      </span>
+      {children}
+    </label>
   );
 }
