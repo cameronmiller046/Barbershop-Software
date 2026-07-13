@@ -20,7 +20,7 @@ export default async function ReviewsPage({ params }: { params: Promise<{ slug: 
   if (!t) notFound();
   const reviews = await getTenantReviews(t.id);
   const rating = t.googleRating ?? null;
-  const reviewCount = reviews.length || 128;
+  const reviewCount = t.googleReviewCount ?? reviews.length ?? 0;
 
   const reviewLd = reviews.length
     ? {

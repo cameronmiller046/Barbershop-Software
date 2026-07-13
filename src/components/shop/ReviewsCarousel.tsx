@@ -18,11 +18,30 @@ export function ReviewsCarousel({ reviews, rating, count }: { reviews: Review[];
   return (
     <div>
       {rating != null && (
-        <div className="mt-6 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1 text-brass">
-            {Array.from({ length: 5 }).map((_, i) => <Icon.star key={i} className={`h-6 w-6 ${i < Math.round(rating) ? "" : "opacity-25"}`} />)}
+        <div className="mt-6 flex justify-center">
+          <div className="flex flex-col items-center gap-3 rounded-3xl border border-brass/25 bg-gradient-to-b from-brass/[0.08] to-transparent px-8 py-7 text-center sm:flex-row sm:gap-6 sm:px-10">
+            <div className="flex flex-col items-center">
+              <span className="font-display text-5xl font-semibold text-cream sm:text-6xl">{rating.toFixed(1)}</span>
+              <div className="mt-1 flex items-center gap-0.5 text-brass">
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const fill = Math.max(0, Math.min(1, rating - i));
+                  return (
+                    <span key={i} className="relative inline-block h-5 w-5">
+                      <Icon.star className="absolute inset-0 h-5 w-5 opacity-20" />
+                      <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}><Icon.star className="h-5 w-5" /></span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="hidden h-16 w-px bg-white/10 sm:block" />
+            <div className="sm:text-left">
+              <div className="font-display text-2xl text-cream">{count.toLocaleString()} reviews</div>
+              <div className="mt-1 inline-flex items-center gap-1.5 text-sm text-cream/55">
+                <GoogleG /> Verified on Google
+              </div>
+            </div>
           </div>
-          <div className="text-cream/70"><span className="font-display text-2xl text-cream">{rating.toFixed(1)}</span> · {count.toLocaleString()} Google reviews</div>
         </div>
       )}
 
@@ -62,4 +81,15 @@ export function ReviewsCarousel({ reviews, rating, count }: { reviews: Review[];
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "C";
+}
+
+function GoogleG() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
+      <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z" />
+      <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z" />
+      <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z" />
+      <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z" />
+    </svg>
+  );
 }

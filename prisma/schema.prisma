@@ -133,6 +133,7 @@ model Tenant {
 
   // Social proof
   googleRating Float?
+  googleReviewCount Int? // total Google reviews (aggregate shown on the storefront)
 
   // ── Website Content (CMS) — drives the public storefront, all owner-editable ──
   description   String? // "About us" / business description
