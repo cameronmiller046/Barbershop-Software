@@ -27,6 +27,7 @@ export function BookingWizard({
   const [barberId, setBarberId] = useState<string | null>(null);
   const [resolvedBarberId, setResolvedBarberId] = useState<string | null>(null);
   const [days, setDays] = useState<Day[]>([]);
+  const [emptyReason, setEmptyReason] = useState<"no-hours" | "fully-booked" | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
@@ -54,6 +55,7 @@ export function BookingWizard({
       .then((data) => {
         setResolvedBarberId(data.barberId ?? null);
         setDays(data.days ?? []);
+        setEmptyReason(data.reason ?? null);
         setActiveDay(data.days?.[0]?.date ?? null);
       })
       .catch(() => setError("Couldn't load available times."))
@@ -136,7 +138,13 @@ export function BookingWizard({
             {loadingSlots ? (
               <p className="mt-4 text-sm text-cream/50">Loading available times…</p>
             ) : days.length === 0 ? (
-              <p className="mt-4 text-sm text-cream/50">No open times soon. Please call the shop.</p>
+              <EmptyTimes
+                reason={emptyReason}
+                barberName={barberId ? barbers.find((b) => b.id === barberId)?.name ?? null : service?.barberName ?? null}
+                canSwitch={showBarberStep && barberId !== null}
+                onAnyBarber={() => setBarberId(null)}
+                brand={brand}
+              />
             ) : (
               <div className="mt-4 grid gap-5 sm:grid-cols-[auto_1fr]">
                 <BookingCalendar days={days} activeDay={activeDay} brand={brand}
@@ -214,6 +222,35 @@ export function BookingWizard({
   );
 }
 
+
+/* Friendly empty state for the time step: explains WHY there are no times and
+   offers a way forward instead of a dead end. */
+function EmptyTimes({ reason, barberName, canSwitch, onAnyBarber, brand }: {
+  reason: "no-hours" | "fully-booked" | null;
+  barberName: string | null;
+  canSwitch: boolean;
+  onAnyBarber: () => void;
+  brand: string;
+}) {
+  const who = barberName ?? "This barber";
+  const message =
+    reason === "no-hours"
+      ? `${who} hasn't published a schedule yet, so there's nothing to book with them right now.`
+      : reason === "fully-booked"
+        ? `${who} is fully booked for the next few weeks.`
+        : "No open times soon. Please call the shop.";
+  return (
+    <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <p className="text-sm text-cream/65">{message}</p>
+      {canSwitch && (
+        <button onClick={onAnyBarber} className="mt-3 rounded-full border px-4 py-2 text-sm transition"
+          style={{ borderColor: brand, color: brand }}>
+          See times with any barber
+        </button>
+      )}
+    </div>
+  );
+}
 
 function StepHeading({ n, title, brand }: { n: number; title: string; brand: string }) {
   return (

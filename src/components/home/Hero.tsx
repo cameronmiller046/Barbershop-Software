@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { Reveal, Stagger, Item, motion } from "@/components/home/motion";
 import { DashboardMock } from "@/components/home/mockups";
 import { Icon } from "@/components/home/icons";
+import { demoPortalLogin } from "@/app/demoActions";
 
 const TRUST = [
   { icon: Icon.spark, label: "Easy Setup" },
@@ -43,11 +45,12 @@ export function Hero() {
         <Reveal delay={0.18}>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link href="/beta" className="btn-gold text-base">
-              Get Started Free <Icon.arrow className="h-4 w-4" />
+              Book a free demo <Icon.arrow className="h-4 w-4" />
             </Link>
             <Link href="/t/professional-barbershop" className="btn-outline-gold text-base">
-              See it live
+              View a live store
             </Link>
+            <DemoPortalButton />
           </div>
         </Reveal>
 
@@ -116,6 +119,50 @@ export function Hero() {
         </FloatCard>
       </motion.div>
     </section>
+  );
+}
+
+/* "View demo page" — expands into an Admin vs Barber preview choice, then signs
+   into the matching flagship demo account (test1/test2) and opens the portal. */
+function DemoPortalButton() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="btn-outline-gold text-base" aria-expanded={open}>
+        View demo page
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-30 w-64 rounded-2xl border border-brass/25 bg-[#131217] p-2 shadow-2xl">
+          <div className="px-2.5 pb-1 pt-1.5 text-[11px] uppercase tracking-wide text-cream/40">Preview the portal as…</div>
+          <form action={demoPortalLogin}>
+            <input type="hidden" name="role" value="admin" />
+            <button type="submit" className="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-brass/10">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-brass/25 bg-brass/[0.08] text-brass"><Icon.staff className="h-4 w-4" /></span>
+              <span><span className="block text-sm font-semibold text-cream">Admin / Owner</span>
+                <span className="block text-xs text-cream/50">Full shop: reports, staff, settings</span></span>
+            </button>
+          </form>
+          <form action={demoPortalLogin}>
+            <input type="hidden" name="role" value="barber" />
+            <button type="submit" className="flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-brass/10">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-brass/25 bg-brass/[0.08] text-brass"><Icon.scissors className="h-4 w-4" /></span>
+              <span><span className="block text-sm font-semibold text-cream">Barber</span>
+                <span className="block text-xs text-cream/50">Their own book, clients & time clock</span></span>
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
 

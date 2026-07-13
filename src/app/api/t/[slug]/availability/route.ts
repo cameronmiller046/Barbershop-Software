@@ -25,7 +25,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   // Specific barber requested (or locked): show only their real availability.
   if (barberId) {
     const days = await getUpcomingDays(tenant.id, barberId, service.durationMin, 21, tenant.slotIntervalMin, tenant.timezone);
-    return NextResponse.json({ barberId, durationMin: service.durationMin, days });
+    // Distinguish "hasn't published a schedule" from "schedule exists but is full",
+    // so the booking UI can hint the customer toward another choice.
+    let reason: "no-hours" | "fully-booked" | null = null;
+    if (days.length === 0) {
+      const hours = await prisma.workingHour.count({ where: { tenantId: tenant.id, barberId } });
+      reason = hours === 0 ? "no-hours" : "fully-booked";
+    }
+    return NextResponse.json({ barberId, durationMin: service.durationMin, days, reason });
   }
 
   // "No preference": union of every active barber's real openings. Each slot is
