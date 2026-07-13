@@ -91,5 +91,4 @@ export async function addReporterComment(ticketId: string, body: string) {
     prisma.ticketActivity.create({ data: { ticketId, actorId: user.id, kind: "comment", detail: "Reporter replied" } }),
   ]);
   revalidatePath("/portal/feedback");
-  revalidatePath("/dev");
 }
