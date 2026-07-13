@@ -49,7 +49,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
   const base = `/t/${tenant.slug}`;
   const bookHref = `${base}/book`;
   const rating = tenant.googleRating ?? null;
-  const reviewCount = reviews.length || 128;
+  const reviewCount = tenant.googleReviewCount ?? reviews.length ?? 0;
   const heroImg = tenant.heroImageUrl || QMARK;
   const heroTitle = tenant.heroHeadline?.trim();
   const heroSub = tenant.heroSubheading?.trim() || tenant.tagline || "Precision fades, classic cuts, and beard work — in a shop that treats every chair like the main event.";
@@ -123,7 +123,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-5 py-9 text-center md:grid-cols-4">
           {[
             { v: <><Counter to={rating ?? 5} decimals={1} />★</>, l: "Google Rating" },
-            { v: <Counter to={barbers.length || 2} />, l: "Master Barbers" },
+            { v: <Counter to={barbers.length} />, l: barbers.length === 1 ? "Master Barber" : "Master Barbers" },
             { v: <><Counter to={services.length} />+</>, l: "Services Offered" },
             { v: <>60s</>, l: "Avg. Booking Time" },
           ].map((s, i) => (
