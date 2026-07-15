@@ -4,7 +4,6 @@ import { signIn, auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDemoData } from "@/lib/demo";
 import { AuthError } from "next-auth";
-import { StoreFinder } from "@/components/StoreFinder";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +13,6 @@ const EMBERS = [
   { l: "42%", s: 3, d: 12, delay: 6 }, { l: "58%", s: 2, d: 20, delay: 1 },
   { l: "74%", s: 3, d: 15, delay: 4 }, { l: "88%", s: 2, d: 19, delay: 8 },
 ];
-
-function storeLabel(t: { storeNumber: number; name: string; address: string | null }) {
-  const parts = (t.address || "").split(",").map((s) => s.trim()).filter(Boolean);
-  let loc = "";
-  if (parts.length >= 3) loc = `${parts[1]}, ${parts[2].split(" ")[0]}`; // "City, ST"
-  else if (parts.length === 2) loc = parts[1];
-  return `#${t.storeNumber} ${loc ? loc + " - " : ""}${t.name}`;
-}
 
 export default async function LoginPage({
   searchParams,
@@ -38,12 +29,6 @@ export default async function LoginPage({
     const stillActive = await prisma.user.findFirst({ where: { id: session.user.id, active: true }, select: { id: true } });
     if (stillActive) redirect(session.user.role === "PLATFORM_ADMIN" ? "/admin" : "/portal");
   }
-
-  const stores = (await prisma.tenant.findMany({
-    where: { status: "ACTIVE", isDemo: false }, // never surface demo shops on the live login
-    select: { slug: true, name: true, storeNumber: true, address: true },
-    orderBy: { storeNumber: "asc" },
-  })).map((t) => ({ slug: t.slug, label: storeLabel(t) }));
 
   async function login(formData: FormData) {
     "use server";
@@ -135,17 +120,6 @@ export default async function LoginPage({
               </form>
             </div>
           </div>
-
-          {/* Find a store's public site */}
-          {stores.length > 0 && (
-            <div className="glass mt-4 rounded-2xl p-6">
-              <h2 className="font-display text-lg">Find a store</h2>
-              <p className="mt-1 text-sm text-cream/50">Pick your shop to visit its site.</p>
-              <div className="mt-3">
-                <StoreFinder stores={stores} />
-              </div>
-            </div>
-          )}
 
           <Link href="/" className="mt-6 block text-center text-sm text-cream/50 transition hover:text-brass">
             ← Back to site

@@ -27,6 +27,24 @@ const STORE_HOURS: Record<number, [number, number]> = {
   6: [540, 1050], 0: [720, 1080],
 };
 
+/**
+ * Start times for today's already-realized (COMPLETED) demo cuts: every 30 min
+ * from shop open until now, on the :15/:45 so they never collide with the
+ * curated bookings (:00) or the upcoming-week fillers (:30). Always at least
+ * the first two slots, so "Today's Revenue" is never $0 — even before opening.
+ * Shared by the seeder and the staleness check in ensureDemoData so they agree.
+ */
+function todayRealizedSlots(now: Date): Date[] {
+  const [openMin, closeMin] = STORE_HOURS[now.getDay()];
+  const day = startOfDay(now);
+  const slots: Date[] = [];
+  for (let m = openMin + 15; m <= closeMin - 30; m += 30) {
+    slots.push(new Date(day.getTime() + m * 60000));
+  }
+  const past = slots.filter((s) => s < now);
+  return past.length >= 2 ? past : slots.slice(0, 2);
+}
+
 /** True if demo data has been loaded (more than just the flagship store exists). */
 export async function demoLoaded(prisma: PrismaClient) {
   return (await prisma.tenant.count()) > 1;
@@ -99,7 +117,14 @@ export async function ensureDemoData(prisma: PrismaClient) {
   // target, or the history predates tips/payment-method tracking (those power
   // the Reports payment mix + Tips KPI, which investors see).
   const enriched = await prisma.appointment.count({ where: { tenantId: flagship.id, paymentMethod: { not: null } } });
-  if (count < 20 || enriched === 0 || flagship.monthlyGoalCents !== DEMO_GOAL_CENTS) {
+  // Also reseed when today's realized cuts have fallen behind the clock (a new
+  // day since the last seed, or a demo left running since morning) so the
+  // dashboard's "Today's Revenue" always shows money made today.
+  const now = new Date();
+  const completedToday = await prisma.appointment.count({
+    where: { tenantId: flagship.id, status: "COMPLETED", startTime: { gte: startOfDay(now) } },
+  });
+  if (count < 20 || enriched === 0 || completedToday < todayRealizedSlots(now).length || flagship.monthlyGoalCents !== DEMO_GOAL_CENTS) {
     await seedFlagshipDemo(prisma);
   }
 }
@@ -329,6 +354,30 @@ export async function seedFlagshipDemo(prisma: PrismaClient) {
       c++;
     }
   }
+  // ── Today so far: cuts already finished today, alternating chairs so BOTH
+  //    the Manager and Barber demos show money made for the day. All COMPLETED
+  //    (no no-show/cancel hash here — today's takings must never be $0), short
+  //    services only so the day's board stays readable between the curated and
+  //    upcoming bookings. ──
+  const shortSvcs = services.filter((s) => s.durationMin <= 45);
+  const todaySvcs = shortSvcs.length ? shortSvcs : services;
+  todayRealizedSlots(now).forEach((start, i) => {
+    const svc = todaySvcs[(i * 2 + 1) % todaySvcs.length];
+    const durMin = Math.max(15, svc.durationMin - 5 + ((i * 7) % 10));
+    const tip = i % 3 === 2 ? 0 : Math.round((svc.priceCents * (15 + (i % 3) * 5)) / 100);
+    hist.push({
+      tenantId: tenant.id, serviceId: svc.id, barberId: staffPair[i % staffPair.length].id,
+      clientId: clients[(i * 5 + 2) % clients.length].id,
+      startTime: start, endTime: new Date(start.getTime() + svc.durationMin * 60000),
+      status: "COMPLETED", startedAt: start, finishedAt: new Date(start.getTime() + durMin * 60000),
+      collectedCents: svc.priceCents + (i % 5 === 0 ? 500 : 0),
+      tipCents: tip || null,
+      paymentMethod: PAYMENTS[(i * 7) % PAYMENTS.length],
+      kind: i % 4 === 0 ? "WALKIN" : "APPOINTMENT",
+      referral: REFERRALS[i % REFERRALS.length],
+    });
+  });
+
   if (hist.length) await prisma.appointment.createMany({ data: hist });
 
   // ── A busy upcoming week: 3 more bookings per chair per day (on the :30 so
