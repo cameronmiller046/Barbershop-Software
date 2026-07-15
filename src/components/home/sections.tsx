@@ -247,7 +247,7 @@ export function FinalCTA() {
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link href="/beta" className="btn-gold text-base">Get Started Free <Icon.arrow className="h-4 w-4" /></Link>
-            <Link href="/t/professional-barbershop" className="btn-outline-gold text-base">See it live</Link>
+            <Link href="/t/demo-store" className="btn-outline-gold text-base">See it live</Link>
           </div>
           <div className="mt-6 text-xs text-cream/40">No credit card · Set up in minutes · Cancel anytime</div>
         </div>

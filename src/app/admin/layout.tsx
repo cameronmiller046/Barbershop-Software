@@ -3,7 +3,7 @@ import { requirePlatformAdmin } from "@/lib/rbac";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { demoLoaded } from "@/lib/demo";
-import { loadDemo, clearDemo } from "@/app/admin/actions";
+import { clearDemo } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <form action={clearDemo}>
                 <button className="btn-ghost px-3 py-1.5 text-xs">Clear demo data</button>
               </form>
-            ) : (
-              <form action={loadDemo}>
-                <button className="btn-primary px-3 py-1.5 text-xs">✨ Try the demo</button>
-              </form>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-4 text-sm">
             <nav className="hidden gap-4 md:flex">

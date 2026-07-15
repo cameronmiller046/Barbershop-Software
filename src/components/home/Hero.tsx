@@ -47,7 +47,7 @@ export function Hero() {
             <Link href="/beta" className="btn-gold text-base">
               Book a free demo <Icon.arrow className="h-4 w-4" />
             </Link>
-            <Link href="/t/professional-barbershop" className="btn-outline-gold text-base">
+            <Link href="/t/demo-store" className="btn-outline-gold text-base">
               View a live store
             </Link>
             <DemoPortalButton />

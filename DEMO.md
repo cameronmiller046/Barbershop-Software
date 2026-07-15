@@ -51,7 +51,7 @@ demo data" resets to baseline but keeps `test1`/`test2` loginable.
    appointments, no shop-wide revenue, and the Reports/Team/Settings nav items
    are gone.
 
-The flagship store's public booking site is at `/t/professional-barbershop`.
+The demo store's public booking site is at `/t/demo-store`.
 
 ## Demo identities
 

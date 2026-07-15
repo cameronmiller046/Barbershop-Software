@@ -18,8 +18,9 @@ Built per the **Multi-Tenant Barbershop SaaS PRD**.
 | Barber portal | `/portal` — dashboard, appointments, clients, services, social planner, team, settings |
 | Platform admin | `/admin` — overview, beta applications, tenants, feature flags |
 
-**Demo tenant:** `Professional Barbershop` at `/t/professional-barbershop` — runs
-on the exact same codebase as every other tenant.
+**Demo tenant:** `Demo Store` at `/t/demo-store` — a dedicated `isDemo` tenant
+(so demo reseeds never touch real stores) that runs on the exact same codebase
+as every other tenant.
 
 ### Architecture highlights
 - **Tenant isolation:** every business record carries `tenantId`; all queries
@@ -64,7 +65,7 @@ Default seeded logins:
   A barber of the demo shop "Professional Barbershop & Salon" — the account behind the
   storefront's "Powered by The Chair" footer link, for demoing the shop portal.
 
-The demo shop (`/t/professional-barbershop`) is **public** — anyone can browse and
+The demo shop (`/t/demo-store`) is **public** — anyone can browse and
 book without logging in.
 
 ## Deploy to Railway
