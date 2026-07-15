@@ -1,17 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/rbac";
 import { provisionTenant } from "@/lib/provision";
 import { audit } from "@/lib/audit";
-import { SUPERADMIN_ASSIGNABLE, isMasterAdmin } from "@/lib/roles";
-import { isPermKey, overridesOf } from "@/lib/permissions";
 import { loadDemoData, clearDemoData } from "@/lib/demo";
-import { Prisma } from "@prisma/client";
-import type { TenantStatus, Role } from "@prisma/client";
+import type { TenantStatus } from "@prisma/client";
 
 // ── Demo data (Superadmin) ──
 export async function loadDemo() {
@@ -20,7 +15,6 @@ export async function loadDemo() {
   await audit({ action: "admin.demo.loaded", userId: admin.id });
   revalidatePath("/admin");
   revalidatePath("/admin/tenants");
-  revalidatePath("/admin/users");
 }
 
 export async function clearDemo() {
@@ -29,7 +23,6 @@ export async function clearDemo() {
   await audit({ action: "admin.demo.cleared", userId: admin.id });
   revalidatePath("/admin");
   revalidatePath("/admin/tenants");
-  revalidatePath("/admin/users");
 }
 
 export async function approveApplication(id: string) {
@@ -87,114 +80,8 @@ export async function toggleFeature(id: string, field: "featureSocial" | "featur
   revalidatePath("/admin/tenants");
 }
 
-// ── Superadmin: manage all user accounts ──
-
-/** Change a user's level (role) and store, with hierarchy guardrails. */
-export async function changeUserRole(userId: string, formData: FormData) {
-  const admin = await requirePlatformAdmin();
-  if (userId === admin.id) return; // a Superadmin can't change their own level (lockout guard)
-
-  const role = String(formData.get("role")) as Role;
-  if (!SUPERADMIN_ASSIGNABLE.includes(role)) return;
-
-  const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (!target) return;
-  if (isMasterAdmin(target.email)) return; // the master superadmin can't be changed
-
-  // Superadmin has no store; store-scoped roles must belong to a tenant.
-  let tenantId: string | null = String(formData.get("tenantId") || "") || target.tenantId;
-  if (role === "PLATFORM_ADMIN") tenantId = null;
-  else if (!tenantId) return; // store-scoped role requires a store
-
-  await prisma.user.update({ where: { id: userId }, data: { role, tenantId } });
-  await audit({ action: "admin.user.role", userId: admin.id, target: userId, meta: { role, tenantId } });
-  revalidatePath("/admin/users");
-}
-
-export async function setUserActive(userId: string, active: boolean) {
-  const admin = await requirePlatformAdmin();
-  if (userId === admin.id) return; // can't deactivate yourself
-  const target = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-  if (target && isMasterAdmin(target.email)) return; // master can't be deactivated
-  await prisma.user.update({ where: { id: userId }, data: { active } });
-  await audit({ action: "admin.user.active", userId: admin.id, target: userId, meta: { active } });
-  revalidatePath("/admin/users");
-}
-
-export async function deleteUser(userId: string) {
-  const admin = await requirePlatformAdmin();
-  if (userId === admin.id) return;
-  const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (!target || isMasterAdmin(target.email)) return; // master can't be deleted
-  // Don't delete the last Superadmin.
-  if (target.role === "PLATFORM_ADMIN") {
-    const supers = await prisma.user.count({ where: { role: "PLATFORM_ADMIN" } });
-    if (supers <= 1) return;
-  }
-  await prisma.user.delete({ where: { id: userId } });
-  await audit({ action: "admin.user.deleted", userId: admin.id, target: userId });
-  revalidatePath("/admin/users");
-}
-
-/** Create any account: a new Superadmin, or a store-scoped Manager / Barber. */
-export async function createUserAccount(formData: FormData) {
-  const admin = await requirePlatformAdmin();
-  const email = String(formData.get("email") || "").toLowerCase().trim();
-  const name = String(formData.get("name") || "").trim();
-  const password = String(formData.get("password") || "");
-  const role = String(formData.get("role") || "") as Role;
-  let tenantId: string | null = String(formData.get("tenantId") || "") || null;
-
-  if (!email || !name || password.length < 6) redirect("/admin/users?err=fields");
-  if (!SUPERADMIN_ASSIGNABLE.includes(role)) redirect("/admin/users?err=level");
-  if (role === "PLATFORM_ADMIN") tenantId = null;
-  else if (!tenantId) redirect("/admin/users?err=store");
-
-  if (await prisma.user.findUnique({ where: { email } })) redirect("/admin/users?err=email");
-
-  const user = await prisma.user.create({
-    data: { email, name, role, tenantId, passwordHash: await bcrypt.hash(password, 10) },
-  });
-  // Make new barbers immediately bookable.
-  if (role === "BARBER" && tenantId) {
-    await prisma.workingHour.createMany({
-      data: [1, 2, 3, 4, 5].map((dow) => ({ tenantId, barberId: user.id, dayOfWeek: dow, startMin: 9 * 60, endMin: 18 * 60 })),
-    });
-  }
-  await audit({ action: "admin.user.created", userId: admin.id, target: email, meta: { role, tenantId } });
-  redirect(`/admin/users?created=${role === "PLATFORM_ADMIN" ? "superadmin" : "1"}`);
-}
-
-/**
- * Set a single per-user permission override.
- * value: "allow" | "deny" sets an explicit override; "default" clears it (use role default).
- */
-export async function setUserPermission(userId: string, key: string, value: "default" | "allow" | "deny") {
-  const admin = await requirePlatformAdmin();
-  if (!isPermKey(key)) return;
-  const target = await prisma.user.findUnique({ where: { id: userId }, select: { permissionOverrides: true } });
-  if (!target) return;
-
-  const overrides: Record<string, boolean> = { ...overridesOf({ role: "BARBER", permissionOverrides: target.permissionOverrides }) };
-  if (value === "default") delete overrides[key];
-  else overrides[key] = value === "allow";
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { permissionOverrides: Object.keys(overrides).length ? overrides : Prisma.JsonNull },
-  });
-  await audit({ action: "admin.user.permission", userId: admin.id, target: userId, meta: { key, value } });
-  revalidatePath(`/admin/users/${userId}`);
-  revalidatePath("/admin/users");
-}
-
-/** Clear all per-user overrides (reset to role defaults). */
-export async function resetUserPermissions(userId: string) {
-  const admin = await requirePlatformAdmin();
-  await prisma.user.update({ where: { id: userId }, data: { permissionOverrides: Prisma.JsonNull } });
-  await audit({ action: "admin.user.permission.reset", userId: admin.id, target: userId });
-  revalidatePath(`/admin/users/${userId}`);
-}
+// Account & permission management moved to Yggdrasil (fleet management plane)
+// via the /api/yggdrasil/* bridge — the in-app Users/Roles console is retired.
 
 /**
  * Permanently delete a store and ALL of its data (staff, services, clients,
@@ -212,7 +99,6 @@ export async function deleteStore(tenantId: string, formData: FormData) {
   await prisma.tenant.delete({ where: { id: tenantId } });
   await audit({ action: "admin.store.deleted", userId: admin.id, target: tenant.slug, meta: { name: tenant.name } });
   revalidatePath("/admin/tenants");
-  revalidatePath("/admin/users");
   revalidatePath("/admin");
 }
 
@@ -230,6 +116,5 @@ export async function createStore(formData: FormData) {
     console.error("[createStore] failed", err);
   }
   revalidatePath("/admin/tenants");
-  revalidatePath("/admin/users");
   revalidatePath("/admin");
 }

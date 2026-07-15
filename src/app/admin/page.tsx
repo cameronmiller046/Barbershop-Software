@@ -15,10 +15,10 @@ export default async function AdminOverview() {
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
-  const stats = [
+  const stats: { label: string; value: number; href?: string }[] = [
     { label: "Stores", value: tenants, href: "/admin/tenants" },
     { label: "Active stores", value: activeTenants, href: "/admin/tenants" },
-    { label: "User accounts", value: users, href: "/admin/users" },
+    { label: "User accounts", value: users },
     { label: "Pending applications", value: pendingApps, href: "/admin/applications" },
     { label: "Appointments booked", value: appointments, href: "/admin/tenants" },
   ];
@@ -28,12 +28,28 @@ export default async function AdminOverview() {
       <h1 className="font-display text-3xl">Superadmin overview</h1>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {stats.map((s) => (
-          <Link key={s.label} href={s.href ?? "#"} className="stat block">
-            <div className="text-3xl font-bold text-brass">{s.value}</div>
-            <div className="mt-1 text-xs text-cream/50">{s.label}</div>
-          </Link>
-        ))}
+        {stats.map((s) =>
+          s.href ? (
+            <Link key={s.label} href={s.href} className="stat block">
+              <div className="text-3xl font-bold text-brass">{s.value}</div>
+              <div className="mt-1 text-xs text-cream/50">{s.label}</div>
+            </Link>
+          ) : (
+            <div key={s.label} className="stat block">
+              <div className="text-3xl font-bold text-brass">{s.value}</div>
+              <div className="mt-1 text-xs text-cream/50">{s.label}</div>
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="card mt-6">
+        <h2 className="font-display text-xl">Accounts &amp; permissions</h2>
+        <p className="mt-1 text-sm text-cream/60">
+          User accounts and permissions are now managed centrally in Yggdrasil, the
+          Mocazari fleet management plane. The in-app Users and Roles consoles have
+          been retired.
+        </p>
       </div>
 
       <h2 className="mt-10 font-display text-2xl">Recent activity</h2>

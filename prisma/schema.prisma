@@ -11,14 +11,14 @@ datasource db {
 
 enum Role {
   PLATFORM_ADMIN // runs the whole SaaS; tenantId is null
-  OWNER          // shop owner
-  BARBER         // staff who takes appointments
-  RECEPTIONIST   // front desk
-  CUSTOMER       // end client (self-serve)
+  OWNER // shop owner
+  BARBER // staff who takes appointments
+  RECEPTIONIST // front desk
+  CUSTOMER // end client (self-serve)
 }
 
 enum TenantStatus {
-  PENDING    // provisioned but not yet live
+  PENDING // provisioned but not yet live
   ACTIVE
   SUSPENDED
 }
@@ -99,25 +99,25 @@ enum SocialStatus {
 // A Tenant is one barbershop (or, later, any appointment business).
 // Every business record below carries tenantId for hard isolation.
 model Tenant {
-  id     String       @id @default(cuid())
-  slug   String       @unique // used in /t/<slug> routing
-  name   String
-  storeNumber Int    @default(0) // display id (1–999) for the store picker
+  id          String       @id @default(cuid())
+  slug        String       @unique // used in /t/<slug> routing
+  name        String
+  storeNumber Int          @default(0) // display id (1–999) for the store picker
   // Demo/sample shops (loaded via "Try the demo"). Kept OUT of every live/public
   // surface (store picker, sitemap) so demo and real data never overlap.
-  isDemo Boolean @default(false)
-  status TenantStatus @default(PENDING)
-  plan   Plan         @default(SOLO)
+  isDemo      Boolean      @default(false)
+  status      TenantStatus @default(PENDING)
+  plan        Plan         @default(SOLO)
 
   // Branding
-  tagline      String?
-  primaryColor String  @default("#c9a24b") // main accent: buttons, CTAs, prices
-  secondaryColor String @default("#c9a24b") // accent: headings, highlights, labels
-  logoUrl      String?
-  heroImageUrl String?
+  tagline           String?
+  primaryColor      String  @default("#c9a24b") // main accent: buttons, CTAs, prices
+  secondaryColor    String  @default("#c9a24b") // accent: headings, highlights, labels
+  logoUrl           String?
+  heroImageUrl      String?
   // CSS object-position for the hero photo, e.g. "50% 30%". Lets admins pick
   // which part of the photo stays in frame.
-  heroImagePosition String @default("50% 50%")
+  heroImagePosition String  @default("50% 50%")
 
   // Contact / locale
   email    String?
@@ -132,48 +132,48 @@ model Tenant {
   monthlyGoalCents Int @default(0)
 
   // Social proof
-  googleRating Float?
+  googleRating      Float?
   googleReviewCount Int? // total Google reviews (aggregate shown on the storefront)
 
   // ── Website Content (CMS) — drives the public storefront, all owner-editable ──
-  description   String? // "About us" / business description
-  website       String?
+  description     String? // "About us" / business description
+  website         String?
   heroHeadline    String?
   heroSubheading  String?
   heroCtaText     String?
   announcement    String? // dismissible banner across the top of the storefront
-  instagramUrl String?
-  facebookUrl  String?
-  tiktokUrl    String?
-  xUrl         String? // X / Twitter
-  youtubeUrl   String?
+  instagramUrl    String?
+  facebookUrl     String?
+  tiktokUrl       String?
+  xUrl            String? // X / Twitter
+  youtubeUrl      String?
   metaTitle       String? // SEO overrides (fall back to auto-generated)
   metaDescription String?
-  accentColor  String? // optional 3rd brand color
-  faviconUrl   String?
-  coverImageUrl String? // OG / social share image
+  accentColor     String? // optional 3rd brand color
+  faviconUrl      String?
+  coverImageUrl   String? // OG / social share image
   // Storefront section visibility toggles
-  showBarbers Boolean @default(true)
-  showGallery Boolean @default(true)
-  showReviews Boolean @default(true)
-  showFaq     Boolean @default(true)
+  showBarbers     Boolean @default(true)
+  showGallery     Boolean @default(true)
+  showReviews     Boolean @default(true)
+  showFaq         Boolean @default(true)
 
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
   featureAnalytics Boolean @default(true)
 
-  users        User[]
-  services     Service[]
-  clients      Client[]
-  appointments Appointment[]
-  workingHours WorkingHour[]
-  socialPosts  SocialPost[]
-  galleryItems GalleryItem[]
-  reviews      Review[]
-  auditLogs    AuditLog[]
-  timeEntries  TimeEntry[]
+  users            User[]
+  services         Service[]
+  clients          Client[]
+  appointments     Appointment[]
+  workingHours     WorkingHour[]
+  socialPosts      SocialPost[]
+  galleryItems     GalleryItem[]
+  reviews          Review[]
+  auditLogs        AuditLog[]
+  timeEntries      TimeEntry[]
   timeEditRequests TimeEditRequest[]
-  tickets      Ticket[]
+  tickets          Ticket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -202,28 +202,28 @@ model User {
   tenantId String?
 
   // Barber profile fields (used when role = BARBER)
-  bio            String?
-  avatarUrl      String?
+  bio             String?
+  avatarUrl       String?
   instagramHandle String?
   // Barber social links (shown on their public storefront profile).
-  facebookUrl String?
-  tiktokUrl   String?
-  xUrl        String?
-  youtubeUrl  String?
+  facebookUrl     String?
+  tiktokUrl       String?
+  xUrl            String?
+  youtubeUrl      String?
 
   // HR fields — set by admins, read-only to the user themselves
   hireDate    DateTime?
   dateOfBirth DateTime?
 
-  barberAppointments Appointment[] @relation("BarberAppointments")
+  barberAppointments Appointment[]     @relation("BarberAppointments")
   services           Service[]
   workingHours       WorkingHour[]
   socialPosts        SocialPost[]
   auditLogs          AuditLog[]
   timeEntries        TimeEntry[]
   timeEditRequests   TimeEditRequest[]
-  reportedTickets    Ticket[]         @relation("TicketReporter")
-  assignedTickets    Ticket[]         @relation("TicketAssignee")
+  reportedTickets    Ticket[]          @relation("TicketReporter")
+  assignedTickets    Ticket[]          @relation("TicketAssignee")
   ticketComments     TicketComment[]
   ticketActivity     TicketActivity[]
 
@@ -236,14 +236,14 @@ model User {
 // ───────────────────────── Catalog ─────────────────────────
 
 model Service {
-  id           String  @id @default(cuid())
-  name         String
-  description  String?
-  durationMin  Int     @default(30)
-  priceCents   Int     @default(0)
-  imageUrl     String?
-  active       Boolean @default(true)
-  sortOrder    Int     @default(0)
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  durationMin Int     @default(30)
+  priceCents  Int     @default(0)
+  imageUrl    String?
+  active      Boolean @default(true)
+  sortOrder   Int     @default(0)
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId String
@@ -261,8 +261,8 @@ model Service {
 }
 
 model Client {
-  id    String  @id @default(cuid())
-  name  String // display name — kept in sync with "firstName lastName"
+  id        String  @id @default(cuid())
+  name      String // display name — kept in sync with "firstName lastName"
   firstName String?
   lastName  String?
   email     String?
@@ -283,31 +283,31 @@ model Client {
 }
 
 model Appointment {
-  id        String            @id @default(cuid())
-  startTime DateTime
-  endTime   DateTime
-  status    AppointmentStatus @default(CONFIRMED)
-  notes     String?
+  id           String            @id @default(cuid())
+  startTime    DateTime
+  endTime      DateTime
+  status       AppointmentStatus @default(CONFIRMED)
+  notes        String?
   // Preset reason captured when staff reschedule / cancel / mark no-show.
   statusReason String?
   // Soft-delete: appointments are never hard-removed, so the history (e.g. a
   // no-show) is always on record. `false` = removed from active views.
-  active    Boolean @default(true)
+  active       Boolean           @default(true)
 
   // When the client physically arrived and is waiting (before the cut starts).
   checkedInAt DateTime?
   // Turnaround clock: when the barber started/finished the cut. Duration is
   // finishedAt - startedAt (5-minute minimum for staff; admins can correct).
-  startedAt  DateTime?
-  finishedAt DateTime?
+  startedAt   DateTime?
+  finishedAt  DateTime?
 
   // What the barber actually collected (service amount, excludes tip).
   collectedCents Int?
   tipCents       Int? // tip on top of the service
   paymentMethod  String? // Card | Cash | Digital wallet | Other
   // How the visit happened + how the client found the shop (walk-in logging).
-  kind     String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
-  referral String?
+  kind           String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
+  referral       String?
 
   // public token for the customer reschedule / cancel link
   manageToken String @unique @default(cuid())
@@ -500,11 +500,11 @@ model PageView {
 // Unified ticket: bug reports, questions, and feature requests all live here
 // and flow through the Development Center pipeline.
 model Ticket {
-  id       String         @id @default(cuid())
-  ref      String         @unique // human reference, e.g. CHR-1042
+  id       String          @id @default(cuid())
+  ref      String          @unique // human reference, e.g. CHR-1042
   type     TicketType
-  status   TicketStatus   @default(NEW)
-  priority TicketPriority @default(MEDIUM)
+  status   TicketStatus    @default(NEW)
+  priority TicketPriority  @default(MEDIUM)
   severity TicketSeverity? // bugs only
 
   title       String
@@ -512,7 +512,7 @@ model Ticket {
   // Type-specific structured fields (steps, expected, actual, problem,
   // solution, benefit, useCase, category, subject, …). Kept as JSON so each
   // ticket type can carry its own shape without column sprawl.
-  details Json?
+  details     Json?
 
   labels String[] @default([])
 
@@ -587,4 +587,17 @@ model TicketActivity {
   createdAt DateTime @default(now())
 
   @@index([ticketId, createdAt])
+}
+
+// ───────────────────── Yggdrasil Link (fleet management) ─────────────────────
+// Single-row pairing record for the Yggdrasil management plane. Stores ONLY the
+// sha256 hash of the pairing token — never the token itself.
+model YggdrasilLink {
+  id        Int      @id @default(1)
+  tokenHash String
+  origin    String?
+  pairedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("yggdrasil_link")
 }
