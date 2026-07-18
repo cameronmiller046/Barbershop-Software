@@ -70,6 +70,28 @@ body {
   min-height: 100vh;
 }
 
+/* ───────── Themeable dividers & panel edges ─────────
+   Section borders/dividers are authored as hard `border-white/N` utilities.
+   Retint them to a translucent tint of the themeable accent (--brass) so they
+   read as a warm-gold hairline that matches the gold theme — and, because
+   --brass is what the per-tenant color presets drive (TenantShell/SiteColors),
+   they automatically recolor when a different preset is selected.
+   Alphas run a touch above the original white opacity to offset gold's lower
+   luminance. Unlayered so they win over Tailwind's utilities layer; the
+   `.mkt.light` / `.preview-dark` overrides above have higher specificity and
+   keep the light marketing theme + app screenshots untouched. */
+.border-white\/5  { border-color: rgb(var(--brass) / 0.08); }
+.border-white\/8  { border-color: rgb(var(--brass) / 0.12); }
+.border-white\/10 { border-color: rgb(var(--brass) / 0.15); }
+.border-white\/12 { border-color: rgb(var(--brass) / 0.18); }
+.border-white\/15 { border-color: rgb(var(--brass) / 0.22); }
+.border-white\/25 { border-color: rgb(var(--brass) / 0.34); }
+.border-white\/30 { border-color: rgb(var(--brass) / 0.40); }
+.border-white\/40 { border-color: rgb(var(--brass) / 0.52); }
+.divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(var(--brass) / 0.09); }
+/* Thin hairline bars used as explicit dividers (only when sized as a 1px rule). */
+.h-px.bg-white\/10, .w-px.bg-white\/10 { background-color: rgb(var(--brass) / 0.18); }
+
 @layer components {
   .container-page {
     @apply mx-auto w-full max-w-6xl px-5;
