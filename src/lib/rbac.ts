@@ -30,6 +30,10 @@ export async function requireUser(from?: string): Promise<SessionUser> {
   return session.user as SessionUser;
 }
 
+// Platform administration now lives in Yggdrasil (the fleet management plane),
+// so platform admins are routed there instead of the deprecated in-app /admin.
+export const YGGDRASIL_URL = process.env.YGGDRASIL_URL || "https://project-yggdrasil.up.railway.app";
+
 /** Require the platform admin. */
 export async function requirePlatformAdmin(): Promise<SessionUser> {
   const user = await requireUser("/admin");
@@ -43,7 +47,7 @@ export async function requirePlatformAdmin(): Promise<SessionUser> {
  */
 export async function requireTenantStaff(): Promise<SessionUser & { tenantId: string }> {
   const user = await requireUser("/portal");
-  if (user.role === "PLATFORM_ADMIN") redirect("/admin");
+  if (user.role === "PLATFORM_ADMIN") redirect(YGGDRASIL_URL);
   if (!user.tenantId) redirect("/login");
   return user as SessionUser & { tenantId: string };
 }
