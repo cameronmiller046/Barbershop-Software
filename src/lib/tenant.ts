@@ -3,7 +3,13 @@ import { prisma } from "@/lib/prisma";
 /** Load an ACTIVE/PENDING tenant by its slug. Returns null if missing. */
 export async function getTenantBySlug(slug: string) {
   try {
-    return await prisma.tenant.findUnique({ where: { slug } });
+    const tenant = await prisma.tenant.findUnique({ where: { slug } });
+    // The demo store's only "barbers" are the test1/test2 portal demo logins,
+    // not real staff — so never surface them on its public storefront. Enforced
+    // here rather than via the editable showBarbers toggle so the demo/test
+    // accounts can't turn it back on. (slug matches DEMO_SLUG in lib/demo.ts.)
+    if (tenant?.slug === "demo-store") tenant.showBarbers = false;
+    return tenant;
   } catch {
     return null;
   }
