@@ -6,12 +6,18 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminOverview() {
   await requirePlatformAdmin();
+  // Demo/showcase stores that must never count toward real business metrics.
+  // Excluded by slug (mirrors DEMO_SLUG / SHOWCASE_SLUG in lib/demo.ts) AND by
+  // the isDemo flag, since the flagship demo isn't always flagged and the "Try
+  // the demo" stores are flagged but slug-varied.
+  const SEED_SLUGS = ["demo-store", "professional-barbershop"];
   const [tenants, activeTenants, users, pendingApps, appointments, recentLogs] = await Promise.all([
     prisma.tenant.count(),
     prisma.tenant.count({ where: { status: "ACTIVE" } }),
     prisma.user.count(),
     prisma.betaApplication.count({ where: { status: "PENDING" } }),
-    prisma.appointment.count({ where: { active: true } }),
+    // Exclude demo/showcase tenants — this metric should reflect real bookings.
+    prisma.appointment.count({ where: { active: true, tenant: { isDemo: false, slug: { notIn: SEED_SLUGS } } } }),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
