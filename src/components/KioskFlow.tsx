@@ -32,6 +32,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
   const [client, setClient] = useState<Client | null>(null);
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [newReferral, setNewReferral] = useState<string>(""); // referral for first-time clients
+  const [prefill, setPrefill] = useState<string>(""); // Identify search text carried into Register
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -43,6 +44,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
     setClient(null);
     setServiceId(null);
     setNewReferral("");
+    setPrefill("");
     setResult(null);
     setError(null);
   }
@@ -86,7 +88,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
       {step === "identify" && (
         <Identify
           onPick={(c) => { setClient({ id: c.id, name: c.name }); setStep("service"); }}
-          onNew={() => setStep("register")}
+          onNew={(q) => { setPrefill(q); setStep("register"); }}
           onBack={reset}
         />
       )}
@@ -95,6 +97,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
         <Register
           referral={newReferral}
           setReferral={setNewReferral}
+          initialQuery={prefill}
           onBack={() => setStep("identify")}
           onDone={(c) => { setClient(c); setStep("service"); }}
         />
@@ -149,7 +152,7 @@ function Identify({
   onPick, onNew, onBack,
 }: {
   onPick: (c: KioskClient) => void;
-  onNew: () => void;
+  onNew: (query: string) => void;
   onBack: () => void;
 }) {
   const [q, setQ] = useState("");
@@ -209,7 +212,7 @@ function Identify({
       </div>
 
       <button
-        onClick={onNew}
+        onClick={() => onNew(q)}
         className="mt-6 w-full rounded-2xl border border-white/15 py-5 text-lg font-medium transition hover:bg-white/5"
       >
         I&apos;m new here — register
@@ -218,18 +221,34 @@ function Identify({
   );
 }
 
+// The Identify search box accepts a phone, an email, or a name. Route whatever
+// the walk-in already typed into the matching Register field so they don't have
+// to retype it.
+function splitInitialQuery(raw: string): { firstName?: string; lastName?: string; phone?: string; email?: string } {
+  const q = raw.trim();
+  if (!q) return {};
+  if (q.includes("@")) return { email: q };
+  const digitCount = (q.match(/\d/g) ?? []).length;
+  const hasLetters = /[a-z]/i.test(q);
+  if (digitCount >= 7 && !hasLetters) return { phone: q };
+  const [firstName, ...rest] = q.split(/\s+/);
+  return { firstName, lastName: rest.join(" ") || undefined };
+}
+
 function Register({
-  referral, setReferral, onBack, onDone,
+  referral, setReferral, initialQuery, onBack, onDone,
 }: {
   referral: string;
   setReferral: (v: string) => void;
+  initialQuery: string;
   onBack: () => void;
   onDone: (c: Client) => void;
 }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const prefill = splitInitialQuery(initialQuery);
+  const [firstName, setFirstName] = useState(prefill.firstName ?? "");
+  const [lastName, setLastName] = useState(prefill.lastName ?? "");
+  const [phone, setPhone] = useState(prefill.phone ?? "");
+  const [email, setEmail] = useState(prefill.email ?? "");
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();

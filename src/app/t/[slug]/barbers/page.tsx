@@ -21,6 +21,9 @@ export default async function BarbersPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const t = await getTenantBySlug(slug);
   if (!t) notFound();
+  // Respect the storefront's "show barbers" toggle — when off, this page is hidden
+  // too (the nav link is already omitted), not just the homepage team section.
+  if (!t.showBarbers) notFound();
   const barbers = await getTenantBarbers(t.id);
   const bookHref = `/t/${t.slug}/book`;
 

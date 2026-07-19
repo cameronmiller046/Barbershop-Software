@@ -70,6 +70,21 @@ body {
   min-height: 100vh;
 }
 
+/* ───────── iOS auto-zoom guard ─────────
+   Mobile Safari zooms into any focused text field whose font-size is < 16px
+   and never zooms back out when the field blurs — so closing an input-bearing
+   menu leaves the page stuck zoomed. Force a 16px minimum on phone/small-tablet
+   widths so focus never triggers the zoom in the first place. Unlayered so it
+   wins over Tailwind's `text-sm` etc. on inputs; desktop keeps its denser sizes.
+   Checkbox/radio/range excluded (no text entry, no zoom). */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* ───────── Themeable dividers & panel edges ─────────
    Section borders/dividers are authored as hard `border-white/N` utilities.
    Retint them to a translucent tint of the themeable accent (--brass) so they

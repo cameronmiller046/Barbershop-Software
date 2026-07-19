@@ -239,6 +239,11 @@ export async function ensureFlagshipStaff(prisma: PrismaClient) {
     where: { email: { in: ["admin123", "owner@professionalbarbershop.com", "barber@professionalbarbershop.com"] } },
   });
 
+  // The flagship's only barber (Brandon Brooks / test2) is a portal demo login,
+  // not a real staff member, so keep it off the public storefront's "Meet your
+  // barbers" section. Booking is unaffected — availability ignores showBarbers.
+  await prisma.tenant.update({ where: { id: tenant.id }, data: { showBarbers: false } });
+
   // No permission overrides on the barber, so the role contrast stays clean.
   const manager = await prisma.user.upsert({
     where: { email: FLAGSHIP_MANAGER_EMAIL },
