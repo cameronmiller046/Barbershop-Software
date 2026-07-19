@@ -58,7 +58,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const updated = await prisma.ticket.findUnique({
       where: { id },
-      include: { reporter: { select: { name: true, email: true } } },
+      include: {
+        reporter: { select: { name: true, email: true } },
+        attachments: { select: { id: true, name: true, mime: true, dataUrl: true } },
+      },
     });
     if (!updated) return NextResponse.json({ error: "Unknown issue" }, { status: 404 });
     return NextResponse.json({ issue: toIssue(updated) });

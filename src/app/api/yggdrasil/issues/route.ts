@@ -20,7 +20,10 @@ export async function GET(req: Request) {
       where: sinceDate ? { updatedAt: { gt: sinceDate } } : undefined,
       orderBy: { updatedAt: "desc" },
       take: 1000,
-      include: { reporter: { select: { name: true, email: true } } },
+      include: {
+        reporter: { select: { name: true, email: true } },
+        attachments: { select: { id: true, name: true, mime: true, dataUrl: true } },
+      },
     });
 
     return NextResponse.json({ issues: tickets.map(toIssue) });

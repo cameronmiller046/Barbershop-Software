@@ -96,7 +96,12 @@ function detailSummary(details: unknown): string {
     .join("\n");
 }
 
-export type TicketWithReporter = Ticket & { reporter: { name: string; email: string } };
+export type IssueAttachment = { id: string; name: string; mime: string; dataUrl: string };
+export type TicketWithReporter = Ticket & {
+  reporter: { name: string; email: string };
+  // Present only when the caller `include`s the relation; base64 image data URLs.
+  attachments?: IssueAttachment[];
+};
 
 /** Serialize a Ticket into the Link v2 contract issue shape. */
 export function toIssue(t: TicketWithReporter) {
@@ -119,6 +124,12 @@ export function toIssue(t: TicketWithReporter) {
       ...(t.severity ? [t.severity.toLowerCase()] : []),
     ],
     reporter: { name: t.reporter.name, email: t.reporter.email },
+    attachments: (t.attachments ?? []).map((a) => ({
+      externalId: a.id,
+      name: a.name,
+      mime: a.mime,
+      dataUrl: a.dataUrl,
+    })),
     url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/portal/feedback/${t.id}`,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
