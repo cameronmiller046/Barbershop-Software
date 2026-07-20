@@ -43,6 +43,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     });
     if (!target) return NextResponse.json({ error: "Unknown user" }, { status: 404 });
 
+    // Shop accounts are Mocazari clients: they can be made Admin (OWNER) or
+    // Barber, but never elevated to Superadmin (PLATFORM_ADMIN) — that's a
+    // Mocazari operator level, managed separately, not granted from the fleet
+    // panel. (Existing platform admins keep their level; this only blocks
+    // promoting a client into one.)
+    if (role === "PLATFORM_ADMIN" && target.role !== "PLATFORM_ADMIN") {
+      return NextResponse.json({ error: "Superadmin can't be granted to a client account from Yggdrasil" }, { status: 400 });
+    }
+
     // The master superadmin can never be demoted or deactivated.
     if (isMasterAdmin(target.email)) {
       if (role !== undefined && role !== target.role) {

@@ -31,7 +31,13 @@ export async function GET(req: Request) {
       product: LINK_PRODUCT,
       capabilities: LINK_CAPABILITIES,
       counts: { openIssues, users },
-      assignableRoles: ["PLATFORM_ADMIN", "OWNER", "BARBER", "RECEPTIONIST", "CUSTOMER"],
+      // Shop accounts are Mocazari CLIENTS — they only ever get the two store
+      // roles (Admin = OWNER, Barber). PLATFORM_ADMIN (Superadmin) is a Mocazari
+      // operator level and is deliberately NOT assignable from the fleet panel,
+      // so a client can never be granted platform/Yggdrasil-level access.
+      assignableRoles: ["OWNER", "BARBER"],
+      // Display labels for the management plane (raw role value → friendly name).
+      roleLabels: { PLATFORM_ADMIN: "Superadmin", OWNER: "Admin", BARBER: "Barber", RECEPTIONIST: "Barber", CUSTOMER: "Customer" },
     });
   } catch {
     return NextResponse.json({ error: "Summary failed" }, { status: 500 });
