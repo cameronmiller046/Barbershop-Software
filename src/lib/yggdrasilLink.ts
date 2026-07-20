@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 
 export const LINK_APP = "the-chair";
 export const LINK_PRODUCT = "The Chair";
-export const LINK_CAPABILITIES = ["issues", "users", "users.password"];
+export const LINK_CAPABILITIES = ["issues", "users", "users.password", "users.create"];
 
 export function sha256Hex(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");

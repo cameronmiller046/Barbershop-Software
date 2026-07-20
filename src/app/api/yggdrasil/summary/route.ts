@@ -20,9 +20,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ paired: await isPaired() }, { status: 401 });
     }
 
-    const [openIssues, users] = await Promise.all([
+    const [openIssues, users, stores] = await Promise.all([
       prisma.ticket.count({ where: { status: { notIn: DONE_NATIVE_STATUSES } } }),
       prisma.user.count(),
+      prisma.tenant.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     ]);
 
     return NextResponse.json({
@@ -32,12 +33,14 @@ export async function GET(req: Request) {
       capabilities: LINK_CAPABILITIES,
       counts: { openIssues, users },
       // Shop accounts are Mocazari CLIENTS — they only ever get the two store
-      // roles (Admin = OWNER, Barber). PLATFORM_ADMIN (Superadmin) is a Mocazari
-      // operator level and is deliberately NOT assignable from the fleet panel,
-      // so a client can never be granted platform/Yggdrasil-level access.
+      // roles (Manager = OWNER, Barber). PLATFORM_ADMIN (Superadmin) is a
+      // Mocazari operator level and is deliberately NOT assignable from the fleet
+      // panel, so a client can never be granted platform/Yggdrasil-level access.
       assignableRoles: ["OWNER", "BARBER"],
       // Display labels for the management plane (raw role value → friendly name).
-      roleLabels: { PLATFORM_ADMIN: "Superadmin", OWNER: "Admin", BARBER: "Barber", RECEPTIONIST: "Barber", CUSTOMER: "Customer" },
+      roleLabels: { PLATFORM_ADMIN: "Superadmin", OWNER: "Manager", BARBER: "Barber", RECEPTIONIST: "Barber", CUSTOMER: "Customer" },
+      // Shop accounts belong to a store — the create form picks one of these.
+      stores,
     });
   } catch {
     return NextResponse.json({ error: "Summary failed" }, { status: 500 });
