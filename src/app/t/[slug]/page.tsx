@@ -144,7 +144,7 @@ export default async function ShopHome({ params }: { params: Promise<{ slug: str
               <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] transition hover:border-brass/40">
                 <div className="aspect-[16/10] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.imageUrl || QMARK} alt={s.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={s.imageUrl || QMARK} alt={s.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" style={{ objectPosition: s.imagePosition }} />
                 </div>
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-baseline justify-between gap-3"><h3 className="font-display text-lg text-cream">{s.name}</h3><span className="font-display text-lg text-brass">{formatMoney(s.priceCents)}</span></div>

@@ -6,7 +6,7 @@ import { formatMoney, formatDuration } from "@/lib/utils";
 import { Icon } from "@/components/home/icons";
 import { QMARK } from "@/lib/placeholder";
 
-export type Svc = { id: string; name: string; description: string | null; durationMin: number; priceCents: number; imageUrl: string | null; barberName: string | null };
+export type Svc = { id: string; name: string; description: string | null; durationMin: number; priceCents: number; imageUrl: string | null; imagePosition: string; barberName: string | null };
 
 const ORDER = ["Haircuts", "Beard", "Women's", "Kids", "Color", "Premium"];
 
@@ -49,7 +49,7 @@ export function ShopServices({ services, bookBase }: { services: Svc[]; bookBase
               className="group flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] transition hover:border-brass/40">
               <div className="relative aspect-[16/10] overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.imageUrl || QMARK} alt={s.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                <img src={s.imageUrl || QMARK} alt={s.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" style={{ objectPosition: s.imagePosition }} />
                 <span className="absolute left-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-cream/80 backdrop-blur">{s.cat}</span>
               </div>
               <div className="flex flex-1 flex-col p-5">

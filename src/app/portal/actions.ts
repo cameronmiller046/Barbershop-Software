@@ -308,6 +308,16 @@ export async function setServiceImage(id: string, formData: FormData) {
   revalidatePath("/portal/services");
 }
 
+/** Set a service photo's focal point ("X% Y%") so it centers on the subject. */
+export async function setServiceImagePosition(id: string, formData: FormData) {
+  const user = await requirePerm("shop.services");
+  if (!user) return;
+  const raw = String(formData.get("position") || "").trim();
+  if (!/^\d{1,3}% \d{1,3}%$/.test(raw)) return;
+  await prisma.service.updateMany({ where: { id, tenantId: user.tenantId }, data: { imagePosition: raw } });
+  revalidatePath("/portal/services");
+}
+
 export async function toggleService(id: string, active: boolean) {
   const user = await requirePerm("shop.services");
   if (!user) return;

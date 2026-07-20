@@ -28,7 +28,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ slug:
         {services.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-cream/50">Services coming soon.</div>
         ) : (
-          <ShopServices services={services.map((s) => ({ id: s.id, name: s.name, description: s.description, durationMin: s.durationMin, priceCents: s.priceCents, imageUrl: s.imageUrl, barberName: s.barber?.name ?? null }))} bookBase={`${base}/book`} />
+          <ShopServices services={services.map((s) => ({ id: s.id, name: s.name, description: s.description, durationMin: s.durationMin, priceCents: s.priceCents, imageUrl: s.imageUrl, imagePosition: s.imagePosition, barberName: s.barber?.name ?? null }))} bookBase={`${base}/book`} />
         )}
       </section>
     </main>

@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney, formatDuration } from "@/lib/utils";
 import { QMARK } from "@/lib/placeholder";
 import { can } from "@/lib/permissions";
-import { toggleService, deleteService, createService, setServiceImage } from "@/app/portal/actions";
+import { toggleService, deleteService, createService, setServiceImage, setServiceImagePosition } from "@/app/portal/actions";
 import { AddServiceForm } from "@/components/AddServiceForm";
 import { ServicePhotoForm } from "@/components/ServicePhotoForm";
+import { ServiceFocusPicker } from "@/components/ServiceFocusPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function ServicesPage() {
               <div key={s.id} className="card flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.imageUrl || QMARK} alt={s.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                  <img src={s.imageUrl || QMARK} alt={s.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" style={{ objectPosition: s.imagePosition }} />
                   <div>
                     <div className="font-medium">{s.name} {!s.active && <span className="chip ml-1">hidden</span>}</div>
                     <div className="text-sm text-cream/50">
@@ -41,6 +42,7 @@ export default async function ServicesPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <ServicePhotoForm action={setServiceImage.bind(null, s.id)} hasImage={!!s.imageUrl} />
+                  {s.imageUrl && <ServiceFocusPicker imageUrl={s.imageUrl} initial={s.imagePosition} action={setServiceImagePosition.bind(null, s.id)} />}
                   <form action={toggleService.bind(null, s.id, !s.active)}>
                     <button className="btn-ghost px-3 py-1.5 text-xs">{s.active ? "Hide" : "Show"}</button>
                   </form>

@@ -243,6 +243,7 @@ model Service {
   durationMin Int     @default(30)
   priceCents  Int     @default(0)
   imageUrl    String?
+  imagePosition String @default("50% 50%") // CSS object-position — focal point for the service photo
   active      Boolean @default(true)
   sortOrder   Int     @default(0)
 
