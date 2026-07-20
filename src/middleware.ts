@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { pathname, origin } = req.nextUrl;
   const needsAuth =
-    pathname.startsWith("/portal") || pathname.startsWith("/admin") || pathname.startsWith("/kiosk");
+    pathname.startsWith("/portal") || pathname.startsWith("/admin") || pathname.startsWith("/kiosk") || pathname.startsWith("/superuser");
 
   if (needsAuth && !req.auth) {
     const url = new URL("/login", origin);
@@ -17,5 +17,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/portal/:path*", "/admin/:path*", "/kiosk/:path*"],
+  matcher: ["/portal/:path*", "/admin/:path*", "/kiosk/:path*", "/superuser/:path*"],
 };

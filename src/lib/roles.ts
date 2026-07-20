@@ -11,6 +11,7 @@ export function isMasterAdmin(email: string | null | undefined) {
 
 export const ROLE_LABEL: Record<Role, string> = {
   PLATFORM_ADMIN: "Superadmin",
+  SUPERUSER: "Superuser", // hidden dev-team debug role
   OWNER: "Manager",
   BARBER: "Barber",
   RECEPTIONIST: "Barber", // legacy → treated as Barber
@@ -26,6 +27,7 @@ export const ROLE_RANK: Record<Role, number> = {
   BARBER: 1,
   OWNER: 2,
   PLATFORM_ADMIN: 3,
+  SUPERUSER: 4, // highest — dev-team debug access above the platform admin
 };
 
 export function roleLabel(role: Role | undefined | null) {

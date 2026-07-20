@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSelectedStoreId } from "@/lib/superuser";
 
 export type SessionUser = {
   id: string;
@@ -48,6 +49,16 @@ export async function requirePlatformAdmin(): Promise<SessionUser> {
 export async function requireTenantStaff(): Promise<SessionUser & { tenantId: string }> {
   const user = await requireUser("/portal");
   if (user.role === "PLATFORM_ADMIN") redirect(YGGDRASIL_URL);
+  // SUPERUSER (hidden dev-team debug role) isn't bound to a store — it views any
+  // store it picks. Resolve that selection into an effective tenantId so the rest
+  // of the portal works unchanged; send them to the store picker if none is set.
+  if (user.role === "SUPERUSER") {
+    const storeId = await getSelectedStoreId();
+    if (!storeId) redirect("/superuser");
+    const store = await prisma.tenant.findUnique({ where: { id: storeId }, select: { id: true } });
+    if (!store) redirect("/superuser");
+    return { ...user, tenantId: storeId } as SessionUser & { tenantId: string };
+  }
   if (!user.tenantId) redirect("/login");
   return user as SessionUser & { tenantId: string };
 }
@@ -62,8 +73,12 @@ export async function requireStaffWithPerms(): Promise<StaffWithPerms> {
     where: { id: session.id, active: true },
     select: { id: true, name: true, email: true, role: true, tenantId: true, permissionOverrides: true, kioskOnly: true },
   });
-  if (!full || !full.tenantId) redirect("/login");
-  return { ...full, tenantId: full.tenantId };
+  if (!full) redirect("/login");
+  // SUPERUSER has no tenantId of its own — fall back to the store it selected
+  // (carried on the session by requireTenantStaff above).
+  const tenantId = full.tenantId ?? session.tenantId;
+  if (!tenantId) redirect("/login");
+  return { ...full, tenantId };
 }
 
 /**
@@ -93,6 +108,7 @@ const RANK: Record<Role, number> = {
   BARBER: 1,
   OWNER: 2,
   PLATFORM_ADMIN: 3,
+  SUPERUSER: 4, // hidden dev-team debug role, above platform admin
 };
 
 export function hasAtLeast(role: Role | undefined, min: Role) {

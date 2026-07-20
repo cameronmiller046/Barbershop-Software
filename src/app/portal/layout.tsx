@@ -50,6 +50,12 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div className="portal min-h-screen">
+      {user.role === "SUPERUSER" && (
+        <div className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 border-b border-brass/30 bg-brass/15 px-4 py-1.5 text-center text-xs text-brass">
+          <span>🛠 Superuser mode — viewing <b className="text-cream">{tenant?.name ?? "store"}</b> for debugging</span>
+          <a href="/superuser" className="font-semibold underline hover:no-underline">Switch store</a>
+        </div>
+      )}
       <PortalShell
         user={{ name: user.name, roleLabel: roleLabel(user.role), email: user.email }}
         tenant={{ name: tenant?.name ?? "Portal" }}

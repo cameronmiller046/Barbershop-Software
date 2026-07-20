@@ -30,6 +30,8 @@ const ALL_FALSE: Record<PermKey, boolean> = {
 
 const DEFAULTS: Record<Role, Record<PermKey, boolean>> = {
   PLATFORM_ADMIN: { ...ALL_TRUE },
+  // Hidden dev-team debug role — full access inside whichever store it's viewing.
+  SUPERUSER: { ...ALL_TRUE },
   OWNER: { ...ALL_TRUE },
   // Only managers/admins manage the shop (services, settings, team). Barbers
   // run their own chair: their book + their clients.

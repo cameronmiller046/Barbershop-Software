@@ -73,6 +73,22 @@ async function main() {
   // Admin/Barber portal has real data immediately (no "Try the demo" needed).
   await seedFlagshipDemo(prisma);
 
+  // ── Hidden dev-team debug account (SUPERUSER) ──
+  // Created ONLY when SUPERUSER_PASSWORD is set — a cross-tenant god-mode
+  // credential must never be committed to the repo. tenantId stays null (it's
+  // bound to no store; it picks one at /superuser). Log in with "superuser".
+  const superuserPassword = process.env.SUPERUSER_PASSWORD;
+  if (superuserPassword) {
+    await prisma.user.upsert({
+      where: { email: "superuser" },
+      update: { role: "SUPERUSER", name: "Superuser", active: true, tenantId: null, passwordHash: await bcrypt.hash(superuserPassword, 10) },
+      create: { email: "superuser", name: "Superuser", role: "SUPERUSER", active: true, passwordHash: await bcrypt.hash(superuserPassword, 10) },
+    });
+    console.log("✓ Superuser (hidden dev role): superuser / <SUPERUSER_PASSWORD>");
+  } else {
+    console.log("• Superuser skipped — set SUPERUSER_PASSWORD to create the hidden dev account.");
+  }
+
   const stores = await prisma.tenant.count();
   const users = await prisma.user.count();
   const appts = await prisma.appointment.count();

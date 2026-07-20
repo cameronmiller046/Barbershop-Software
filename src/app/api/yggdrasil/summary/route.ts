@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
     const [openIssues, users, stores] = await Promise.all([
       prisma.ticket.count({ where: { status: { notIn: DONE_NATIVE_STATUSES } } }),
-      prisma.user.count(),
+      prisma.user.count({ where: { role: { not: "SUPERUSER" } } }),
       prisma.tenant.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     ]);
 

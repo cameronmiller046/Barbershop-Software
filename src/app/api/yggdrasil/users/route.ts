@@ -21,9 +21,13 @@ export async function GET(req: Request) {
     const limit = Math.min(Math.max(parseInt(params.get("limit") || "100", 10) || 100, 1), 500);
     const offset = Math.max(parseInt(params.get("offset") || "0", 10) || 0, 0);
 
-    const where = query
-      ? { OR: [{ email: { contains: query, mode: "insensitive" as const } }, { name: { contains: query, mode: "insensitive" as const } }] }
-      : undefined;
+    // The hidden SUPERUSER dev-debug accounts are never exposed over the bridge.
+    const where = {
+      role: { not: "SUPERUSER" as const },
+      ...(query
+        ? { OR: [{ email: { contains: query, mode: "insensitive" as const } }, { name: { contains: query, mode: "insensitive" as const } }] }
+        : {}),
+    };
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({

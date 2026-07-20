@@ -15,6 +15,7 @@ enum Role {
   BARBER // staff who takes appointments
   RECEPTIONIST // front desk
   CUSTOMER // end client (self-serve)
+  SUPERUSER // hidden dev-team debug role; can open any store's portal. tenantId is null; never a real barber and never public.
 }
 
 enum TenantStatus {

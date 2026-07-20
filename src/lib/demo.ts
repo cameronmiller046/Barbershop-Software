@@ -119,9 +119,10 @@ export async function clearDemoData(prisma: PrismaClient) {
     await prisma.workingHour.deleteMany({ where: { tenantId: main.id } });
   }
 
-  // 3) Remove non-superadmin users, EXCEPT the permanent flagship demo logins.
+  // 3) Remove non-superadmin users, EXCEPT the permanent flagship demo logins
+  //    and any hidden SUPERUSER dev accounts (never wiped by a demo reset).
   await prisma.user.deleteMany({
-    where: { role: { not: "PLATFORM_ADMIN" }, email: { notIn: [FLAGSHIP_MANAGER_EMAIL, FLAGSHIP_BARBER_EMAIL] } },
+    where: { role: { notIn: ["PLATFORM_ADMIN", "SUPERUSER"] }, email: { notIn: [FLAGSHIP_MANAGER_EMAIL, FLAGSHIP_BARBER_EMAIL] } },
   });
 
   // 4) Clear platform demo artifacts.
