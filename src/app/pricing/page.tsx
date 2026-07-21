@@ -29,7 +29,7 @@ type Cell = boolean | string;
 type Feature = { t: string; soon?: boolean };
 type Plan = {
   key: string; name: string; icon: IconName; priceNum?: number; price?: string; per?: string;
-  desc: string; includes?: string; extra?: string; features: Feature[];
+  desc: string; includes?: string; extra?: string; plus?: string; features: Feature[];
   cta: { label: string; href: string }; featured?: boolean;
 };
 
@@ -46,19 +46,22 @@ const PLANS: Plan[] = [
     key: "team", name: "Team", icon: "crown", priceNum: 49, per: "/month",
     desc: "Built for growing teams.",
     includes: "Includes 3 Barbers", extra: "+$10/month per additional barber",
+    plus: "Everything in Solo, plus:",
     cta: { label: "Start Trial", href: "/beta" },
-    features: [{ t: "Team scheduling" }, { t: "Advanced reports" }, { t: "Custom branding" }, { t: "Loyalty program" }, { t: "SMS reminders", soon: true }, { t: "Memberships", soon: true }, { t: "POS integrations", soon: true }],
+    features: [{ t: "Team scheduling" }, { t: "Advanced reports" }, { t: "Custom branding" }, { t: "Loyalty program" }, { t: "POS integrations", soon: true }],
   },
   {
     key: "barbershop", name: "Barbershop", icon: "store", priceNum: 129, per: "/month", featured: true,
     desc: "Everything you need to run a modern barbershop.",
     includes: "Includes 8 Barbers", extra: "+$8/month per additional barber",
+    plus: "Everything in Team, plus:",
     cta: { label: "Start 14-Day Trial", href: "/beta" },
-    features: [{ t: "Advanced scheduling" }, { t: "Staff permissions" }, { t: "Analytics dashboard" }, { t: "Inventory management", soon: true }, { t: "Payroll exports", soon: true }, { t: "Commission tracking", soon: true }, { t: "Multi-location (up to 3)", soon: true }, { t: "Business intelligence", soon: true }],
+    features: [{ t: "Advanced scheduling" }, { t: "Staff permissions" }, { t: "Analytics dashboard" }, { t: "SMS reminders" }, { t: "Inventory management", soon: true }, { t: "Payroll exports", soon: true }, { t: "Commission tracking", soon: true }, { t: "Memberships", soon: true }, { t: "Multi-location (up to 3)", soon: true }, { t: "Business intelligence", soon: true }],
   },
   {
     key: "ent", name: "Enterprise", icon: "building", price: "Custom",
     desc: "For franchises and multi-location businesses.",
+    plus: "Everything in Barbershop, plus:",
     cta: { label: "Contact Sales", href: "/contact" },
     features: [{ t: "Dedicated onboarding" }, { t: "SLA support" }, { t: "Unlimited locations", soon: true }, { t: "API access", soon: true }, { t: "Single Sign-On (SSO)", soon: true }, { t: "White labeling", soon: true }, { t: "Franchise dashboard", soon: true }, { t: "Custom integrations", soon: true }],
   },
@@ -72,7 +75,8 @@ const COMPARE: { icon: IconName; label: string; cells: [Cell, Cell, Cell, Cell] 
   { icon: "staff", label: "Barber Accounts", cells: ["1", "3 incl.", "8 incl.", "Unlimited"] },
   { icon: "analytics", label: "Analytics & Reports", cells: ["Basic", "Advanced", "Dashboard", "Advanced"] },
   { icon: "loyalty", label: "Loyalty program", cells: [false, true, true, true] },
-  { icon: "customers", label: "Memberships", cells: [false, SOON, SOON, SOON] },
+  { icon: "messages", label: "SMS & email reminders", cells: [false, false, true, true] },
+  { icon: "customers", label: "Memberships", cells: [false, false, SOON, SOON] },
   { icon: "inventory", label: "Inventory Management", cells: [false, false, SOON, SOON] },
   { icon: "building", label: "Multi-Location", cells: [false, false, SOON, SOON] },
   { icon: "code", label: "API Access & SSO", cells: [false, false, false, SOON] },
@@ -321,6 +325,7 @@ function PlanCard({ p }: { p: Plan }) {
 
       <div className="p-hairline my-5" />
 
+      {p.plus && <div className="mb-3 text-sm font-semibold text-brass">{p.plus}</div>}
       <ul className="flex-1 space-y-2.5">
         {p.features.map((f) => (
           <li key={f.t} className={`flex items-start gap-2.5 text-sm ${f.soon ? "text-cream/45" : "text-cream/80"}`}>
