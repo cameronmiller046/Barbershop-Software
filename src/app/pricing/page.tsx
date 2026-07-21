@@ -26,51 +26,55 @@ const EMBERS = [
 ];
 
 type Cell = boolean | string;
+type Feature = { t: string; soon?: boolean };
 type Plan = {
   key: string; name: string; icon: IconName; priceNum?: number; price?: string; per?: string;
-  desc: string; includes?: string; extra?: string; features: string[];
+  desc: string; includes?: string; extra?: string; features: Feature[];
   cta: { label: string; href: string }; featured?: boolean;
 };
 
+// Real features are listed first; anything still on the roadmap is tagged `soon`
+// so the page stays honest (see the "Soon" note under the cards).
 const PLANS: Plan[] = [
   {
     key: "solo", name: "Solo", icon: "staff", price: "FREE",
     desc: "Perfect for independent barbers.",
     cta: { label: "Start Free", href: "/beta" },
-    features: ["1 barber", "Unlimited appointments", "Online booking", "Client CRM", "Booking calendar", "Mobile app"],
+    features: [{ t: "1 barber" }, { t: "Unlimited appointments" }, { t: "Online booking" }, { t: "Client CRM" }, { t: "Booking calendar" }, { t: "Works on any device" }],
   },
   {
     key: "team", name: "Team", icon: "crown", priceNum: 49, per: "/month",
     desc: "Built for growing teams.",
     includes: "Includes 3 Barbers", extra: "+$10/month per additional barber",
     cta: { label: "Start Trial", href: "/beta" },
-    features: ["Team scheduling", "SMS reminders", "Loyalty program", "Memberships", "POS integrations", "Advanced reports", "Custom branding"],
+    features: [{ t: "Team scheduling" }, { t: "Advanced reports" }, { t: "Custom branding" }, { t: "SMS reminders", soon: true }, { t: "Loyalty program", soon: true }, { t: "Memberships", soon: true }, { t: "POS integrations", soon: true }],
   },
   {
     key: "barbershop", name: "Barbershop", icon: "store", priceNum: 129, per: "/month", featured: true,
     desc: "Everything you need to run a modern barbershop.",
     includes: "Includes 8 Barbers", extra: "+$8/month per additional barber",
     cta: { label: "Start 14-Day Trial", href: "/beta" },
-    features: ["Inventory management", "Payroll exports", "Commission tracking", "Advanced scheduling", "Staff permissions", "Analytics dashboard", "Multi-location (up to 3)", "Business intelligence"],
+    features: [{ t: "Advanced scheduling" }, { t: "Staff permissions" }, { t: "Analytics dashboard" }, { t: "Inventory management", soon: true }, { t: "Payroll exports", soon: true }, { t: "Commission tracking", soon: true }, { t: "Multi-location (up to 3)", soon: true }, { t: "Business intelligence", soon: true }],
   },
   {
     key: "ent", name: "Enterprise", icon: "building", price: "Custom",
     desc: "For franchises and multi-location businesses.",
     cta: { label: "Contact Sales", href: "/contact" },
-    features: ["Unlimited locations", "API access", "Single Sign-On (SSO)", "White labeling", "Franchise dashboard", "Dedicated onboarding", "Custom integrations", "SLA support"],
+    features: [{ t: "Dedicated onboarding" }, { t: "SLA support" }, { t: "Unlimited locations", soon: true }, { t: "API access", soon: true }, { t: "Single Sign-On (SSO)", soon: true }, { t: "White labeling", soon: true }, { t: "Franchise dashboard", soon: true }, { t: "Custom integrations", soon: true }],
   },
 ];
 
+const SOON = "soon"; // rendered as a "Soon" pill by CellView
 const COMPARE: { icon: IconName; label: string; cells: [Cell, Cell, Cell, Cell] }[] = [
   { icon: "booking", label: "Online Booking", cells: [true, true, true, true] },
   { icon: "checkin", label: "Check-In / Check-Out", cells: [true, true, true, true] },
   { icon: "customers", label: "Client CRM", cells: [true, true, true, true] },
   { icon: "staff", label: "Barber Accounts", cells: ["1", "3 incl.", "8 incl.", "Unlimited"] },
-  { icon: "loyalty", label: "Loyalty & Memberships", cells: [false, true, true, true] },
-  { icon: "inventory", label: "Inventory Management", cells: [false, false, true, true] },
-  { icon: "analytics", label: "Analytics & Reports", cells: ["—", "Advanced", "Dashboard + BI", "Enterprise"] },
-  { icon: "building", label: "Multi-Location", cells: [false, false, "Up to 3", "Unlimited"] },
-  { icon: "code", label: "API Access & SSO", cells: [false, false, false, true] },
+  { icon: "analytics", label: "Analytics & Reports", cells: ["Basic", "Advanced", "Dashboard", "Advanced"] },
+  { icon: "loyalty", label: "Loyalty & Memberships", cells: [false, SOON, SOON, SOON] },
+  { icon: "inventory", label: "Inventory Management", cells: [false, false, SOON, SOON] },
+  { icon: "building", label: "Multi-Location", cells: [false, false, SOON, SOON] },
+  { icon: "code", label: "API Access & SSO", cells: [false, false, false, SOON] },
   { icon: "headset", label: "Dedicated Support", cells: [false, false, true, "SLA"] },
 ];
 
@@ -156,7 +160,11 @@ export default function PricingPage() {
             ))}
           </Stagger>
           <Reveal className="mt-8 text-center text-xs text-cream/40">
-            All prices per shop, per month. No per-booking fees. Cancel anytime.
+            <p>
+              <span className="mr-1 rounded-full border border-brass/25 bg-brass/[0.06] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass/70">Soon</span>
+              marks features on our roadmap — everything else is live today.
+            </p>
+            <p className="mt-2">All prices per shop, per month. No per-booking fees. Cancel anytime.</p>
           </Reveal>
         </section>
 
@@ -314,9 +322,10 @@ function PlanCard({ p }: { p: Plan }) {
 
       <ul className="flex-1 space-y-2.5">
         {p.features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5 text-sm text-cream/80">
-            <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-brass/15 text-brass"><Icon.check className="h-3 w-3" /></span>
-            {f}
+          <li key={f.t} className={`flex items-start gap-2.5 text-sm ${f.soon ? "text-cream/45" : "text-cream/80"}`}>
+            <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full ${f.soon ? "bg-white/5 text-cream/40" : "bg-brass/15 text-brass"}`}><Icon.check className="h-3 w-3" /></span>
+            <span className="flex-1">{f.t}</span>
+            {f.soon && <span className="mt-px shrink-0 rounded-full border border-brass/25 bg-brass/[0.06] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brass/70">Soon</span>}
           </li>
         ))}
       </ul>
@@ -334,5 +343,6 @@ function PlanCard({ p }: { p: Plan }) {
 function CellView({ v }: { v: Cell }) {
   if (v === true) return <Icon.check className="mx-auto h-5 w-5 text-brass" />;
   if (v === false) return <span className="text-cream/25">—</span>;
+  if (v === "soon") return <span className="rounded-full border border-brass/25 bg-brass/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass/70">Soon</span>;
   return <span className="text-sm text-cream/70">{v}</span>;
 }
