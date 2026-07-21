@@ -27,7 +27,7 @@ export type ClientDetail = {
 };
 
 /** Compute a client's full detail from their (start-desc-ordered) appointments. */
-export function computeClientDetail(c: ClientLike, now = Date.now(), loyaltyConfig?: LoyaltyConfig): ClientDetail {
+export function computeClientDetail(c: ClientLike, now = Date.now(), loyalty?: { config: LoyaltyConfig; points: number }): ClientDetail {
   const active = c.appointments.filter((a) => a.active);
   const completed = active.filter((a) => a.status === "COMPLETED");
   const visits = completed.length;
@@ -46,13 +46,13 @@ export function computeClientDetail(c: ClientLike, now = Date.now(), loyaltyConf
     .filter((a) => a.status === "CONFIRMED" && a.startTime.getTime() >= now)
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())[0];
 
-  let loyalty: LoyaltyDetail | null = null;
-  if (loyaltyConfig?.enabled) {
-    const points = c.loyaltyPoints ?? 0;
-    const { rewardsAvailable, toNext } = loyaltyProgress(points, loyaltyConfig.threshold);
-    loyalty = {
+  let loyaltyDetail: LoyaltyDetail | null = null;
+  if (loyalty?.config.enabled) {
+    const points = Math.max(0, loyalty.points);
+    const { rewardsAvailable, toNext } = loyaltyProgress(points, loyalty.config.threshold);
+    loyaltyDetail = {
       points, lifetime: c.loyaltyLifetimePoints ?? 0, redeemed: c.loyaltyRewardsRedeemed ?? 0,
-      threshold: loyaltyConfig.threshold, rewardLabel: loyaltyConfig.rewardLabel, rewardsAvailable, toNext,
+      threshold: loyalty.config.threshold, rewardLabel: loyalty.config.rewardLabel, rewardsAvailable, toNext,
     };
   }
 
@@ -63,7 +63,7 @@ export function computeClientDetail(c: ClientLike, now = Date.now(), loyaltyConf
     last: lastCompleted ? toAppt(lastCompleted) : null,
     upcoming: upcoming ? toAppt(upcoming) : null,
     notes: c.notes, notesUpdatedISO: c.updatedAt.toISOString(),
-    loyalty,
+    loyalty: loyaltyDetail,
   };
 }
 

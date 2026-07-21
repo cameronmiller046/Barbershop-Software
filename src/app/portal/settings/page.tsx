@@ -86,7 +86,10 @@ export default async function SettingsPage() {
       <form action={updateLoyalty} className="card mt-6 space-y-4">
         <div>
           <h2 className="font-display text-xl">Loyalty program</h2>
-          <p className="mt-1 text-sm text-cream/50">Reward regulars automatically. Points accrue on every completed visit; clients earn a reward once they hit your threshold.</p>
+          <p className="mt-1 text-sm text-cream/50">Reward regulars automatically. Points accrue on every completed visit; a client earns a reward once they reach the threshold.</p>
+          <p className="mt-2 rounded-lg border border-brass/20 bg-brass/[0.05] px-3 py-2 text-xs text-cream/60">
+            Guardrails: a reward costs up to <b className="text-cream/80">100 points</b> and is worth up to <b className="text-cream/80">$10 off</b>, balances are capped at <b className="text-cream/80">200 points</b>, and points <b className="text-cream/80">expire 90 days</b> after they&apos;re earned.
+          </p>
         </div>
 
         <label className="flex items-center gap-3">
@@ -98,6 +101,7 @@ export default async function SettingsPage() {
           <div>
             <label className="label">Points per visit</label>
             <input name="pointsPerVisit" type="number" min="0" max="1000" step="1" inputMode="numeric" defaultValue={tenant.loyaltyPointsPerVisit} className="input" />
+            <p className="mt-1 text-xs text-cream/45">10/visit + a 100-point reward ≈ every 10th visit.</p>
           </div>
           <div>
             <label className="label">Bonus points per $1 spent</label>
@@ -107,20 +111,19 @@ export default async function SettingsPage() {
         </div>
 
         <div>
-          <label className="label">Points needed for a reward</label>
-          <input name="threshold" type="number" min="1" max="10000" step="1" inputMode="numeric" defaultValue={tenant.loyaltyThreshold} className="input" />
-          <p className="mt-1 text-xs text-cream/45">e.g. 10 points = every 10th visit earns a reward.</p>
+          <label className="label">Points needed for a reward (max 100)</label>
+          <input name="threshold" type="number" min="1" max="100" step="1" inputMode="numeric" defaultValue={tenant.loyaltyThreshold} className="input" />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Reward</label>
-            <input name="rewardLabel" defaultValue={tenant.loyaltyRewardLabel} placeholder="Free haircut" className="input" />
+            <input name="rewardLabel" defaultValue={tenant.loyaltyRewardLabel} placeholder="$10 off" className="input" />
           </div>
           <div>
-            <label className="label">Reward value ($, optional)</label>
-            <input name="rewardValue" type="number" min="0" step="1" inputMode="numeric" defaultValue={tenant.loyaltyRewardValueCents ? Math.round(tenant.loyaltyRewardValueCents / 100) : ""} placeholder="e.g. 35" className="input" />
-            <p className="mt-1 text-xs text-cream/45">For your reports. Leave blank for a comped service.</p>
+            <label className="label">Reward value ($, max 10)</label>
+            <input name="rewardValue" type="number" min="0" max="10" step="1" inputMode="numeric" defaultValue={tenant.loyaltyRewardValueCents ? Math.round(tenant.loyaltyRewardValueCents / 100) : ""} placeholder="e.g. 10" className="input" />
+            <p className="mt-1 text-xs text-cream/45">Capped at $10 off per reward.</p>
           </div>
         </div>
 

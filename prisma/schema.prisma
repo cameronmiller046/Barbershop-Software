@@ -159,13 +159,15 @@ model Tenant {
   showReviews     Boolean @default(true)
   showFaq         Boolean @default(true)
 
-  // ── Loyalty program (owner-configurable) ──
+  // ── Loyalty program (owner-configurable, with fixed guardrails) ──
+  // Guardrails (enforced in lib/loyalty.ts): reward ≤ $10, threshold ≤ 100,
+  // balance capped at 200, points expire 90 days after they are earned.
   loyaltyEnabled          Boolean @default(false)
-  loyaltyPointsPerVisit   Int     @default(1) // points earned per completed visit
+  loyaltyPointsPerVisit   Int     @default(10) // points earned per completed visit
   loyaltyPointsPerDollar  Int     @default(0) // extra points per whole $ spent (0 = visit-only)
-  loyaltyThreshold        Int     @default(10) // points needed to earn one reward
-  loyaltyRewardLabel      String  @default("Free service") // what a reward gets them
-  loyaltyRewardValueCents Int     @default(0) // reward value for reporting (0 = comp/free)
+  loyaltyThreshold        Int     @default(100) // points needed to earn one reward (max 100)
+  loyaltyRewardLabel      String  @default("$10 off") // what a reward gets them
+  loyaltyRewardValueCents Int     @default(1000) // reward $ value (max $10)
 
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
@@ -280,10 +282,12 @@ model Client {
   address   String?
   notes     String?
 
-  // Loyalty balances (accrued from completed visits; see lib/loyalty.ts)
-  loyaltyPoints          Int @default(0) // current redeemable balance
-  loyaltyLifetimePoints  Int @default(0) // total ever earned (display)
+  // Loyalty (see lib/loyalty.ts). The live balance is derived from loyaltyEntries
+  // (so expiry is automatic); loyaltyPoints is deprecated/unused.
+  loyaltyPoints          Int @default(0) // deprecated — balance now comes from the ledger
+  loyaltyLifetimePoints  Int @default(0) // total ever earned (display only)
   loyaltyRewardsRedeemed Int @default(0) // rewards redeemed count
+  loyaltyEntries         LoyaltyEntry[]
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId String
@@ -295,6 +299,26 @@ model Client {
 
   @@index([tenantId, email])
   @@index([tenantId, phone])
+}
+
+// A single loyalty earning. The live balance is the sum of (points - redeemed)
+// across a client's entries whose expiresAt is still in the future, so points
+// age out automatically 90 days after they were earned. Redemptions consume the
+// oldest live entries first (FIFO).
+model LoyaltyEntry {
+  id            String   @id @default(cuid())
+  tenantId      String
+  clientId      String
+  points        Int // points earned in this entry
+  redeemed      Int      @default(0) // how many of these points have been consumed
+  earnedAt      DateTime @default(now())
+  expiresAt     DateTime // earnedAt + 90 days
+  appointmentId String?  @unique // source visit (idempotent accrual)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, expiresAt])
+  @@index([tenantId, expiresAt])
 }
 
 model Appointment {

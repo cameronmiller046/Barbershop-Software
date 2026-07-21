@@ -13,7 +13,7 @@ import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } fr
 import { planLimits } from "@/lib/plans";
 import { isDemoAccount } from "@/lib/demoMode";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
-import { accrueLoyalty, loyaltyConfigOf, LOYALTY_SELECT } from "@/lib/loyalty";
+import { accrueLoyalty, loyaltyConfigOf, liveLoyaltyBalance, consumeLoyaltyReward, LOYALTY_SELECT, LOYALTY_MAX_REWARD_CENTS, LOYALTY_THRESHOLD_MAX } from "@/lib/loyalty";
 import { isPaymentMethod } from "@/lib/payments";
 import type { AppointmentStatus } from "@prisma/client";
 
@@ -250,7 +250,9 @@ export async function clientDetail(clientId: string) {
     prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, include: CLIENT_DETAIL_INCLUDE }),
     prisma.tenant.findUnique({ where: { id: user.tenantId }, select: LOYALTY_SELECT }),
   ]);
-  return c ? computeClientDetail(c, Date.now(), tenant ? loyaltyConfigOf(tenant) : undefined) : null;
+  if (!c) return null;
+  const loyalty = tenant?.loyaltyEnabled ? { config: loyaltyConfigOf(tenant), points: await liveLoyaltyBalance(c.id) } : undefined;
+  return computeClientDetail(c, Date.now(), loyalty);
 }
 
 /** Owner configures the loyalty program (requires shop.settings). */
@@ -258,11 +260,12 @@ export async function updateLoyalty(formData: FormData) {
   const user = await requirePerm("shop.settings");
   if (!user) return;
   const enabled = formData.get("loyaltyEnabled") === "on";
-  const pointsPerVisit = Math.max(0, Math.min(1000, Math.round(Number(formData.get("pointsPerVisit") || 1))));
+  const pointsPerVisit = Math.max(0, Math.min(1000, Math.round(Number(formData.get("pointsPerVisit") || 10))));
   const pointsPerDollar = Math.max(0, Math.min(100, Math.round(Number(formData.get("pointsPerDollar") || 0))));
-  const threshold = Math.max(1, Math.min(10000, Math.round(Number(formData.get("threshold") || 10))));
-  const rewardLabel = (String(formData.get("rewardLabel") || "").trim() || "Free service").slice(0, 60);
-  const rewardValueCents = Math.max(0, Math.round(Number(formData.get("rewardValue") || 0) * 100));
+  // Guardrails: a reward costs at most 100 points and is worth at most $10 off.
+  const threshold = Math.max(1, Math.min(LOYALTY_THRESHOLD_MAX, Math.round(Number(formData.get("threshold") || 100))));
+  const rewardLabel = (String(formData.get("rewardLabel") || "").trim() || "$10 off").slice(0, 60);
+  const rewardValueCents = Math.max(0, Math.min(LOYALTY_MAX_REWARD_CENTS, Math.round(Number(formData.get("rewardValue") || 0) * 100)));
   await prisma.tenant.update({
     where: { id: user.tenantId },
     data: { loyaltyEnabled: enabled, loyaltyPointsPerVisit: pointsPerVisit, loyaltyPointsPerDollar: pointsPerDollar, loyaltyThreshold: threshold, loyaltyRewardLabel: rewardLabel, loyaltyRewardValueCents: rewardValueCents },
@@ -272,16 +275,17 @@ export async function updateLoyalty(formData: FormData) {
   revalidatePath("/portal/clients");
 }
 
-/** Redeem one loyalty reward for a client — deducts the threshold in points. */
+/** Redeem one loyalty reward for a client — consumes the threshold in points (FIFO, oldest first). */
 export async function redeemLoyaltyReward(clientId: string) {
   const user = await requirePerm("shop.clients");
   if (!user) return;
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { loyaltyEnabled: true, loyaltyThreshold: true } });
   if (!tenant?.loyaltyEnabled) return;
-  const threshold = Math.max(1, tenant.loyaltyThreshold);
-  const client = await prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, select: { id: true, loyaltyPoints: true } });
-  if (!client || client.loyaltyPoints < threshold) return;
-  await prisma.client.update({ where: { id: client.id }, data: { loyaltyPoints: { decrement: threshold }, loyaltyRewardsRedeemed: { increment: 1 } } });
+  const threshold = Math.max(1, Math.min(LOYALTY_THRESHOLD_MAX, tenant.loyaltyThreshold));
+  const client = await prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, select: { id: true } });
+  if (!client) return;
+  const ok = await consumeLoyaltyReward(client.id, threshold);
+  if (!ok) return;
   await audit({ action: "loyalty.redeemed", tenantId: user.tenantId, userId: user.id, target: clientId, meta: { threshold } });
   revalidatePath("/portal/clients");
 }
