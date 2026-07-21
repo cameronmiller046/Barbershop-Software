@@ -87,10 +87,13 @@ export async function getUpcomingDays(
   stepMin = 15,
   timeZone = "America/New_York",
 ) {
+  // Bookable slots are spaced at least 30 min apart so a barber can hold at most
+  // one appointment per 30-minute block (walk-in check-in still uses fine steps).
+  const step = Math.max(30, stepMin);
   const result: { date: string; slots: Slot[] }[] = [];
   for (let i = 0; i < days; i++) {
     const d = addDays(new Date(), i);
-    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin, timeZone);
+    const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, step, timeZone);
     if (slots.length) {
       // Label with the shop-local midnight so the client renders the right day.
       const { year, month0, day } = zonedYmd(d, timeZone);
@@ -114,12 +117,13 @@ export async function getUpcomingDaysAnyBarber(
   stepMin = 15,
   timeZone = "America/New_York",
 ) {
+  const step = Math.max(30, stepMin); // ≥30-min spacing → 1 appointment per 30-min block
   const result: { date: string; slots: Slot[] }[] = [];
   for (let i = 0; i < days; i++) {
     const d = addDays(new Date(), i);
     const byStart = new Map<string, Slot>();
     for (const barberId of barberIds) {
-      const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, stepMin, timeZone);
+      const slots = await getDaySlots(tenantId, barberId, serviceDurationMin, d, step, timeZone);
       for (const s of slots) if (!byStart.has(s.start)) byStart.set(s.start, s);
     }
     if (byStart.size) {

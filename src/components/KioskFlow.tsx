@@ -20,7 +20,7 @@ const brand = { background: "var(--brand)", color: "var(--brand-fg)" };
 
 function waitLabel(etaMin: number | null): string {
   if (etaMin === null) return "Not available today";
-  if (etaMin <= 3) return "Free now";
+  if (etaMin <= 3) return "No wait";
   if (etaMin < 60) return `~${etaMin} min wait`;
   const h = Math.floor(etaMin / 60);
   const m = etaMin % 60;

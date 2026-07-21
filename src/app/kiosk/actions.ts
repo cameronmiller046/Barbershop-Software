@@ -160,13 +160,16 @@ export async function kioskBarberOptions(serviceId: string): Promise<BarberOptio
   const now = Date.now();
   return Promise.all(
     barbers.map(async (b) => {
+      // Count ONLY this barber's own unfinished jobs — a booking for another
+      // barber can never change this barber's wait.
+      const queued = await prisma.appointment.count({
+        where: { tenantId: user.tenantId, barberId: b.id, active: true, status: "CONFIRMED", endTime: { gt: new Date(now) } },
+      });
       const start = await nextFreeStart(user.tenantId, b.id, service.durationMin, 5, tz);
-      return {
-        id: b.id,
-        name: b.name,
-        avatarUrl: b.avatarUrl,
-        etaMin: start ? Math.max(0, Math.round((start.getTime() - now) / 60000)) : null,
-      };
+      // No appointments/walk-ins in their queue → no wait (as long as they work
+      // today). Otherwise it's the time until their soonest free slot.
+      const etaMin = start === null ? null : queued === 0 ? 0 : Math.max(0, Math.round((start.getTime() - now) / 60000));
+      return { id: b.id, name: b.name, avatarUrl: b.avatarUrl, etaMin };
     }),
   );
 }
