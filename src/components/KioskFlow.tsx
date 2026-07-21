@@ -167,6 +167,13 @@ function LoyaltyDisclosure({ shopName, l }: { shopName: string; l: LoyaltyInfo }
   );
 }
 
+// Search only fires on a real phone fragment (6+ digits) or an email — never a
+// bare name — so the result list stays short and the kiosk stays fast.
+function canSearch(s: string): boolean {
+  const q = s.trim();
+  return q.replace(/\D/g, "").length >= 6 || (q.includes("@") && q.length >= 5);
+}
+
 function Identify({
   onPick, onNew, onBack,
 }: {
@@ -181,9 +188,7 @@ function Identify({
 
   useEffect(() => {
     const query = q.trim();
-    // Only search once at least 6 digits of a phone number are entered — keeps
-    // the result list short and the kiosk snappy.
-    if (query.replace(/\D/g, "").length < 6) { setResults([]); setSearched(false); setSearching(false); return; }
+    if (!canSearch(query)) { setResults([]); setSearched(false); setSearching(false); return; }
     let alive = true;
     setSearching(true);
     const t = setTimeout(async () => {
@@ -198,19 +203,19 @@ function Identify({
 
   return (
     <div>
-      <ScreenHead title="Find your account" subtitle="Enter your phone number to find your account." onBack={onBack} />
+      <ScreenHead title="Find your account" subtitle="Enter your phone number or email to find your account." onBack={onBack} />
       <input
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        inputMode="tel"
-        placeholder="e.g. 555-123-4567"
+        inputMode="text"
+        placeholder="Phone number or email"
         className="input mt-6 !py-4 !text-lg"
       />
 
       <div className="mt-4 space-y-2">
-        {q.replace(/\D/g, "").length > 0 && q.replace(/\D/g, "").length < 6 && !searching && (
-          <p className="text-sm text-cream/40">Enter at least 6 digits of your phone number to search…</p>
+        {q.trim().length > 0 && !canSearch(q) && !searching && (
+          <p className="text-sm text-cream/40">Enter your full phone number (6+ digits) or email to search…</p>
         )}
         {searching && <p className="text-sm text-cream/40">Searching…</p>}
         {results.map((c) => (
