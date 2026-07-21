@@ -1,4 +1,5 @@
 import { segmentOf, initialsOf } from "@/lib/clientSegments";
+import { loyaltyProgress, type LoyaltyConfig } from "@/lib/loyalty";
 
 type ApptLike = {
   id: string; startTime: Date; status: string; collectedCents: number | null; active: boolean;
@@ -7,9 +8,14 @@ type ApptLike = {
 type ClientLike = {
   id: string; name: string; phone: string | null; email: string | null; notes: string | null;
   createdAt: Date; updatedAt: Date; appointments: ApptLike[];
+  loyaltyPoints?: number; loyaltyLifetimePoints?: number; loyaltyRewardsRedeemed?: number;
 };
 
 export type Appt = { id: string; service: string; barber: string; dateISO: string; status: string; priceCents: number };
+export type LoyaltyDetail = {
+  points: number; lifetime: number; redeemed: number;
+  threshold: number; rewardLabel: string; rewardsAvailable: number; toNext: number;
+};
 export type ClientDetail = {
   id: string; name: string; phone: string | null; email: string | null; initials: string;
   memberSinceISO: string; visits: number; spentCents: number;
@@ -17,10 +23,11 @@ export type ClientDetail = {
   favoriteServices: string[]; appointments: Appt[];
   last: Appt | null; upcoming: Appt | null;
   notes: string | null; notesUpdatedISO: string;
+  loyalty: LoyaltyDetail | null; // null when the program is disabled
 };
 
 /** Compute a client's full detail from their (start-desc-ordered) appointments. */
-export function computeClientDetail(c: ClientLike, now = Date.now()): ClientDetail {
+export function computeClientDetail(c: ClientLike, now = Date.now(), loyaltyConfig?: LoyaltyConfig): ClientDetail {
   const active = c.appointments.filter((a) => a.active);
   const completed = active.filter((a) => a.status === "COMPLETED");
   const visits = completed.length;
@@ -39,6 +46,16 @@ export function computeClientDetail(c: ClientLike, now = Date.now()): ClientDeta
     .filter((a) => a.status === "CONFIRMED" && a.startTime.getTime() >= now)
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())[0];
 
+  let loyalty: LoyaltyDetail | null = null;
+  if (loyaltyConfig?.enabled) {
+    const points = c.loyaltyPoints ?? 0;
+    const { rewardsAvailable, toNext } = loyaltyProgress(points, loyaltyConfig.threshold);
+    loyalty = {
+      points, lifetime: c.loyaltyLifetimePoints ?? 0, redeemed: c.loyaltyRewardsRedeemed ?? 0,
+      threshold: loyaltyConfig.threshold, rewardLabel: loyaltyConfig.rewardLabel, rewardsAvailable, toNext,
+    };
+  }
+
   return {
     id: c.id, name: c.name, phone: c.phone, email: c.email, initials: initialsOf(c.name),
     memberSinceISO: c.createdAt.toISOString(), visits, spentCents, ...seg,
@@ -46,6 +63,7 @@ export function computeClientDetail(c: ClientLike, now = Date.now()): ClientDeta
     last: lastCompleted ? toAppt(lastCompleted) : null,
     upcoming: upcoming ? toAppt(upcoming) : null,
     notes: c.notes, notesUpdatedISO: c.updatedAt.toISOString(),
+    loyalty,
   };
 }
 

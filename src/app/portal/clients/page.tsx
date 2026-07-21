@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { segmentOf, initialsOf } from "@/lib/clientSegments";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
+import { loyaltyConfigOf, LOYALTY_SELECT } from "@/lib/loyalty";
 import { ClientsWorkspace, type ClientRow } from "@/components/portal/ClientsWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -40,8 +41,12 @@ export default async function ClientsPage() {
   };
 
   const firstId = rows[0]?.id;
-  const first = firstId ? await prisma.client.findFirst({ where: { id: firstId, tenantId }, include: CLIENT_DETAIL_INCLUDE }) : null;
-  const initialDetail = first ? computeClientDetail(first) : null;
+  const [first, tenant] = await Promise.all([
+    firstId ? prisma.client.findFirst({ where: { id: firstId, tenantId }, include: CLIENT_DETAIL_INCLUDE }) : null,
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: LOYALTY_SELECT }),
+  ]);
+  const loyaltyConfig = tenant ? loyaltyConfigOf(tenant) : undefined;
+  const initialDetail = first ? computeClientDetail(first, now, loyaltyConfig) : null;
 
   return <ClientsWorkspace rows={rows} counts={counts} initialDetail={initialDetail} />;
 }

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { clientDetail, createClient, updateClient, saveClientNotes } from "@/app/portal/actions";
-import type { ClientDetail, Appt } from "@/lib/clientDetail";
+import { clientDetail, createClient, updateClient, saveClientNotes, redeemLoyaltyReward } from "@/app/portal/actions";
+import type { ClientDetail, Appt, LoyaltyDetail } from "@/lib/clientDetail";
 import { formatMoney } from "@/lib/utils";
 import { Icon } from "@/components/home/icons";
 
@@ -32,6 +32,15 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
   function select(id: string) {
     setSelectedId(id); setTab("overview");
     if (!cache[id]) startT(async () => { const d = await clientDetail(id); if (d) setCache((c) => ({ ...c, [id]: d })); });
+  }
+
+  const [redeeming, startRedeem] = useTransition();
+  function redeem(id: string) {
+    startRedeem(async () => {
+      await redeemLoyaltyReward(id);
+      const d = await clientDetail(id); // re-pull the fresh balance so the panel updates
+      if (d) setCache((c) => ({ ...c, [id]: d }));
+    });
   }
 
   const filtered = useMemo(() => {
@@ -137,7 +146,7 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
         {/* ── Right detail ── */}
         <div className="xl:sticky xl:top-6 xl:self-start">
           {detail ? (
-            <Detail d={detail} tab={tab} setTab={setTab} pending={pending} onEdit={() => setModal("edit")} />
+            <Detail d={detail} tab={tab} setTab={setTab} pending={pending} onEdit={() => setModal("edit")} onRedeem={() => redeem(detail.id)} redeeming={redeeming} />
           ) : pending ? (
             <div className="p-panel h-[560px] animate-pulse" />
           ) : (
@@ -187,7 +196,7 @@ function Col({ value, label, gold, hide }: { value: string; label: string; gold?
 }
 
 /* ── Detail panel ── */
-function Detail({ d, tab, setTab, pending, onEdit }: { d: ClientDetail; tab: string; setTab: (t: string) => void; pending: boolean; onEdit: () => void }) {
+function Detail({ d, tab, setTab, pending, onEdit, onRedeem, redeeming }: { d: ClientDetail; tab: string; setTab: (t: string) => void; pending: boolean; onEdit: () => void; onRedeem: () => void; redeeming: boolean }) {
   const TABS = ["Overview", "History", "Notes", "Appointments", "Photos"];
   return (
     <div className={`p-panel p-5 transition ${pending ? "opacity-60" : ""}`}>
@@ -215,6 +224,8 @@ function Detail({ d, tab, setTab, pending, onEdit }: { d: ClientDetail; tab: str
         <Stat value={formatMoney(d.spentCents)} label="Total Spent" border />
         <Stat value={fmtDate(d.memberSinceISO)} label="Member Since" border />
       </div>
+
+      {d.loyalty && <LoyaltyCard l={d.loyalty} onRedeem={onRedeem} redeeming={redeeming} />}
 
       {/* tabs */}
       <div className="p-scroll mt-5 flex gap-4 overflow-x-auto border-b border-white/10">
@@ -345,6 +356,31 @@ function ApptRow({ a }: { a: Appt }) {
         <div className="text-xs text-cream/45">{fmtDate(a.dateISO)} · {fmtTime(a.dateISO)}</div>
       </div>
       <span className={`badge shrink-0 ${s.cls}`}>{s.label}</span>
+    </div>
+  );
+}
+
+function LoyaltyCard({ l, onRedeem, redeeming }: { l: LoyaltyDetail; onRedeem: () => void; redeeming: boolean }) {
+  const pct = Math.max(0, Math.min(100, Math.round(((l.threshold - l.toNext) / l.threshold) * 100)));
+  return (
+    <div className="mt-4 rounded-2xl border border-brass/25 bg-brass/[0.05] p-4">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-brass"><Icon.star className="h-4 w-4" /> Loyalty</span>
+        <span className="text-sm text-cream/70"><span className="font-display text-lg font-semibold text-cream">{l.points}</span> pts</span>
+      </div>
+      {l.rewardsAvailable > 0 ? (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="min-w-0 text-sm text-cream/85">{l.rewardsAvailable} reward{l.rewardsAvailable > 1 ? "s" : ""} ready · <span className="text-brass">{l.rewardLabel}</span></span>
+          <button onClick={onRedeem} disabled={redeeming} className="p-btn-gold shrink-0 !px-3 !py-1.5 text-xs disabled:opacity-50">{redeeming ? "Redeeming…" : "Redeem"}</button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#f4d585] to-[#b98a3c]" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="mt-2 text-xs text-cream/55">{l.toNext} more point{l.toNext > 1 ? "s" : ""} until a {l.rewardLabel.toLowerCase()}.</div>
+        </>
+      )}
     </div>
   );
 }

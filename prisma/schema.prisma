@@ -159,6 +159,14 @@ model Tenant {
   showReviews     Boolean @default(true)
   showFaq         Boolean @default(true)
 
+  // ── Loyalty program (owner-configurable) ──
+  loyaltyEnabled          Boolean @default(false)
+  loyaltyPointsPerVisit   Int     @default(1) // points earned per completed visit
+  loyaltyPointsPerDollar  Int     @default(0) // extra points per whole $ spent (0 = visit-only)
+  loyaltyThreshold        Int     @default(10) // points needed to earn one reward
+  loyaltyRewardLabel      String  @default("Free service") // what a reward gets them
+  loyaltyRewardValueCents Int     @default(0) // reward value for reporting (0 = comp/free)
+
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
   featureAnalytics Boolean @default(true)
@@ -272,6 +280,11 @@ model Client {
   address   String?
   notes     String?
 
+  // Loyalty balances (accrued from completed visits; see lib/loyalty.ts)
+  loyaltyPoints          Int @default(0) // current redeemable balance
+  loyaltyLifetimePoints  Int @default(0) // total ever earned (display)
+  loyaltyRewardsRedeemed Int @default(0) // rewards redeemed count
+
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId String
 
@@ -310,6 +323,7 @@ model Appointment {
   // How the visit happened + how the client found the shop (walk-in logging).
   kind           String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
   referral       String?
+  loyaltyAwarded Boolean @default(false) // true once loyalty points were accrued for this completed visit
 
   // public token for the customer reschedule / cancel link
   manageToken String @unique @default(cuid())

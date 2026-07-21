@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant, setTenantImage, setHeroPosition } from "@/app/portal/actions";
+import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty } from "@/app/portal/actions";
 import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -81,6 +81,51 @@ export default async function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* ── Loyalty program ── */}
+      <form action={updateLoyalty} className="card mt-6 space-y-4">
+        <div>
+          <h2 className="font-display text-xl">Loyalty program</h2>
+          <p className="mt-1 text-sm text-cream/50">Reward regulars automatically. Points accrue on every completed visit; clients earn a reward once they hit your threshold.</p>
+        </div>
+
+        <label className="flex items-center gap-3">
+          <input type="checkbox" name="loyaltyEnabled" defaultChecked={tenant.loyaltyEnabled} className="h-4 w-4 accent-[color:var(--brand)]" />
+          <span className="text-sm text-cream/85">Enable the loyalty program</span>
+        </label>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">Points per visit</label>
+            <input name="pointsPerVisit" type="number" min="0" max="1000" step="1" inputMode="numeric" defaultValue={tenant.loyaltyPointsPerVisit} className="input" />
+          </div>
+          <div>
+            <label className="label">Bonus points per $1 spent</label>
+            <input name="pointsPerDollar" type="number" min="0" max="100" step="1" inputMode="numeric" defaultValue={tenant.loyaltyPointsPerDollar} className="input" />
+            <p className="mt-1 text-xs text-cream/45">Set to 0 for a simple visit-based punch card.</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="label">Points needed for a reward</label>
+          <input name="threshold" type="number" min="1" max="10000" step="1" inputMode="numeric" defaultValue={tenant.loyaltyThreshold} className="input" />
+          <p className="mt-1 text-xs text-cream/45">e.g. 10 points = every 10th visit earns a reward.</p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">Reward</label>
+            <input name="rewardLabel" defaultValue={tenant.loyaltyRewardLabel} placeholder="Free haircut" className="input" />
+          </div>
+          <div>
+            <label className="label">Reward value ($, optional)</label>
+            <input name="rewardValue" type="number" min="0" step="1" inputMode="numeric" defaultValue={tenant.loyaltyRewardValueCents ? Math.round(tenant.loyaltyRewardValueCents / 100) : ""} placeholder="e.g. 35" className="input" />
+            <p className="mt-1 text-xs text-cream/45">For your reports. Leave blank for a comped service.</p>
+          </div>
+        </div>
+
+        <button className="btn-primary">Save loyalty settings</button>
+      </form>
     </div>
   );
 }

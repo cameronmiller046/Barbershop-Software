@@ -13,6 +13,7 @@ import { RESCHEDULE_REASONS, CANCEL_REASONS, DELETE_REASONS, reasonToStatus } fr
 import { planLimits } from "@/lib/plans";
 import { isDemoAccount } from "@/lib/demoMode";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
+import { accrueLoyalty, loyaltyConfigOf, LOYALTY_SELECT } from "@/lib/loyalty";
 import { isPaymentMethod } from "@/lib/payments";
 import type { AppointmentStatus } from "@prisma/client";
 
@@ -156,6 +157,7 @@ export async function finishAppointment(id: string, collectedCents?: number, tip
     },
   });
   await audit({ action: "appointment.finished", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { collectedCents, tipCents, paymentMethod: method } });
+  await accrueLoyalty(id); // idempotent; no-op unless the program is on
   revalidateAppointments();
 }
 
@@ -182,7 +184,7 @@ export async function logWalkIn(formData: FormData) {
   const client = existing ?? (await prisma.client.create({ data: { tenantId: user.tenantId, name, phone: phone || null } }));
 
   const now = new Date();
-  await prisma.appointment.create({
+  const walkIn = await prisma.appointment.create({
     data: {
       tenantId: user.tenantId, serviceId, barberId: user.id, clientId: client.id,
       startTime: now, endTime: new Date(now.getTime() + service.durationMin * 60000),
@@ -193,6 +195,7 @@ export async function logWalkIn(formData: FormData) {
       startedAt: now, finishedAt: new Date(now.getTime() + Math.max(5, service.durationMin) * 60000),
     },
   });
+  await accrueLoyalty(walkIn.id); // idempotent; no-op unless the program is on
   await audit({ action: "appointment.walkin", tenantId: user.tenantId, userId: user.id, meta: { kind, referral, newClient: !existing } });
   revalidateAppointments();
   revalidatePath("/portal/clients");
@@ -226,6 +229,7 @@ export async function correctAppointmentClock(id: string, startISO: string, fini
     data: { startedAt: started, finishedAt: finished, ...(finished ? { status: "COMPLETED" as const } : {}) },
   });
   await audit({ action: "appointment.clock.corrected", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id });
+  if (finished) await accrueLoyalty(id); // idempotent
   revalidateAppointments();
 }
 
@@ -242,8 +246,44 @@ export async function saveClientNotes(id: string, formData: FormData) {
 export async function clientDetail(clientId: string) {
   const user = await requirePerm("shop.clients");
   if (!user) return null;
-  const c = await prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, include: CLIENT_DETAIL_INCLUDE });
-  return c ? computeClientDetail(c) : null;
+  const [c, tenant] = await Promise.all([
+    prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, include: CLIENT_DETAIL_INCLUDE }),
+    prisma.tenant.findUnique({ where: { id: user.tenantId }, select: LOYALTY_SELECT }),
+  ]);
+  return c ? computeClientDetail(c, Date.now(), tenant ? loyaltyConfigOf(tenant) : undefined) : null;
+}
+
+/** Owner configures the loyalty program (requires shop.settings). */
+export async function updateLoyalty(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const enabled = formData.get("loyaltyEnabled") === "on";
+  const pointsPerVisit = Math.max(0, Math.min(1000, Math.round(Number(formData.get("pointsPerVisit") || 1))));
+  const pointsPerDollar = Math.max(0, Math.min(100, Math.round(Number(formData.get("pointsPerDollar") || 0))));
+  const threshold = Math.max(1, Math.min(10000, Math.round(Number(formData.get("threshold") || 10))));
+  const rewardLabel = (String(formData.get("rewardLabel") || "").trim() || "Free service").slice(0, 60);
+  const rewardValueCents = Math.max(0, Math.round(Number(formData.get("rewardValue") || 0) * 100));
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: { loyaltyEnabled: enabled, loyaltyPointsPerVisit: pointsPerVisit, loyaltyPointsPerDollar: pointsPerDollar, loyaltyThreshold: threshold, loyaltyRewardLabel: rewardLabel, loyaltyRewardValueCents: rewardValueCents },
+  });
+  await audit({ action: "loyalty.settings", tenantId: user.tenantId, userId: user.id, meta: { enabled, threshold, pointsPerVisit } });
+  revalidatePath("/portal/settings");
+  revalidatePath("/portal/clients");
+}
+
+/** Redeem one loyalty reward for a client — deducts the threshold in points. */
+export async function redeemLoyaltyReward(clientId: string) {
+  const user = await requirePerm("shop.clients");
+  if (!user) return;
+  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { loyaltyEnabled: true, loyaltyThreshold: true } });
+  if (!tenant?.loyaltyEnabled) return;
+  const threshold = Math.max(1, tenant.loyaltyThreshold);
+  const client = await prisma.client.findFirst({ where: { id: clientId, tenantId: user.tenantId }, select: { id: true, loyaltyPoints: true } });
+  if (!client || client.loyaltyPoints < threshold) return;
+  await prisma.client.update({ where: { id: client.id }, data: { loyaltyPoints: { decrement: threshold }, loyaltyRewardsRedeemed: { increment: 1 } } });
+  await audit({ action: "loyalty.redeemed", tenantId: user.tenantId, userId: user.id, target: clientId, meta: { threshold } });
+  revalidatePath("/portal/clients");
 }
 
 export async function createClient(formData: FormData) {
