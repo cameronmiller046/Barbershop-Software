@@ -47,7 +47,7 @@ const PLANS: Plan[] = [
     desc: "Built for growing teams.",
     includes: "Includes 3 Barbers", extra: "+$10/month per additional barber",
     cta: { label: "Start Trial", href: "/beta" },
-    features: [{ t: "Team scheduling" }, { t: "Advanced reports" }, { t: "Custom branding" }, { t: "SMS reminders", soon: true }, { t: "Loyalty program", soon: true }, { t: "Memberships", soon: true }, { t: "POS integrations", soon: true }],
+    features: [{ t: "Team scheduling" }, { t: "Advanced reports" }, { t: "Custom branding" }, { t: "Loyalty program" }, { t: "SMS reminders", soon: true }, { t: "Memberships", soon: true }, { t: "POS integrations", soon: true }],
   },
   {
     key: "barbershop", name: "Barbershop", icon: "store", priceNum: 129, per: "/month", featured: true,
@@ -71,7 +71,8 @@ const COMPARE: { icon: IconName; label: string; cells: [Cell, Cell, Cell, Cell] 
   { icon: "customers", label: "Client CRM", cells: [true, true, true, true] },
   { icon: "staff", label: "Barber Accounts", cells: ["1", "3 incl.", "8 incl.", "Unlimited"] },
   { icon: "analytics", label: "Analytics & Reports", cells: ["Basic", "Advanced", "Dashboard", "Advanced"] },
-  { icon: "loyalty", label: "Loyalty & Memberships", cells: [false, SOON, SOON, SOON] },
+  { icon: "loyalty", label: "Loyalty program", cells: [false, true, true, true] },
+  { icon: "customers", label: "Memberships", cells: [false, SOON, SOON, SOON] },
   { icon: "inventory", label: "Inventory Management", cells: [false, false, SOON, SOON] },
   { icon: "building", label: "Multi-Location", cells: [false, false, SOON, SOON] },
   { icon: "code", label: "API Access & SSO", cells: [false, false, false, SOON] },
