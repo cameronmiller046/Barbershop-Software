@@ -181,7 +181,9 @@ function Identify({
 
   useEffect(() => {
     const query = q.trim();
-    if (query.length < 3) { setResults([]); setSearched(false); setSearching(false); return; }
+    // Only search once at least 6 digits of a phone number are entered — keeps
+    // the result list short and the kiosk snappy.
+    if (query.replace(/\D/g, "").length < 6) { setResults([]); setSearched(false); setSearching(false); return; }
     let alive = true;
     setSearching(true);
     const t = setTimeout(async () => {
@@ -196,17 +198,20 @@ function Identify({
 
   return (
     <div>
-      <ScreenHead title="Find your account" subtitle="Enter your phone number, email, or name." onBack={onBack} />
+      <ScreenHead title="Find your account" subtitle="Enter your phone number to find your account." onBack={onBack} />
       <input
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        inputMode="text"
+        inputMode="tel"
         placeholder="e.g. 555-123-4567"
         className="input mt-6 !py-4 !text-lg"
       />
 
       <div className="mt-4 space-y-2">
+        {q.replace(/\D/g, "").length > 0 && q.replace(/\D/g, "").length < 6 && !searching && (
+          <p className="text-sm text-cream/40">Enter at least 6 digits of your phone number to search…</p>
+        )}
         {searching && <p className="text-sm text-cream/40">Searching…</p>}
         {results.map((c) => (
           <button
