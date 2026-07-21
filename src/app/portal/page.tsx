@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const [tenant, services, clientList, barbers, todays, yesterday, weekRev, myClockOpen, myClockToday] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } }),
     prisma.service.findMany({ where: { tenantId, active: true }, select: { id: true, name: true, priceCents: true }, orderBy: { sortOrder: "asc" } }),
-    prisma.client.findMany({ where: { tenantId }, select: { name: true }, orderBy: { name: "asc" }, take: 500 }),
+    prisma.client.findMany({ where: { tenantId }, select: { name: true, phone: true }, orderBy: { name: "asc" }, take: 1000 }),
     prisma.user.findMany({ where: { tenantId, role: "BARBER", active: true, kioskOnly: false }, select: { id: true } }),
     prisma.appointment.findMany({
       where: { tenantId, active: true, ...scope, startTime: { gte: dayStart, lte: dayEnd } },

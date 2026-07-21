@@ -8,8 +8,12 @@ import { PAYMENT_METHODS } from "@/lib/payments";
 
 type Svc = { id: string; name: string; priceCents: number };
 
+const digitsOf = (s: string) => s.replace(/\D/g, "");
+
 // Quick "log a cut" for walk-in or appointment traffic — new or existing client.
-export function WalkInLogger({ services, clients }: { services: Svc[]; clients: { name: string }[] }) {
+// Clients come from the shared client table, so kiosk-registered walk-ins are
+// searchable here by phone (or name) too.
+export function WalkInLogger({ services, clients }: { services: Svc[]; clients: { name: string; phone: string | null }[] }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [name, setName] = useState("");
@@ -61,12 +65,50 @@ export function WalkInLogger({ services, clients }: { services: Svc[]; clients: 
             <div className="mt-4 space-y-3">
               <div>
                 <div className="label">Client name</div>
-                <input value={name} onChange={(e) => setName(e.target.value)} list="walkin-clients" autoFocus placeholder="New or existing client" className="input" />
+                <input
+                  value={name}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setName(v);
+                    const m = clients.find((c) => c.name.toLowerCase() === v.trim().toLowerCase());
+                    if (m?.phone) setPhone(m.phone);
+                  }}
+                  list="walkin-clients"
+                  autoFocus
+                  placeholder="New or existing client"
+                  className="input"
+                />
                 <datalist id="walkin-clients">
-                  {clients.map((c, i) => <option key={i} value={c.name} />)}
+                  {clients.map((c, i) => <option key={i} value={c.name}>{c.phone ?? ""}</option>)}
                 </datalist>
               </div>
-              <div><div className="label">Phone (optional)</div><input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="(555) 123-4567" className="input" /></div>
+              <div>
+                <div className="label">Phone (optional) — search existing clients</div>
+                <input
+                  value={phone}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setPhone(v);
+                    const d = digitsOf(v);
+                    if (d.length >= 7) {
+                      const m = clients.find((c) => c.phone && digitsOf(c.phone) === d);
+                      if (m) setName(m.name);
+                    }
+                  }}
+                  type="tel"
+                  list="walkin-phones"
+                  placeholder="(555) 123-4567"
+                  className="input"
+                />
+                <datalist id="walkin-phones">
+                  {clients.filter((c) => c.phone).map((c, i) => <option key={i} value={c.phone as string}>{c.name}</option>)}
+                </datalist>
+                {(() => {
+                  const d = digitsOf(phone);
+                  const m = d.length >= 7 ? clients.find((c) => c.phone && digitsOf(c.phone) === d) : null;
+                  return m ? <p className="mt-1 text-xs text-emerald-300">Matched existing client: {m.name}</p> : null;
+                })()}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="label">Service</div>

@@ -36,7 +36,7 @@ export default async function AppointmentsPage({
   const [tenant, services, clientList] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { slug: true } }),
     prisma.service.findMany({ where: { tenantId: user.tenantId, active: true }, select: { id: true, name: true, priceCents: true }, orderBy: { sortOrder: "asc" } }),
-    prisma.client.findMany({ where: { tenantId: user.tenantId }, select: { name: true }, orderBy: { name: "asc" }, take: 500 }),
+    prisma.client.findMany({ where: { tenantId: user.tenantId }, select: { name: true, phone: true }, orderBy: { name: "asc" }, take: 1000 }),
   ]);
   const sp = await searchParams;
 
