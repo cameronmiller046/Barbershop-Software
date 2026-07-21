@@ -15,6 +15,7 @@ type Service = { id: string; name: string; durationMin: number; priceCents: numb
 type Step = "welcome" | "identify" | "register" | "service" | "barber" | "done";
 type Client = { id: string; name: string };
 type CheckInResult = { barberName: string; etaMin: number; position: number; serviceName: string };
+type LoyaltyInfo = { pointsPerVisit: number; pointsPerDollar: number; threshold: number; rewardLabel: string; expiryDays: number; maxPoints: number };
 
 const brand = { background: "var(--brand)", color: "var(--brand-fg)" };
 
@@ -27,7 +28,7 @@ function waitLabel(etaMin: number | null): string {
   return `~${h}h${m ? ` ${m}m` : ""} wait`;
 }
 
-export function KioskFlow({ shopName, services }: { shopName: string; services: Service[] }) {
+export function KioskFlow({ shopName, services, loyalty }: { shopName: string; services: Service[]; loyalty?: LoyaltyInfo | null }) {
   const [step, setStep] = useState<Step>("welcome");
   const [client, setClient] = useState<Client | null>(null);
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -83,7 +84,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
 
   return (
     <div className="w-full">
-      {step === "welcome" && <Welcome shopName={shopName} onStart={() => setStep("identify")} />}
+      {step === "welcome" && <Welcome shopName={shopName} loyalty={loyalty} onStart={() => setStep("identify")} />}
 
       {step === "identify" && (
         <Identify
@@ -123,7 +124,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
       )}
 
       {step === "done" && result && (
-        <Done result={result} onDone={reset} />
+        <Done result={result} onDone={reset} shopName={shopName} loyalty={loyalty} />
       )}
     </div>
   );
@@ -131,7 +132,7 @@ export function KioskFlow({ shopName, services }: { shopName: string; services: 
 
 /* ── Screens ─────────────────────────────────────────────────────────── */
 
-function Welcome({ shopName, onStart }: { shopName: string; onStart: () => void }) {
+function Welcome({ shopName, loyalty, onStart }: { shopName: string; loyalty?: LoyaltyInfo | null; onStart: () => void }) {
   return (
     <div className="text-center">
       <h1 className="font-display text-4xl sm:text-5xl">Welcome to {shopName}</h1>
@@ -144,6 +145,24 @@ function Welcome({ shopName, onStart }: { shopName: string; onStart: () => void 
         Check in →
       </button>
       <p className="mt-6 text-sm text-cream/40">Walk-ins welcome · No account needed</p>
+      {loyalty && <LoyaltyDisclosure shopName={shopName} l={loyalty} />}
+    </div>
+  );
+}
+
+// Consumer-facing loyalty terms shown at self check-in. Built entirely from the
+// shop's own config so it always matches how points actually work.
+function LoyaltyDisclosure({ shopName, l }: { shopName: string; l: LoyaltyInfo }) {
+  return (
+    <div className="mx-auto mt-8 max-w-md rounded-2xl border border-brass/25 bg-brass/[0.05] p-4 text-left">
+      <div className="flex items-center gap-2 text-sm font-semibold text-brass">⭐ Loyalty rewards</div>
+      <p className="mt-2 text-xs leading-relaxed text-cream/60">
+        Earn <b className="text-cream/85">{l.pointsPerVisit} point{l.pointsPerVisit === 1 ? "" : "s"}</b> on every completed visit
+        {l.pointsPerDollar > 0 ? <>, plus <b className="text-cream/85">{l.pointsPerDollar}</b> per $1 spent</> : null}.
+        {" "}Redeem <b className="text-cream/85">{l.threshold} points</b> for <b className="text-cream/85">{l.rewardLabel}</b>.
+        {" "}Points expire <b className="text-cream/85">{l.expiryDays} days</b> after they&apos;re earned, and balances are capped at {l.maxPoints} points.
+        {" "}Checking in at {shopName} enrolls you in the loyalty program; rewards have no cash value and terms may change.
+      </p>
     </div>
   );
 }
@@ -425,7 +444,7 @@ function BarberPicker({
   );
 }
 
-function Done({ result, onDone }: { result: CheckInResult; onDone: () => void }) {
+function Done({ result, onDone, shopName, loyalty }: { result: CheckInResult; onDone: () => void; shopName: string; loyalty?: LoyaltyInfo | null }) {
   return (
     <div className="text-center">
       <div className="mx-auto grid h-20 w-20 place-items-center rounded-full text-4xl" style={brand}>✓</div>
@@ -445,6 +464,11 @@ function Done({ result, onDone }: { result: CheckInResult; onDone: () => void })
         </div>
       </div>
       <p className="mt-6 text-cream/50">Please have a seat — we&apos;ll call your name.</p>
+      {loyalty && (
+        <p className="mx-auto mt-4 max-w-sm text-xs text-brass/80">
+          ⭐ You&apos;ll earn {loyalty.pointsPerVisit} point{loyalty.pointsPerVisit === 1 ? "" : "s"} toward {loyalty.rewardLabel} once your visit is complete. Points expire {loyalty.expiryDays} days after they&apos;re earned.
+        </p>
+      )}
       <button onClick={onDone} className="mt-8 w-full rounded-2xl border border-white/15 py-4 text-lg font-medium transition hover:bg-white/5">
         Done
       </button>
