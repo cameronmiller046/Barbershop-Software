@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty } from "@/app/portal/actions";
+import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders } from "@/app/portal/actions";
+import { smsConfigured } from "@/lib/sms";
 import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -128,6 +129,44 @@ export default async function SettingsPage() {
         </div>
 
         <button className="btn-primary">Save loyalty settings</button>
+      </form>
+
+      {/* ── Appointment reminders ── */}
+      <form action={updateReminders} className="card mt-6 space-y-4">
+        <div>
+          <h2 className="font-display text-xl">Appointment reminders</h2>
+          <p className="mt-1 text-sm text-cream/50">Automatically remind clients before their appointment so fewer no-shows slip through.</p>
+        </div>
+
+        <label className="flex items-center gap-3">
+          <input type="checkbox" name="remindersEnabled" defaultChecked={tenant.remindersEnabled} className="h-4 w-4 accent-[color:var(--brand)]" />
+          <span className="text-sm text-cream/85">Enable appointment reminders</span>
+        </label>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="flex items-center gap-3">
+            <input type="checkbox" name="reminderEmail" defaultChecked={tenant.reminderEmail} className="h-4 w-4 accent-[color:var(--brand)]" />
+            <span className="text-sm text-cream/85">Email reminders</span>
+          </label>
+          <label className="flex items-center gap-3">
+            <input type="checkbox" name="reminderSms" defaultChecked={tenant.reminderSms} className="h-4 w-4 accent-[color:var(--brand)]" />
+            <span className="text-sm text-cream/85">SMS reminders</span>
+          </label>
+        </div>
+
+        <div>
+          <label className="label">Send how many hours before?</label>
+          <input name="reminderHoursBefore" type="number" min="1" max="168" step="1" inputMode="numeric" defaultValue={tenant.reminderHoursBefore} className="input" />
+          <p className="mt-1 text-xs text-cream/45">e.g. 24 = about a day ahead. Reminders send only for confirmed, upcoming appointments.</p>
+        </div>
+
+        {!smsConfigured() && (
+          <p className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-xs text-amber-200/90">
+            SMS isn&apos;t connected yet — add your Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM) to start texting. Until then, SMS reminders are logged only. Email works as soon as a sender is configured.
+          </p>
+        )}
+
+        <button className="btn-primary">Save reminder settings</button>
       </form>
     </div>
   );

@@ -169,6 +169,12 @@ model Tenant {
   loyaltyRewardLabel      String  @default("$10 off") // what a reward gets them
   loyaltyRewardValueCents Int     @default(1000) // reward $ value (max $10)
 
+  // ── Appointment reminders ──
+  remindersEnabled    Boolean @default(false)
+  reminderEmail       Boolean @default(true) // send email reminders (needs a client email)
+  reminderSms         Boolean @default(false) // send SMS reminders (needs Twilio env + a client phone)
+  reminderHoursBefore Int     @default(24) // how far ahead of the appointment to remind
+
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
   featureAnalytics Boolean @default(true)
@@ -348,6 +354,7 @@ model Appointment {
   kind           String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
   referral       String?
   loyaltyAwarded Boolean @default(false) // true once loyalty points were accrued for this completed visit
+  reminderSentAt DateTime? // when the pre-appointment reminder was sent (null = not yet)
 
   // public token for the customer reschedule / cancel link
   manageToken String @unique @default(cuid())
@@ -367,6 +374,7 @@ model Appointment {
 
   @@index([tenantId, startTime])
   @@index([barberId, startTime])
+  @@index([status, reminderSentAt, startTime])
 }
 
 // Weekly recurring availability per barber. dayOfWeek 0=Sun .. 6=Sat

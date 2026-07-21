@@ -275,6 +275,22 @@ export async function updateLoyalty(formData: FormData) {
   revalidatePath("/portal/clients");
 }
 
+/** Owner configures appointment reminders (requires shop.settings). */
+export async function updateReminders(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const remindersEnabled = formData.get("remindersEnabled") === "on";
+  const reminderEmail = formData.get("reminderEmail") === "on";
+  const reminderSms = formData.get("reminderSms") === "on";
+  const reminderHoursBefore = Math.max(1, Math.min(168, Math.round(Number(formData.get("reminderHoursBefore") || 24))));
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: { remindersEnabled, reminderEmail, reminderSms, reminderHoursBefore },
+  });
+  await audit({ action: "reminders.settings", tenantId: user.tenantId, userId: user.id, meta: { remindersEnabled, reminderEmail, reminderSms, reminderHoursBefore } });
+  revalidatePath("/portal/settings");
+}
+
 /** Redeem one loyalty reward for a client — consumes the threshold in points (FIFO, oldest first). */
 export async function redeemLoyaltyReward(clientId: string) {
   const user = await requirePerm("shop.clients");
