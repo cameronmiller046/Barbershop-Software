@@ -291,6 +291,24 @@ export async function updateReminders(formData: FormData) {
   revalidatePath("/portal/settings");
 }
 
+/** Manager connects this shop's own Twilio account for SMS (requires shop.settings). */
+export async function updateTwilio(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const accountSid = String(formData.get("twilioAccountSid") || "").trim();
+  const fromNumber = String(formData.get("twilioFromNumber") || "").trim();
+  const authToken = String(formData.get("twilioAuthToken") || "").trim(); // blank = keep existing
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: !accountSid
+      ? { twilioAccountSid: null, twilioFromNumber: null, twilioAuthToken: null } // disconnect
+      : { twilioAccountSid: accountSid, twilioFromNumber: fromNumber || null, ...(authToken ? { twilioAuthToken: authToken } : {}) },
+  });
+  // Never log secrets — only whether it's connected and whether the token changed.
+  await audit({ action: "twilio.settings", tenantId: user.tenantId, userId: user.id, meta: { connected: !!accountSid, tokenChanged: !!authToken } });
+  revalidatePath("/portal/settings");
+}
+
 /** Redeem one loyalty reward for a client — consumes the threshold in points (FIFO, oldest first). */
 export async function redeemLoyaltyReward(clientId: string) {
   const user = await requirePerm("shop.clients");

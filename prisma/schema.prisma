@@ -172,8 +172,15 @@ model Tenant {
   // ── Appointment reminders ──
   remindersEnabled    Boolean @default(false)
   reminderEmail       Boolean @default(true) // send email reminders (needs a client email)
-  reminderSms         Boolean @default(false) // send SMS reminders (needs Twilio env + a client phone)
+  reminderSms         Boolean @default(false) // send SMS reminders (needs Twilio creds + a client phone)
   reminderHoursBefore Int     @default(24) // how far ahead of the appointment to remind
+
+  // ── Twilio (per-shop SMS credentials; the manager connects their own account,
+  //    falling back to server env if unset). The auth token is a secret and is
+  //    NEVER sent to the browser. ──
+  twilioAccountSid String?
+  twilioAuthToken  String?
+  twilioFromNumber String?
 
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)

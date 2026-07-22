@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders } from "@/app/portal/actions";
-import { smsConfigured } from "@/lib/sms";
+import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders, updateTwilio } from "@/app/portal/actions";
+import { smsReady } from "@/lib/sms";
 import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -16,6 +16,10 @@ export default async function SettingsPage() {
   if (!can(user, "shop.settings")) redirect("/portal");
   const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId } });
   if (!tenant) redirect("/portal");
+
+  // Whether SMS can actually send (this shop's Twilio, or the server fallback).
+  // NOTE: the auth token itself is never rendered — only this boolean.
+  const smsConnected = smsReady({ accountSid: tenant.twilioAccountSid, authToken: tenant.twilioAuthToken, from: tenant.twilioFromNumber });
 
   return (
     <div className="max-w-xl">
@@ -160,13 +164,47 @@ export default async function SettingsPage() {
           <p className="mt-1 text-xs text-cream/45">e.g. 24 = about a day ahead. Reminders send only for confirmed, upcoming appointments.</p>
         </div>
 
-        {!smsConfigured() && (
+        {!smsConnected && (
           <p className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-xs text-amber-200/90">
-            SMS isn&apos;t connected yet — add your Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM) to start texting. Until then, SMS reminders are logged only. Email works as soon as a sender is configured.
+            SMS isn&apos;t connected yet — add your Twilio credentials in <b>SMS provider (Twilio)</b> below to start texting. Until then, SMS reminders are logged only. Email works as soon as a sender is configured.
           </p>
         )}
 
         <button className="btn-primary">Save reminder settings</button>
+      </form>
+
+      {/* ── SMS provider (Twilio) ── */}
+      <form action={updateTwilio} className="card mt-6 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl">SMS provider (Twilio)</h2>
+            <p className="mt-1 text-sm text-cream/50">Connect your own Twilio account to send text reminders from your shop&apos;s number.</p>
+          </div>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${smsConnected ? "bg-emerald-500/15 text-emerald-300" : "bg-white/8 text-cream/50"}`}>
+            {smsConnected ? "Connected" : "Not connected"}
+          </span>
+        </div>
+
+        <div>
+          <label className="label">Account SID</label>
+          <input name="twilioAccountSid" defaultValue={tenant.twilioAccountSid ?? ""} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autoComplete="off" className="input font-mono text-sm" />
+        </div>
+        <div>
+          <label className="label">Auth Token</label>
+          <input name="twilioAuthToken" type="password" placeholder={tenant.twilioAuthToken ? "•••••••• (leave blank to keep current)" : "Your Twilio auth token"} autoComplete="off" className="input font-mono text-sm" />
+          <p className="mt-1 text-xs text-cream/45">Stored securely and never shown again. Leave blank to keep the current token.</p>
+        </div>
+        <div>
+          <label className="label">From number</label>
+          <input name="twilioFromNumber" defaultValue={tenant.twilioFromNumber ?? ""} placeholder="+15551234567" autoComplete="off" className="input" />
+          <p className="mt-1 text-xs text-cream/45">Your Twilio phone number (E.164 format). Clear the Account SID and save to disconnect.</p>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs text-cream/50">
+          Find these in your Twilio Console → Account Info. Texting clients requires their consent; reminders include a &ldquo;Reply STOP to opt out&rdquo; line.
+        </div>
+
+        <button className="btn-primary">Save Twilio settings</button>
       </form>
     </div>
   );

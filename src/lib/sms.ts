@@ -1,16 +1,28 @@
 /**
- * SMS delivery. Uses Twilio's REST API when TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
- * and TWILIO_FROM are set; otherwise logs the message to the server console so
- * flows still work in dev and before a provider is connected (mirrors lib/email).
+ * SMS delivery via Twilio. Credentials resolve per shop first (a manager can
+ * connect their own Twilio account in Settings), falling back to server env
+ * (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM). When nothing is
+ * configured, messages are logged to the console so flows still work in dev and
+ * before a provider is connected (mirrors lib/email).
  */
-export function smsConfigured(): boolean {
-  return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+export type TwilioCreds = { accountSid?: string | null; authToken?: string | null; from?: string | null };
+
+function resolve(creds?: TwilioCreds) {
+  return {
+    sid: creds?.accountSid || process.env.TWILIO_ACCOUNT_SID || "",
+    token: creds?.authToken || process.env.TWILIO_AUTH_TOKEN || "",
+    from: creds?.from || process.env.TWILIO_FROM || "",
+  };
 }
 
-export async function sendSms(to: string, body: string): Promise<{ ok: boolean; logged?: boolean; error?: string }> {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM;
+/** Whether SMS can be sent given a shop's creds (or the server env fallback). */
+export function smsReady(creds?: TwilioCreds): boolean {
+  const { sid, token, from } = resolve(creds);
+  return !!(sid && token && from);
+}
+
+export async function sendSms(to: string, body: string, creds?: TwilioCreds): Promise<{ ok: boolean; logged?: boolean; error?: string }> {
+  const { sid, token, from } = resolve(creds);
   const digits = to.replace(/[^\d+]/g, "");
   if (digits.replace(/\D/g, "").length < 7) return { ok: false, error: "invalid phone" };
 
