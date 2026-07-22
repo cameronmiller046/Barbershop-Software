@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireStaffWithPerms } from "@/lib/rbac";
+import { requireStaffWithPerms, getPortalTenant } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { PortalShell, type EditNotif } from "@/components/portal/PortalShell";
 import { signOut } from "@/lib/auth";
@@ -17,7 +17,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const user = await requireStaffWithPerms();
   // Kiosk-locked accounts can only ever see the self-check-in surface.
   if (user.kioskOnly) redirect("/kiosk");
-  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { name: true, slug: true, plan: true } });
+  const tenant = await getPortalTenant(user.tenantId);
   const perms = permMap(user);
   const limits = planLimits(tenant?.plan ?? "SOLO");
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
@@ -66,8 +67,11 @@ export async function requireTenantStaff(): Promise<SessionUser & { tenantId: st
 /**
  * Like requireTenantStaff but loads the full DB record, including
  * permissionOverrides, so pages/actions can evaluate per-user permissions.
+ *
+ * Wrapped in React `cache()` so it runs at most once per request — the layout
+ * and the page both call it, and this collapses that into a single DB lookup.
  */
-export async function requireStaffWithPerms(): Promise<StaffWithPerms> {
+export const requireStaffWithPerms = cache(async (): Promise<StaffWithPerms> => {
   const session = await requireTenantStaff();
   const full = await prisma.user.findUnique({
     where: { id: session.id, active: true },
@@ -79,7 +83,15 @@ export async function requireStaffWithPerms(): Promise<StaffWithPerms> {
   const tenantId = full.tenantId ?? session.tenantId;
   if (!tenantId) redirect("/login");
   return { ...full, tenantId };
-}
+});
+
+/**
+ * The tenant fields the portal shell + dashboard need, loaded once per request.
+ * Cached so the layout and page don't each hit the DB for the same row.
+ */
+export const getPortalTenant = cache((tenantId: string) =>
+  prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, slug: true, plan: true } })
+);
 
 /**
  * Require a kiosk-capable staff account bound to a tenant. Any tenant staff can

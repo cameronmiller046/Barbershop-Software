@@ -52,7 +52,30 @@ export function PortalShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState<EditNotif[]>(notifications);
   useEffect(() => { setNotifOpen(false); }, [pathname]);
+
+  // Near-real-time bell: poll a lightweight endpoint every few seconds (and on
+  // tab focus) so incoming timeclock-edit requests appear without a page reload.
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const r = await fetch("/api/portal/notifications", { cache: "no-store" });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (alive && Array.isArray(d.notifications)) setNotifs(d.notifications);
+      } catch { /* transient — keep the last known list */ }
+    };
+    const id = setInterval(load, 4000);
+    document.addEventListener("visibilitychange", load);
+    load();
+    return () => { alive = false; clearInterval(id); document.removeEventListener("visibilitychange", load); };
+  }, []);
+
+  // Drop a notification the moment it's approved/rejected; the next poll reconciles.
+  const removeNotif = (id: string) => setNotifs((list) => list.filter((n) => n.id !== id));
 
   useEffect(() => {
     setCollapsed(localStorage.getItem("portalNavCollapsed") === "1");
@@ -168,8 +191,8 @@ export function PortalShell({
             <div className="relative">
               <button onClick={() => setNotifOpen((o) => !o)} className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-cream/70 transition hover:text-brass" aria-label="Notifications">
                 <Icon.bell className="h-5 w-5" />
-                {notifications.length > 0 && (
-                  <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brass px-1 text-[10px] font-bold text-[#17130a]">{notifications.length}</span>
+                {notifs.length > 0 && (
+                  <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brass px-1 text-[10px] font-bold text-[#17130a]">{notifs.length}</span>
                 )}
               </button>
               <AnimatePresence>
@@ -179,10 +202,10 @@ export function PortalShell({
                     <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                       className="p-scroll absolute right-0 z-50 mt-2 max-h-[70vh] w-[340px] overflow-y-auto rounded-2xl border border-white/10 bg-[#131217] p-2 shadow-2xl">
                       <div className="px-3 py-2 text-sm font-semibold text-cream">Notifications</div>
-                      {notifications.length === 0 ? (
+                      {notifs.length === 0 ? (
                         <div className="px-3 pb-3 pt-1 text-sm text-cream/45">You&apos;re all caught up.</div>
                       ) : (
-                        notifications.map((n) => <NotifCard key={n.id} n={n} />)
+                        notifs.map((n) => <NotifCard key={n.id} n={n} onResolved={removeNotif} />)
                       )}
                     </motion.div>
                   </>
@@ -231,7 +254,7 @@ function initials(name: string) {
   return name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "U";
 }
 
-function NotifCard({ n }: { n: EditNotif }) {
+function NotifCard({ n, onResolved }: { n: EditNotif; onResolved: (id: string) => void }) {
   const t = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
@@ -245,10 +268,10 @@ function NotifCard({ n }: { n: EditNotif }) {
         {n.reason && <div className="text-cream/50">“{n.reason}”</div>}
       </div>
       <div className="mt-3 flex gap-2">
-        <form action={approveTimeEdit.bind(null, n.id)} className="flex-1">
+        <form action={approveTimeEdit.bind(null, n.id)} onSubmit={() => onResolved(n.id)} className="flex-1">
           <button className="w-full rounded-full border border-emerald-400/30 bg-emerald-400/10 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-400/20">Approve</button>
         </form>
-        <form action={rejectTimeEdit.bind(null, n.id)} className="flex-1">
+        <form action={rejectTimeEdit.bind(null, n.id)} onSubmit={() => onResolved(n.id)} className="flex-1">
           <button className="w-full rounded-full border border-white/12 py-1.5 text-xs text-cream/70 transition hover:border-red-400/40 hover:text-red-200">Reject</button>
         </form>
       </div>

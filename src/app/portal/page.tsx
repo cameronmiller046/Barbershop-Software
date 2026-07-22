@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireStaffWithPerms } from "@/lib/rbac";
+import { Suspense } from "react";
+import { requireStaffWithPerms, getPortalTenant, type StaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/utils";
@@ -17,9 +18,21 @@ export const dynamic = "force-dynamic";
 const fmtTime = (d: Date) => new Date(d).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 export default async function DashboardPage() {
+  // Fast, request-cached guard — lets the shell + skeleton paint immediately
+  // while the data-heavy dashboard body streams in behind a Suspense boundary.
   const user = await requireStaffWithPerms();
-  const tenantId = user.tenantId;
   const seesAll = can(user, "shop.viewAll");
+  return (
+    <div className="mx-auto max-w-[1500px]">
+      <Suspense fallback={<DashboardSkeleton seesAll={seesAll} />}>
+        <DashboardBody user={user} seesAll={seesAll} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function DashboardBody({ user, seesAll }: { user: StaffWithPerms; seesAll: boolean }) {
+  const tenantId = user.tenantId;
   const scope = seesAll ? {} : { barberId: user.id };
 
   const now = new Date();
@@ -28,7 +41,7 @@ export default async function DashboardPage() {
   const weekStart = startOfWeek(now), weekEnd = endOfWeek(now);
 
   const [tenant, services, clientList, barbers, todays, yesterday, weekRev, myClockOpen, myClockToday] = await Promise.all([
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } }),
+    getPortalTenant(tenantId),
     prisma.service.findMany({ where: { tenantId, active: true }, select: { id: true, name: true, priceCents: true }, orderBy: { sortOrder: "asc" } }),
     prisma.client.findMany({ where: { tenantId }, select: { name: true, phone: true }, orderBy: { name: "asc" }, take: 1000 }),
     prisma.user.findMany({ where: { tenantId, role: "BARBER", active: true, kioskOnly: false }, select: { id: true } }),
@@ -113,7 +126,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1500px]">
+    <>
       {/* Greeting */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -296,6 +309,43 @@ export default async function DashboardPage() {
           <Link href="/portal/appointments" className="p-btn-ghost"><Icon.calendar className="h-4 w-4" /> View Full Calendar</Link>
         </div>
       </Reveal>
+    </>
+  );
+}
+
+// Instant-paint placeholder shown while DashboardBody's queries resolve. Mirrors
+// the real layout (KPI row + 3-column grid) so nothing jumps when data streams in.
+function DashboardSkeleton({ seesAll }: { seesAll: boolean }) {
+  const panel = "rounded-2xl border border-white/8 bg-white/[0.02]";
+  return (
+    <div className="animate-pulse">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="h-8 w-64 rounded-lg bg-white/[0.06]" />
+          <div className="mt-2 h-4 w-80 rounded bg-white/[0.04]" />
+        </div>
+        <div className="h-10 w-32 rounded-full bg-white/[0.05]" />
+      </div>
+      <div className={`mt-6 grid gap-4 sm:grid-cols-2 ${seesAll ? "xl:grid-cols-6" : "lg:grid-cols-4"}`}>
+        {Array.from({ length: seesAll ? 6 : 4 }).map((_, i) => (
+          <div key={i} className={`${panel} p-5`}>
+            <div className="h-3 w-20 rounded bg-white/[0.06]" />
+            <div className="mt-4 h-8 w-16 rounded bg-white/[0.08]" />
+            <div className="mt-2 h-3 w-24 rounded bg-white/[0.04]" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1.5fr_1fr_1fr]">
+        <div className={`${panel} h-[420px] p-5`} />
+        <div className="space-y-5">
+          <div className={`${panel} h-48 p-5`} />
+          <div className={`${panel} h-28 p-5`} />
+        </div>
+        <div className="space-y-5">
+          <div className={`${panel} h-44 p-5`} />
+          <div className={`${panel} h-40 p-5`} />
+        </div>
+      </div>
     </div>
   );
 }
