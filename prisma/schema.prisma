@@ -182,6 +182,12 @@ model Tenant {
   twilioAuthToken  String?
   twilioFromNumber String?
 
+  // ── Email provider (SendGrid — Twilio's email). Per-shop API key + from
+  //    address; falls back to the server's Resend env. Key is a secret and is
+  //    NEVER sent to the browser. ──
+  sendgridApiKey   String?
+  emailFromAddress String?
+
   // Feature flags (Phase 5 admin toggles)
   featureSocial    Boolean @default(true)
   featureAnalytics Boolean @default(true)

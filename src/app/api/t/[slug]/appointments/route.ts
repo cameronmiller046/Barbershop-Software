@@ -87,7 +87,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         <p><b>${service.name}</b> with ${barber.name}<br/>${startTime.toLocaleString()}</p>
         <p>Manage your appointment: <a href="${manageUrl}" style="color:#c9a24b">${manageUrl}</a></p>
       `),
-    });
+    }, { sendgridApiKey: tenant.sendgridApiKey, from: tenant.emailFromAddress });
   }
 
   return NextResponse.json({ redirect: `/t/${tenant.slug}/appointments/${appointment.manageToken}?booked=1` });

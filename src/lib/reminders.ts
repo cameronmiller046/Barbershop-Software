@@ -23,7 +23,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ sent: number
     },
     select: {
       id: true, startTime: true, manageToken: true,
-      tenant: { select: { name: true, slug: true, timezone: true, reminderEmail: true, reminderSms: true, reminderHoursBefore: true, twilioAccountSid: true, twilioAuthToken: true, twilioFromNumber: true } },
+      tenant: { select: { name: true, slug: true, timezone: true, reminderEmail: true, reminderSms: true, reminderHoursBefore: true, twilioAccountSid: true, twilioAuthToken: true, twilioFromNumber: true, sendgridApiKey: true, emailFromAddress: true } },
       client: { select: { name: true, email: true, phone: true } },
       service: { select: { name: true } },
       barber: { select: { name: true } },
@@ -53,7 +53,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ sent: number
         to: a.client.email,
         subject: `Reminder: your appointment at ${a.tenant.name}`,
         html: emailLayout("See you soon!", `<p>Hi ${a.client.name}, this is a reminder for your upcoming appointment at <b>${a.tenant.name}</b>.</p><p><b>${a.service.name}</b> with ${a.barber.name}<br/>${when}</p><p>Manage or cancel: <a href="${manageUrl}" style="color:#c9a24b">${manageUrl}</a></p>`),
-      });
+      }, { sendgridApiKey: a.tenant.sendgridApiKey, from: a.tenant.emailFromAddress });
       if (r.ok) { email++; delivered = true; } else failed++;
     }
     if (a.tenant.reminderSms && a.client.phone) {

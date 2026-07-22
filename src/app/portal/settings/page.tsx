@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders, updateTwilio } from "@/app/portal/actions";
+import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders, updateTwilio, updateEmailSender } from "@/app/portal/actions";
 import { smsReady } from "@/lib/sms";
+import { emailReady } from "@/lib/email";
 import { appUrl } from "@/lib/utils";
 import { can } from "@/lib/permissions";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -20,6 +21,7 @@ export default async function SettingsPage() {
   // Whether SMS can actually send (this shop's Twilio, or the server fallback).
   // NOTE: the auth token itself is never rendered — only this boolean.
   const smsConnected = smsReady({ accountSid: tenant.twilioAccountSid, authToken: tenant.twilioAuthToken, from: tenant.twilioFromNumber });
+  const emailConnected = emailReady({ sendgridApiKey: tenant.sendgridApiKey });
 
   return (
     <div className="max-w-xl">
@@ -205,6 +207,32 @@ export default async function SettingsPage() {
         </div>
 
         <button className="btn-primary">Save Twilio settings</button>
+      </form>
+
+      {/* ── Email provider (SendGrid) ── */}
+      <form action={updateEmailSender} className="card mt-6 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl">Email provider (SendGrid)</h2>
+            <p className="mt-1 text-sm text-cream/50">Send confirmations and reminders from your own email. Uses SendGrid (Twilio&apos;s email); leave blank to use the built-in sender.</p>
+          </div>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${emailConnected ? "bg-emerald-500/15 text-emerald-300" : "bg-white/8 text-cream/50"}`}>
+            {emailConnected ? "Connected" : "Not connected"}
+          </span>
+        </div>
+
+        <div>
+          <label className="label">SendGrid API key</label>
+          <input name="sendgridApiKey" type="password" placeholder={tenant.sendgridApiKey ? "•••••••• (leave blank to keep current)" : "SG.xxxxxxxx"} autoComplete="off" className="input font-mono text-sm" />
+          <p className="mt-1 text-xs text-cream/45">Stored securely and never shown again. Leave blank to keep the current key.</p>
+        </div>
+        <div>
+          <label className="label">From address</label>
+          <input name="emailFromAddress" defaultValue={tenant.emailFromAddress ?? ""} placeholder="Your Shop &lt;hello@yourshop.com&gt;" autoComplete="off" className="input" />
+          <p className="mt-1 text-xs text-cream/45">Must be a verified sender in your SendGrid account. Clear this and save to disconnect.</p>
+        </div>
+
+        <button className="btn-primary">Save email settings</button>
       </form>
     </div>
   );

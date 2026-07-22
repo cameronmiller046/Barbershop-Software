@@ -309,6 +309,22 @@ export async function updateTwilio(formData: FormData) {
   revalidatePath("/portal/settings");
 }
 
+/** Manager connects this shop's own email sender (SendGrid) (requires shop.settings). */
+export async function updateEmailSender(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const from = String(formData.get("emailFromAddress") || "").trim();
+  const apiKey = String(formData.get("sendgridApiKey") || "").trim(); // blank = keep existing
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: !from
+      ? { emailFromAddress: null, sendgridApiKey: null } // disconnect
+      : { emailFromAddress: from, ...(apiKey ? { sendgridApiKey: apiKey } : {}) },
+  });
+  await audit({ action: "email.settings", tenantId: user.tenantId, userId: user.id, meta: { connected: !!from, keyChanged: !!apiKey } });
+  revalidatePath("/portal/settings");
+}
+
 /** Redeem one loyalty reward for a client — consumes the threshold in points (FIFO, oldest first). */
 export async function redeemLoyaltyReward(clientId: string) {
   const user = await requirePerm("shop.clients");
