@@ -18,13 +18,37 @@ export async function clockIn() {
   revalidate();
 }
 
-/** Clock the acting staff member OUT (closes their open shift). */
+/** Clock the acting staff member OUT (closes their open shift + any open break). */
 export async function clockOut() {
   const user = await requirePortalStaff();
   const open = await prisma.timeEntry.findFirst({ where: { tenantId: user.tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } });
   if (!open) return;
-  await prisma.timeEntry.update({ where: { id: open.id }, data: { clockOut: new Date() } });
+  const now = new Date();
+  await prisma.timeBreak.updateMany({ where: { entryId: open.id, end: null }, data: { end: now } });
+  await prisma.timeEntry.update({ where: { id: open.id }, data: { clockOut: now } });
   await audit({ action: "timeclock.out", tenantId: user.tenantId, userId: user.id });
+  revalidate();
+}
+
+/** Start an (unpaid) break on the acting staff member's open shift. */
+export async function startBreak() {
+  const user = await requirePortalStaff();
+  const open = await prisma.timeEntry.findFirst({ where: { tenantId: user.tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } });
+  if (!open) return; // must be on the clock to take a break
+  const onBreak = await prisma.timeBreak.findFirst({ where: { entryId: open.id, end: null } });
+  if (onBreak) return; // already on break
+  await prisma.timeBreak.create({ data: { tenantId: user.tenantId, userId: user.id, entryId: open.id } });
+  await audit({ action: "timeclock.break.start", tenantId: user.tenantId, userId: user.id, target: open.id });
+  revalidate();
+}
+
+/** End the acting staff member's current break (returns them to the clock). */
+export async function endBreak() {
+  const user = await requirePortalStaff();
+  const open = await prisma.timeEntry.findFirst({ where: { tenantId: user.tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } });
+  if (!open) return;
+  await prisma.timeBreak.updateMany({ where: { entryId: open.id, end: null }, data: { end: new Date() } });
+  await audit({ action: "timeclock.break.end", tenantId: user.tenantId, userId: user.id, target: open.id });
   revalidate();
 }
 
@@ -34,7 +58,9 @@ export async function clockOutStaff(userId: string) {
   if (!can(user, "shop.team")) return;
   const open = await prisma.timeEntry.findFirst({ where: { tenantId: user.tenantId, userId, clockOut: null }, orderBy: { clockIn: "desc" } });
   if (!open) return;
-  await prisma.timeEntry.update({ where: { id: open.id }, data: { clockOut: new Date() } });
+  const now = new Date();
+  await prisma.timeBreak.updateMany({ where: { entryId: open.id, end: null }, data: { end: now } });
+  await prisma.timeEntry.update({ where: { id: open.id }, data: { clockOut: now } });
   await audit({ action: "timeclock.out.admin", tenantId: user.tenantId, userId: user.id, target: userId });
   revalidate();
 }

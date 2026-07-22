@@ -45,10 +45,14 @@ export default async function DashboardPage() {
       where: { tenantId, active: true, status: "COMPLETED", startTime: { gte: weekStart, lte: weekEnd } },
       select: { collectedCents: true, service: { select: { priceCents: true } } },
     }),
-    prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } }),
-    prisma.timeEntry.findMany({ where: { tenantId, userId: user.id, clockOut: { not: null }, clockIn: { gte: dayStart } }, select: { clockIn: true, clockOut: true } }),
+    prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" }, include: { breaks: { select: { start: true, end: true } } } }),
+    prisma.timeEntry.findMany({ where: { tenantId, userId: user.id, clockOut: { not: null }, clockIn: { gte: dayStart } }, select: { clockIn: true, clockOut: true, breaks: { select: { start: true, end: true } } } }),
   ]);
-  const myClockTodayMin = myClockToday.reduce((s, e) => s + Math.max(0, Math.round(((e.clockOut as Date).getTime() - e.clockIn.getTime()) / 60_000)), 0);
+  const spanMin = (a: Date, b: Date | null) => Math.max(0, Math.round(((b ?? new Date()).getTime() - a.getTime()) / 60_000));
+  const brkMin = (bs: { start: Date; end: Date | null }[]) => bs.reduce((s, b) => s + spanMin(b.start, b.end), 0);
+  const myClockTodayMin = myClockToday.reduce((s, e) => s + Math.max(0, spanMin(e.clockIn, e.clockOut) - brkMin(e.breaks)), 0);
+  const myClockOpenBreak = myClockOpen?.breaks.find((b) => !b.end) ?? null;
+  const myClockOpenBreakMin = myClockOpen ? brkMin(myClockOpen.breaks.filter((b) => b.end)) : 0;
 
   const revenueOf = (a: { collectedCents: number | null; service: { priceCents: number } }) => a.collectedCents ?? a.service.priceCents;
 
@@ -207,7 +211,12 @@ export default async function DashboardPage() {
 
         {/* Right widgets */}
         <section className="order-3 space-y-5 xl:order-3">
-          <TimeClock openSinceISO={myClockOpen?.clockIn.toISOString() ?? null} todayMinutes={myClockTodayMin} />
+          <TimeClock
+            openSinceISO={myClockOpen?.clockIn.toISOString() ?? null}
+            todayMinutes={myClockTodayMin}
+            onBreakSinceISO={myClockOpenBreak?.start.toISOString() ?? null}
+            shiftBreakMinutes={myClockOpenBreakMin}
+          />
 
           {/* Live shop status */}
           <div className="p-panel p-5">

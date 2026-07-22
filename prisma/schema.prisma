@@ -203,6 +203,7 @@ model Tenant {
   auditLogs        AuditLog[]
   timeEntries      TimeEntry[]
   timeEditRequests TimeEditRequest[]
+  timeBreaks       TimeBreak[]
   tickets          Ticket[]
 
   createdAt DateTime @default(now())
@@ -252,6 +253,7 @@ model User {
   auditLogs          AuditLog[]
   timeEntries        TimeEntry[]
   timeEditRequests   TimeEditRequest[]
+  timeBreaks         TimeBreak[]
   reportedTickets    Ticket[]          @relation("TicketReporter")
   assignedTickets    Ticket[]          @relation("TicketAssignee")
   ticketComments     TicketComment[]
@@ -419,11 +421,32 @@ model TimeEntry {
   userId   String
 
   editRequests TimeEditRequest[]
+  breaks       TimeBreak[]
 
   createdAt DateTime @default(now())
 
   @@index([tenantId, clockIn])
   @@index([userId, clockIn])
+}
+
+// An (unpaid) break taken during a shift. Break time is subtracted from the
+// shift's worked hours. A shift can have many breaks but only one open at once.
+model TimeBreak {
+  id    String    @id @default(cuid())
+  start DateTime  @default(now())
+  end   DateTime?
+
+  entry   TimeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+
+  createdAt DateTime @default(now())
+
+  @@index([entryId])
+  @@index([userId])
 }
 
 // A barber's suggested correction to one of their time entries. Admins approve

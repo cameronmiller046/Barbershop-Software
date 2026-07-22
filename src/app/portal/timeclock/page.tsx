@@ -10,6 +10,10 @@ import { Icon } from "@/components/home/icons";
 export const dynamic = "force-dynamic";
 
 const durMin = (inD: Date, outD: Date | null) => Math.max(0, Math.round(((outD ?? new Date()).getTime() - inD.getTime()) / 60_000));
+type BreakSpan = { start: Date; end: Date | null };
+const breakMin = (breaks: BreakSpan[]) => breaks.reduce((s, b) => s + durMin(b.start, b.end), 0);
+// Paid/worked minutes = shift length minus break time (an open break counts up to now).
+const workedMin = (inD: Date, outD: Date | null, breaks: BreakSpan[]) => Math.max(0, durMin(inD, outD) - breakMin(breaks));
 const fmtDur = (m: number) => { const h = Math.floor(m / 60); return h ? `${h}h ${m % 60}m` : `${m}m`; };
 const fmtTime = (d: Date) => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 const fmtDay = (d: Date) => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
@@ -22,26 +26,30 @@ export default async function TimeClockPage() {
   const dayStart = startOfDay(now), weekStart = startOfWeek(now), weekEnd = endOfWeek(now);
 
   const [open, myWeek, pendingReqs] = await Promise.all([
-    prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" } }),
-    prisma.timeEntry.findMany({ where: { tenantId, userId: user.id, clockIn: { gte: weekStart, lte: weekEnd } }, orderBy: { clockIn: "desc" } }),
+    prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" }, include: { breaks: { select: { start: true, end: true } } } }),
+    prisma.timeEntry.findMany({ where: { tenantId, userId: user.id, clockIn: { gte: weekStart, lte: weekEnd } }, orderBy: { clockIn: "desc" }, include: { breaks: { select: { start: true, end: true } } } }),
     prisma.timeEditRequest.findMany({ where: { tenantId, userId: user.id, status: "PENDING" }, select: { entryId: true } }),
   ]);
   const pendingSet = new Set(pendingReqs.map((r) => r.entryId));
-  const myTodayMin = myWeek.filter((e) => e.clockOut && e.clockIn >= dayStart).reduce((s, e) => s + durMin(e.clockIn, e.clockOut), 0);
-  const myWeekMin = myWeek.reduce((s, e) => s + durMin(e.clockIn, e.clockOut), 0);
+  const myTodayMin = myWeek.filter((e) => e.clockOut && e.clockIn >= dayStart).reduce((s, e) => s + workedMin(e.clockIn, e.clockOut, e.breaks), 0);
+  const myWeekMin = myWeek.reduce((s, e) => s + workedMin(e.clockIn, e.clockOut, e.breaks), 0);
+  // Break state for the open shift: an in-progress break + completed break minutes so far.
+  const openBreak = open?.breaks.find((b) => !b.end) ?? null;
+  const openShiftBreakMin = open ? breakMin(open.breaks.filter((b) => b.end)) : 0;
 
-  let staffRows: { id: string; name: string; weekMin: number; onSinceISO: string | null }[] | null = null;
+  let staffRows: { id: string; name: string; weekMin: number; onSinceISO: string | null; onBreakSinceISO: string | null }[] | null = null;
   if (seesAll) {
     const [staff, weekEntries, openEntries] = await Promise.all([
       prisma.user.findMany({ where: { tenantId, role: { in: ["OWNER", "BARBER", "RECEPTIONIST"] }, active: true, kioskOnly: false }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
-      prisma.timeEntry.findMany({ where: { tenantId, clockIn: { gte: weekStart, lte: weekEnd } }, select: { userId: true, clockIn: true, clockOut: true } }),
-      prisma.timeEntry.findMany({ where: { tenantId, clockOut: null }, select: { userId: true, clockIn: true } }),
+      prisma.timeEntry.findMany({ where: { tenantId, clockIn: { gte: weekStart, lte: weekEnd } }, select: { userId: true, clockIn: true, clockOut: true, breaks: { select: { start: true, end: true } } } }),
+      prisma.timeEntry.findMany({ where: { tenantId, clockOut: null }, select: { userId: true, clockIn: true, breaks: { where: { end: null }, select: { start: true } } } }),
     ]);
     const openMap = new Map(openEntries.map((e) => [e.userId, e.clockIn]));
+    const breakMap = new Map(openEntries.map((e) => [e.userId, e.breaks[0]?.start ?? null]));
     const minByUser = new Map<string, number>();
-    for (const e of weekEntries) minByUser.set(e.userId, (minByUser.get(e.userId) ?? 0) + durMin(e.clockIn, e.clockOut));
+    for (const e of weekEntries) minByUser.set(e.userId, (minByUser.get(e.userId) ?? 0) + workedMin(e.clockIn, e.clockOut, e.breaks));
     staffRows = staff
-      .map((s) => ({ id: s.id, name: s.name, weekMin: minByUser.get(s.id) ?? 0, onSinceISO: openMap.get(s.id)?.toISOString() ?? null }))
+      .map((s) => ({ id: s.id, name: s.name, weekMin: minByUser.get(s.id) ?? 0, onSinceISO: openMap.get(s.id)?.toISOString() ?? null, onBreakSinceISO: breakMap.get(s.id)?.toISOString() ?? null }))
       .sort((a, b) => (a.onSinceISO ? 0 : 1) - (b.onSinceISO ? 0 : 1) || a.name.localeCompare(b.name));
   }
 
@@ -55,7 +63,12 @@ export default async function TimeClockPage() {
       <div className="mt-6 grid gap-5 lg:grid-cols-[340px_1fr]">
         {/* Personal clock */}
         <div className="space-y-5">
-          <TimeClock openSinceISO={open?.clockIn.toISOString() ?? null} todayMinutes={myTodayMin} />
+          <TimeClock
+            openSinceISO={open?.clockIn.toISOString() ?? null}
+            todayMinutes={myTodayMin}
+            onBreakSinceISO={openBreak?.start.toISOString() ?? null}
+            shiftBreakMinutes={openShiftBreakMin}
+          />
           <div className="p-panel grid grid-cols-2 gap-3 p-5">
             <div className="text-center"><div className="font-display text-2xl font-semibold text-brass">{fmtDur(myTodayMin)}</div><div className="mt-0.5 text-xs text-cream/45">Today</div></div>
             <div className="text-center"><div className="font-display text-2xl font-semibold text-cream">{fmtDur(myWeekMin)}</div><div className="mt-0.5 text-xs text-cream/45">This week</div></div>
@@ -73,10 +86,13 @@ export default async function TimeClockPage() {
                 <div key={e.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3 text-sm">
                   <div className="min-w-0">
                     <div className="text-cream">{fmtDay(e.clockIn)}</div>
-                    <div className="text-xs text-cream/45">{fmtTime(e.clockIn)} – {e.clockOut ? fmtTime(e.clockOut) : <span className="text-emerald-300">on the clock</span>}</div>
+                    <div className="text-xs text-cream/45">
+                      {fmtTime(e.clockIn)} – {e.clockOut ? fmtTime(e.clockOut) : <span className="text-emerald-300">on the clock</span>}
+                      {breakMin(e.breaks) > 0 && <span className="text-amber-300/70"> · {fmtDur(breakMin(e.breaks))} break</span>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className={`font-medium ${e.clockOut ? "text-cream/80" : "text-emerald-300"}`}>{fmtDur(durMin(e.clockIn, e.clockOut))}</div>
+                    <div className={`font-medium ${e.clockOut ? "text-cream/80" : "text-emerald-300"}`}>{fmtDur(workedMin(e.clockIn, e.clockOut, e.breaks))}</div>
                     <SuggestTimeEdit entryId={e.id} clockInISO={e.clockIn.toISOString()} clockOutISO={e.clockOut?.toISOString() ?? null} pending={pendingSet.has(e.id)} />
                   </div>
                 </div>
@@ -96,10 +112,18 @@ export default async function TimeClockPage() {
           <div className="mt-4 space-y-2">
             {staffRows.map((s) => (
               <div key={s.id} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${s.onSinceISO ? "p-live-dot bg-emerald-400" : "bg-cream/25"}`} />
+                <span className={`h-2 w-2 shrink-0 rounded-full ${s.onBreakSinceISO ? "bg-amber-400" : s.onSinceISO ? "p-live-dot bg-emerald-400" : "bg-cream/25"}`} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm text-cream">{s.name}</div>
-                  <div className="text-xs text-cream/45">{s.onSinceISO ? `Clocked in at ${fmtTime(new Date(s.onSinceISO))}` : "Off the clock"}</div>
+                  <div className="text-xs text-cream/45">
+                    {s.onBreakSinceISO ? (
+                      <span className="text-amber-300/80">On break since {fmtTime(new Date(s.onBreakSinceISO))}</span>
+                    ) : s.onSinceISO ? (
+                      `Clocked in at ${fmtTime(new Date(s.onSinceISO))}`
+                    ) : (
+                      "Off the clock"
+                    )}
+                  </div>
                 </div>
                 <div className="text-sm font-medium text-cream/80">{fmtDur(s.weekMin)}</div>
                 {s.onSinceISO && (
