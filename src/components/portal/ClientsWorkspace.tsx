@@ -65,6 +65,14 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
     });
   }, [rows, query, filter, sort]);
 
+  // Paginate the list — 10 per page. Reset to page 1 whenever the result set changes.
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [query, filter, sort]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const PILLS: { key: Filter; label: string; count: number; dot?: string }[] = [
     { key: "all", label: "All Clients", count: counts.all },
     { key: "active", label: "Active", count: counts.active, dot: "bg-emerald-400" },
@@ -137,10 +145,12 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
             {filtered.length === 0 ? (
               <div className="p-panel p-8 text-center text-cream/50">No clients match your search.</div>
             ) : (
-              filtered.slice(0, 200).map((r) => <Row key={r.id} r={r} active={r.id === selectedId} onClick={() => select(r.id)} />)
+              pageRows.map((r) => <Row key={r.id} r={r} active={r.id === selectedId} onClick={() => select(r.id)} />)
             )}
-            {filtered.length > 200 && <div className="py-3 text-center text-xs text-cream/40">Showing first 200 of {filtered.length.toLocaleString()} — refine your search.</div>}
           </div>
+          {filtered.length > PAGE_SIZE && (
+            <Pagination page={safePage} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
+          )}
         </div>
 
         {/* ── Right detail ── */}
@@ -193,6 +203,53 @@ function Col({ value, label, gold, hide }: { value: string; label: string; gold?
       <div className="text-xs text-cream/40">{label}</div>
     </div>
   );
+}
+
+/* ── Pagination ── */
+function Pagination({ page, totalPages, total, pageSize, onPage }: { page: number; totalPages: number; total: number; pageSize: number; onPage: (p: number) => void }) {
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(total, page * pageSize);
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="text-xs text-cream/45">Showing {start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()}</div>
+      <div className="flex items-center gap-1">
+        <PgBtn disabled={page <= 1} onClick={() => onPage(page - 1)} label="Previous page"><Icon.chevron className="h-4 w-4" /></PgBtn>
+        {pageWindow(page, totalPages).map((n, i) =>
+          typeof n === "string" ? (
+            <span key={`gap-${i}`} className="px-1.5 text-cream/30">…</span>
+          ) : (
+            <button key={n} onClick={() => onPage(n)}
+              className={`grid h-9 min-w-9 place-items-center rounded-lg border px-2 text-sm tabular-nums transition ${n === page ? "border-brass/60 bg-brass/12 text-brass" : "border-white/10 text-cream/65 hover:border-white/25 hover:text-cream"}`}>
+              {n}
+            </button>
+          ),
+        )}
+        <PgBtn disabled={page >= totalPages} onClick={() => onPage(page + 1)} label="Next page"><Icon.chevron className="h-4 w-4 rotate-180" /></PgBtn>
+      </div>
+    </div>
+  );
+}
+
+function PgBtn({ disabled, onClick, label, children }: { disabled: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} disabled={disabled} aria-label={label}
+      className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-cream/70 transition hover:border-white/25 hover:text-cream disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/10">
+      {children}
+    </button>
+  );
+}
+
+// Windowed page numbers: always show first + last, with the current page and its
+// neighbours, collapsing the rest into "…".
+function pageWindow(page: number, total: number): (number | string)[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const out: (number | string)[] = [1];
+  const left = Math.max(2, page - 1), right = Math.min(total - 1, page + 1);
+  if (left > 2) out.push("…");
+  for (let i = left; i <= right; i++) out.push(i);
+  if (right < total - 1) out.push("…");
+  out.push(total);
+  return out;
 }
 
 /* ── Detail panel ── */
