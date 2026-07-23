@@ -27,7 +27,7 @@ export default async function ClientsPage() {
     const spentCents = a?.spent ?? 0;
     const lastMs = a?.last ? a.last.getTime() : null;
     const seg = segmentOf({ visits, spentCents, lastVisitMs: lastMs, createdAtMs: c.createdAt.getTime(), now });
-    return { id: c.id, name: c.name, phone: c.phone, initials: initialsOf(c.name), visits, spentCents, lastVisitISO: a?.last ? a.last.toISOString() : null, ...seg };
+    return { id: c.id, name: c.name, phone: c.phone, email: c.email, initials: initialsOf(c.name), visits, spentCents, lastVisitISO: a?.last ? a.last.toISOString() : null, ...seg };
   });
   // Default order = most recent visit first (matches the default "Last Visit" sort).
   rows.sort((x, y) => (y.lastVisitISO ? Date.parse(y.lastVisitISO) : 0) - (x.lastVisitISO ? Date.parse(x.lastVisitISO) : 0));

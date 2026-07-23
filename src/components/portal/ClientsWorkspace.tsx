@@ -3,36 +3,57 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { clientDetail, createClient, updateClient, saveClientNotes, redeemLoyaltyReward } from "@/app/portal/actions";
 import type { ClientDetail, Appt, LoyaltyDetail } from "@/lib/clientDetail";
 import { formatMoney } from "@/lib/utils";
-import { Icon } from "@/components/home/icons";
+import { Icon, type IconName } from "@/components/home/icons";
 
 export type ClientRow = {
-  id: string; name: string; phone: string | null; initials: string;
+  id: string; name: string; phone: string | null; email: string | null; initials: string;
   visits: number; spentCents: number; lastVisitISO: string | null;
   isVip: boolean; isNew: boolean; isActive: boolean;
 };
 type Counts = { all: number; active: number; new: number; vip: number; inactive: number };
 type Filter = "all" | "active" | "new" | "vip" | "inactive";
+type SortKey = "name" | "visits" | "spent" | "last";
+type Sort = { key: SortKey; dir: "asc" | "desc" };
+type Tint = "brass" | "emerald" | "blue" | "purple" | "cyan";
+
+// Shared column template so the table header and every row line up exactly.
+const COLS = "grid-cols-[minmax(0,2.4fr)_minmax(0,2fr)_80px_120px_140px_110px_32px]";
 
 export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: ClientRow[]; counts: Counts; initialDetail: ClientDetail | null }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [sort, setSort] = useState<"last" | "name" | "spent">("last");
-  const [selectedId, setSelectedId] = useState<string | null>(initialDetail?.id ?? rows[0]?.id ?? null);
+  const [sort, setSort] = useState<Sort>({ key: "last", dir: "desc" });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [cache, setCache] = useState<Record<string, ClientDetail>>(initialDetail ? { [initialDetail.id]: initialDetail } : {});
   const [tab, setTab] = useState("overview");
   const [pending, startT] = useTransition();
   const [modal, setModal] = useState<null | "add" | "edit">(null);
+  const [mounted, setMounted] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { setMounted(true); }, []);
 
   const detail = selectedId ? cache[selectedId] ?? null : null;
 
   function select(id: string) {
-    setSelectedId(id); setTab("overview");
+    setSelectedId(id); setTab("overview"); setDrawerOpen(true);
     if (!cache[id]) startT(async () => { const d = await clientDetail(id); if (d) setCache((c) => ({ ...c, [id]: d })); });
   }
+  const closeDrawer = () => setDrawerOpen(false);
+  const toggleSort = (key: SortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "name" ? "asc" : "desc" }));
+
+  // Close the drawer on Escape.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
 
   const [redeeming, startRedeem] = useTransition();
   function redeem(id: string) {
@@ -58,20 +79,49 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
       }
       return true;
     });
+    const dir = sort.dir === "asc" ? 1 : -1;
     return list.sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name);
-      if (sort === "spent") return b.spentCents - a.spentCents;
-      return (b.lastVisitISO ? Date.parse(b.lastVisitISO) : 0) - (a.lastVisitISO ? Date.parse(a.lastVisitISO) : 0);
+      let cmp: number;
+      if (sort.key === "name") cmp = a.name.localeCompare(b.name);
+      else if (sort.key === "visits") cmp = a.visits - b.visits;
+      else if (sort.key === "spent") cmp = a.spentCents - b.spentCents;
+      else cmp = (a.lastVisitISO ? Date.parse(a.lastVisitISO) : 0) - (b.lastVisitISO ? Date.parse(b.lastVisitISO) : 0);
+      return cmp * dir;
     });
   }, [rows, query, filter, sort]);
 
-  // Paginate the list — 10 per page. Reset to page 1 whenever the result set changes.
-  const PAGE_SIZE = 10;
+  // Paginate — default 10 per page, reset to page 1 when the result set changes.
+  const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [query, filter, sort]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => { setPage(1); }, [query, filter, sort, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const totalValueCents = useMemo(() => rows.reduce((s, r) => s + r.spentCents, 0), [rows]);
+  const activePct = counts.all ? Math.round((counts.active / counts.all) * 100) : 0;
+  const KPIS: { label: string; value: string; icon: IconName; tint: Tint; sub: string }[] = [
+    { label: "Total Clients", value: counts.all.toLocaleString(), icon: "customers", tint: "brass", sub: "All time" },
+    { label: "VIP Clients", value: counts.vip.toLocaleString(), icon: "star", tint: "emerald", sub: "High-value regulars" },
+    { label: "New Clients", value: counts.new.toLocaleString(), icon: "spark", tint: "blue", sub: "Recently joined" },
+    { label: "Active Clients", value: counts.active.toLocaleString(), icon: "gauge", tint: "purple", sub: `${activePct}% of total` },
+    { label: "Lifetime Value", value: formatMoney(totalValueCents), icon: "dollar", tint: "cyan", sub: "Total client spend" },
+  ];
+
+  // Export the current (filtered) list to CSV, client-side.
+  function exportCsv() {
+    const head = ["Name", "Phone", "Email", "Visits", "Total Spent", "Last Visit", "Status"];
+    const body = filtered.map((r) => [
+      r.name, r.phone ?? "", r.email ?? "", String(r.visits), (r.spentCents / 100).toFixed(2),
+      r.lastVisitISO ? new Date(r.lastVisitISO).toISOString().slice(0, 10) : "",
+      r.isActive ? "Active" : "Inactive",
+    ]);
+    const csv = [head, ...body].map((row) => row.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "clients.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const PILLS: { key: Filter; label: string; count: number; dot?: string }[] = [
     { key: "all", label: "All Clients", count: counts.all },
@@ -82,91 +132,102 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
   ];
 
   return (
-    <div className="mx-auto max-w-[1500px]">
-      {/* Top row */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl text-cream">Clients</h1>
-          <p className="mt-1 text-cream/55">Search and manage your clients</p>
+    <div className="mx-auto max-w-[1600px]">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-brass/25 bg-brass/[0.08] text-brass"><Icon.customers className="h-6 w-6" /></span>
+          <div>
+            <h1 className="font-display text-2xl text-cream sm:text-3xl">Clients</h1>
+            <p className="mt-0.5 text-sm text-cream/55">Manage and grow your client relationships.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => searchRef.current?.focus()} className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-sm text-cream/45 transition hover:border-brass/30 md:flex">
-            <SearchIcon /> Search clients… <kbd className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] text-cream/40">⌘K</kbd>
-          </button>
+          <button onClick={exportCsv} className="p-btn-ghost"><DownloadIcon /> Export</button>
           <button onClick={() => setModal("add")} className="p-btn-gold"><Icon.plus className="h-4 w-4" /> Add Client</button>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.85fr_1fr]">
-        {/* ── Center ── */}
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-cream/40"><SearchIcon /></span>
-              <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients by name, phone, or email…"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.02] py-3.5 pl-11 pr-4 text-cream outline-none transition focus:border-brass/50 focus:bg-white/[0.04] placeholder:text-cream/35" />
-            </div>
-            <button className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl border border-brass/30 bg-brass/[0.06] text-brass transition hover:bg-brass/12" aria-label="Filters"><FilterIcon /></button>
-          </div>
+      {/* KPI cards */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {KPIS.map((k) => <KPICard key={k.label} {...k} />)}
+      </div>
 
-          {/* Filter pills */}
-          <div className="p-scroll mt-4 flex gap-2 overflow-x-auto pb-1">
-            {PILLS.map((p) => {
-              const on = filter === p.key;
-              return (
-                <button key={p.key} onClick={() => setFilter(p.key)}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition ${on ? "border-brass/60 bg-brass/12 text-brass" : "border-white/10 text-cream/65 hover:border-white/25 hover:text-cream"}`}>
-                  {p.dot === "gold" ? <Icon.star className="h-3.5 w-3.5" /> : p.dot ? <span className={`h-1.5 w-1.5 rounded-full ${p.dot}`} /> : <Icon.customers className="h-4 w-4" />}
-                  {p.label}
-                  <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${on ? "bg-brass/20 text-brass" : "bg-white/8 text-cream/50"}`}>{p.count.toLocaleString()}</span>
-                </button>
-              );
-            })}
-            <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-2 text-sm text-cream/65 transition hover:border-white/25 hover:text-cream">
-              More Filters <Icon.chevron className="h-3.5 w-3.5 -rotate-90" />
-            </button>
-          </div>
-
-          {/* Count + sort */}
-          <div className="mt-5 flex items-center justify-between">
-            <div className="text-sm text-cream/55">{filtered.length.toLocaleString()} clients found</div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-cream/45">Sort by:</span>
-              <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-1.5 text-cream outline-none focus:border-brass/50">
-                <option value="last">Last Visit</option>
-                <option value="name">Name</option>
-                <option value="spent">Total Spent</option>
-              </select>
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="mt-3 space-y-2">
-            {filtered.length === 0 ? (
-              <div className="p-panel p-8 text-center text-cream/50">No clients match your search.</div>
-            ) : (
-              pageRows.map((r) => <Row key={r.id} r={r} active={r.id === selectedId} onClick={() => select(r.id)} />)
-            )}
-          </div>
-          {filtered.length > PAGE_SIZE && (
-            <Pagination page={safePage} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
-          )}
+      {/* Toolbar: search + segment filters */}
+      <div className="mt-6 p-panel p-4">
+        <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-cream/40"><SearchIcon /></span>
+          <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients by name, phone, or email…"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.02] py-3 pl-11 pr-4 text-cream outline-none transition focus:border-brass/50 focus:bg-white/[0.04] placeholder:text-cream/35" />
         </div>
-
-        {/* ── Right detail ── */}
-        <div className="xl:sticky xl:top-6 xl:self-start">
-          {detail ? (
-            <Detail d={detail} tab={tab} setTab={setTab} pending={pending} onEdit={() => setModal("edit")} onRedeem={() => redeem(detail.id)} redeeming={redeeming} />
-          ) : pending ? (
-            <div className="p-panel h-[560px] animate-pulse" />
-          ) : (
-            <div className="p-panel flex h-[400px] flex-col items-center justify-center p-8 text-center">
-              <span className="grid h-14 w-14 place-items-center rounded-full border border-white/10 text-cream/30"><Icon.customers className="h-7 w-7" /></span>
-              <div className="mt-4 text-cream/60">Select a client to see their details.</div>
-            </div>
-          )}
+        <div className="p-scroll mt-3 flex gap-2 overflow-x-auto pb-1">
+          {PILLS.map((p) => {
+            const on = filter === p.key;
+            return (
+              <button key={p.key} onClick={() => setFilter(p.key)}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition ${on ? "border-brass/60 bg-brass/12 text-brass" : "border-white/10 text-cream/65 hover:border-white/25 hover:text-cream"}`}>
+                {p.dot === "gold" ? <Icon.star className="h-3.5 w-3.5" /> : p.dot ? <span className={`h-1.5 w-1.5 rounded-full ${p.dot}`} /> : <Icon.customers className="h-4 w-4" />}
+                {p.label}
+                <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${on ? "bg-brass/20 text-brass" : "bg-white/8 text-cream/50"}`}>{p.count.toLocaleString()}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* Table */}
+      <div className="mt-4 p-panel overflow-hidden !p-0">
+        <div className="overflow-x-auto">
+          <div className="min-w-[860px]">
+            <div className={`grid ${COLS} items-center gap-4 border-b border-white/8 px-4 py-3`}>
+              <SortTh label="Client" k="name" sort={sort} onSort={toggleSort} />
+              <div className="text-xs font-medium uppercase tracking-wide text-cream/45">Contact</div>
+              <SortTh label="Visits" k="visits" sort={sort} onSort={toggleSort} align="right" />
+              <SortTh label="Total Spent" k="spent" sort={sort} onSort={toggleSort} align="right" />
+              <SortTh label="Last Visit" k="last" sort={sort} onSort={toggleSort} />
+              <div className="text-xs font-medium uppercase tracking-wide text-cream/45">Status</div>
+              <div />
+            </div>
+            {filtered.length === 0 ? (
+              <div className="px-4 py-16 text-center text-cream/50">No clients match your search.</div>
+            ) : (
+              <div className="divide-y divide-white/6">
+                {pageRows.map((r) => <Row key={r.id} r={r} active={r.id === selectedId} onClick={() => select(r.id)} />)}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer: range + page size + pager */}
+      {filtered.length > 0 && (
+        <Footer page={safePage} totalPages={totalPages} total={filtered.length} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+      )}
+
+      {/* Detail drawer */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {drawerOpen && (
+            <>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={closeDrawer} className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm" />
+              <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 340, damping: 36 }}
+                className="p-scroll fixed right-0 top-0 z-[95] h-full w-full max-w-[470px] overflow-y-auto border-l border-white/10 bg-[#0b0a0d] p-4 shadow-2xl sm:p-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs uppercase tracking-wide text-cream/40">Client details</span>
+                  <button onClick={closeDrawer} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-cream/60 transition hover:border-brass/40 hover:text-brass">✕</button>
+                </div>
+                {detail ? (
+                  <Detail d={detail} tab={tab} setTab={setTab} pending={pending} onEdit={() => setModal("edit")} onRedeem={() => redeem(detail.id)} redeeming={redeeming} />
+                ) : (
+                  <div className="p-panel h-[560px] animate-pulse" />
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
 
       {modal === "add" && <ClientModal title="Add client" onClose={() => setModal(null)} action={createClient} />}
       {modal === "edit" && detail && <ClientModal title="Edit client" onClose={() => setModal(null)} action={updateClient.bind(null, detail.id)} defaults={{ name: detail.name, phone: detail.phone, email: detail.email }} />}
@@ -174,60 +235,115 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
   );
 }
 
-/* ── List row ── */
+/* ── Table row ── */
 function Row({ r, active, onClick }: { r: ClientRow; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className={`group flex w-full items-center gap-4 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${active ? "border-brass/50 bg-brass/[0.05]" : "border-white/8 bg-white/[0.02] hover:border-brass/40 hover:bg-white/[0.04]"}`}>
-      <Avatar initials={r.initials} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-medium text-cream">{r.name}</span>
-          {r.isVip && <VipBadge />}
-          {r.isNew && <NewBadge />}
+      className={`group grid ${COLS} w-full items-center gap-4 px-4 py-3 text-left transition hover:bg-white/[0.03] ${active ? "bg-brass/[0.06]" : ""}`}>
+      {/* Client */}
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar initials={r.initials} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-medium text-cream">{r.name}</span>
+            {r.isVip && <VipBadge />}
+            {r.isNew && <NewBadge />}
+          </div>
         </div>
-        <div className="text-sm text-cream/45">{r.phone || "No phone"}</div>
       </div>
-      <Col value={relTime(r.lastVisitISO)} label="Last visit" hide="sm" />
-      <Col value={String(r.visits)} label="Total visits" hide="md" />
-      <Col value={formatMoney(r.spentCents)} label="Total spent" gold hide="md" />
-      <Icon.chevron className={`h-4 w-4 shrink-0 rotate-180 ${active ? "text-brass" : "text-cream/25 group-hover:text-brass"}`} />
+      {/* Contact */}
+      <div className="min-w-0">
+        <div className="truncate text-sm text-cream/80">{r.phone || "—"}</div>
+        <div className="truncate text-xs text-cream/40">{r.email || "No email"}</div>
+      </div>
+      {/* Visits */}
+      <div className="text-right text-sm tabular-nums text-cream">{r.visits}</div>
+      {/* Total spent */}
+      <div className="text-right text-sm font-semibold tabular-nums text-brass">{formatMoney(r.spentCents)}</div>
+      {/* Last visit */}
+      <div className="text-sm text-cream/70">{relTime(r.lastVisitISO)}</div>
+      {/* Status */}
+      <div><StatusPill active={r.isActive} /></div>
+      {/* chevron */}
+      <Icon.chevron className={`h-4 w-4 justify-self-end rotate-180 ${active ? "text-brass" : "text-cream/25 group-hover:text-brass"}`} />
     </button>
   );
 }
 
-function Col({ value, label, gold, hide }: { value: string; label: string; gold?: boolean; hide: "sm" | "md" }) {
+function StatusPill({ active }: { active: boolean }) {
   return (
-    <div className={`w-24 shrink-0 text-right ${hide === "sm" ? "hidden sm:block" : "hidden md:block"}`}>
-      <div className={`text-sm ${gold ? "font-semibold text-brass" : "text-cream"}`}>{value}</div>
-      <div className="text-xs text-cream/40">{label}</div>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${active ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-white/12 bg-white/[0.03] text-cream/50"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-400" : "bg-cream/30"}`} />{active ? "Active" : "Inactive"}
+    </span>
+  );
+}
+
+function SortTh({ label, k, sort, onSort, align }: { label: string; k: SortKey; sort: Sort; onSort: (k: SortKey) => void; align?: "right" }) {
+  const on = sort.key === k;
+  return (
+    <button onClick={() => onSort(k)}
+      className={`flex items-center gap-1 text-xs font-medium uppercase tracking-wide transition hover:text-cream ${on ? "text-brass" : "text-cream/45"} ${align === "right" ? "justify-end" : ""}`}>
+      {label}
+      <Icon.chevron className={`h-3 w-3 transition ${on ? (sort.dir === "asc" ? "rotate-90" : "-rotate-90") : "-rotate-90 opacity-30"}`} />
+    </button>
+  );
+}
+
+const TINTS: Record<Tint, string> = {
+  brass: "text-brass bg-brass/12 border-brass/25",
+  emerald: "text-emerald-300 bg-emerald-400/10 border-emerald-400/25",
+  blue: "text-blue-300 bg-blue-500/10 border-blue-400/25",
+  purple: "text-purple-300 bg-purple-500/10 border-purple-400/25",
+  cyan: "text-cyan-300 bg-cyan-500/10 border-cyan-400/25",
+};
+
+function KPICard({ label, value, icon, tint, sub }: { label: string; value: string; icon: IconName; tint: Tint; sub: string }) {
+  const I = Icon[icon];
+  return (
+    <div className="p-panel p-5">
+      <div className="flex items-center gap-3">
+        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${TINTS[tint]}`}><I className="h-5 w-5" /></span>
+        <span className="text-xs text-cream/50">{label}</span>
+      </div>
+      <div className="mt-3 font-display text-3xl font-semibold tabular-nums text-cream">{value}</div>
+      <div className="mt-1 text-xs text-cream/45">{sub}</div>
     </div>
   );
 }
 
-/* ── Pagination ── */
-function Pagination({ page, totalPages, total, pageSize, onPage }: { page: number; totalPages: number; total: number; pageSize: number; onPage: (p: number) => void }) {
-  const start = (page - 1) * pageSize + 1;
+/* ── Footer: result range + page size + pager ── */
+function Footer({ page, totalPages, total, pageSize, onPage, onPageSize }: { page: number; totalPages: number; total: number; pageSize: number; onPage: (p: number) => void; onPageSize: (n: number) => void }) {
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(total, page * pageSize);
   return (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-      <div className="text-xs text-cream/45">Showing {start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()}</div>
-      <div className="flex items-center gap-1">
-        <PgBtn disabled={page <= 1} onClick={() => onPage(page - 1)} label="Previous page"><Icon.chevron className="h-4 w-4" /></PgBtn>
-        {pageWindow(page, totalPages).map((n, i) =>
-          typeof n === "string" ? (
-            <span key={`gap-${i}`} className="px-1.5 text-cream/30">…</span>
-          ) : (
-            <button key={n} onClick={() => onPage(n)}
-              className={`grid h-9 min-w-9 place-items-center rounded-lg border px-2 text-sm tabular-nums transition ${n === page ? "border-brass/60 bg-brass/12 text-brass" : "border-white/10 text-cream/65 hover:border-white/25 hover:text-cream"}`}>
-              {n}
-            </button>
-          ),
-        )}
-        <PgBtn disabled={page >= totalPages} onClick={() => onPage(page + 1)} label="Next page"><Icon.chevron className="h-4 w-4 rotate-180" /></PgBtn>
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 px-1">
+      <div className="text-sm text-cream/50">Showing {start.toLocaleString()} to {end.toLocaleString()} of {total.toLocaleString()} results</div>
+      <div className="flex items-center gap-3">
+        <select value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))} aria-label="Rows per page"
+          className="rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-1.5 text-sm text-cream outline-none focus:border-brass/50">
+          {[10, 25, 50].map((n) => <option key={n} value={n}>{n} per page</option>)}
+        </select>
+        <div className="flex items-center gap-1">
+          <PgBtn disabled={page <= 1} onClick={() => onPage(page - 1)} label="Previous page"><Icon.chevron className="h-4 w-4" /></PgBtn>
+          {pageWindow(page, totalPages).map((n, i) =>
+            typeof n === "string" ? (
+              <span key={`gap-${i}`} className="px-1.5 text-cream/30">…</span>
+            ) : (
+              <button key={n} onClick={() => onPage(n)}
+                className={`grid h-9 min-w-9 place-items-center rounded-lg border px-2 text-sm tabular-nums transition ${n === page ? "border-brass/60 bg-brass/12 text-brass" : "border-white/10 text-cream/65 hover:border-white/25 hover:text-cream"}`}>
+                {n}
+              </button>
+            ),
+          )}
+          <PgBtn disabled={page >= totalPages} onClick={() => onPage(page + 1)} label="Next page"><Icon.chevron className="h-4 w-4 rotate-180" /></PgBtn>
+        </div>
       </div>
     </div>
   );
+}
+
+function DownloadIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>;
 }
 
 function PgBtn({ disabled, onClick, label, children }: { disabled: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
@@ -517,4 +633,3 @@ function relTime(iso: string | null) {
 }
 
 function SearchIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>; }
-function FilterIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 5h18M6 12h12M10 19h4" /></svg>; }
