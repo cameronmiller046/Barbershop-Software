@@ -20,7 +20,7 @@ const PRIMARY: NavItem[] = [
   { label: "Clients", href: "/portal/clients", icon: "customers", perm: "shop.clients" },
   { label: "Time Clock", href: "/portal/timeclock", icon: "clock" },
   { label: "My Requests", href: "/portal/feedback", icon: "messages" },
-  { label: "Settings", href: "/portal/account", icon: "settings" },
+  // Account settings live in the sidebar footer (next to Log out) — no duplicate here.
 ];
 
 const MANAGEMENT: NavItem[] = [
