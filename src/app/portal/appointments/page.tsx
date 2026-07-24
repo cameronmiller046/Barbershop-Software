@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { formatMoney, classNames } from "@/lib/utils";
 import { AppointmentActions } from "@/components/AppointmentActions";
 import { WalkInLogger } from "@/components/WalkInLogger";
+import { RememberPref } from "@/components/RememberPref";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay,
   eachDayOfInterval, addMonths, addDays, format, isSameMonth, isSameDay, parseISO, isValid,
@@ -41,7 +43,12 @@ export default async function AppointmentsPage({
     prisma.client.findMany({ where: { tenantId: user.tenantId }, select: { name: true, phone: true }, orderBy: { name: "asc" }, take: 1000 }),
   ]);
   const sp = await searchParams;
-  const view: CalView = sp.view === "day" || sp.view === "week" ? sp.view : "month";
+  // View preference: explicit ?view= wins; otherwise fall back to the saved
+  // cookie; otherwise month. RememberPref (below) keeps the cookie in sync.
+  const asView = (v: string | undefined): CalView | null =>
+    v === "day" || v === "week" || v === "month" ? v : null;
+  const savedView = asView((await cookies()).get("cal_view")?.value);
+  const view: CalView = asView(sp.view) ?? savedView ?? "month";
 
   const monthBase = sp.month && isValid(parseISO(sp.month + "-01")) ? parseISO(sp.month + "-01") : new Date();
   const selected = sp.date && isValid(parseISO(sp.date)) ? parseISO(sp.date) : new Date();
@@ -83,6 +90,7 @@ export default async function AppointmentsPage({
 
   return (
     <div>
+      <RememberPref name="cal_view" value={view} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl">Appointments</h1>
         <div className="flex items-center gap-2">
