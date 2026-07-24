@@ -49,11 +49,11 @@ export async function requirePlatformAdmin(): Promise<SessionUser> {
  */
 export async function requireTenantStaff(): Promise<SessionUser & { tenantId: string }> {
   const user = await requireUser("/portal");
-  if (user.role === "PLATFORM_ADMIN") redirect(YGGDRASIL_URL);
-  // SUPERUSER (hidden dev-team debug role) isn't bound to a store — it views any
-  // store it picks. Resolve that selection into an effective tenantId so the rest
-  // of the portal works unchanged; send them to the store picker if none is set.
-  if (user.role === "SUPERUSER") {
+  // Dev-team roles (SUPERUSER + platform admins) aren't bound to one store — they
+  // pick which store's portal to view. Resolve that selection into an effective
+  // tenantId so the rest of the portal works unchanged; send them to the store
+  // picker if none is set yet. (Yggdrasil is still reachable at its own URL.)
+  if (isStoreInspector(user.role)) {
     const storeId = await getSelectedStoreId();
     if (!storeId) redirect("/superuser");
     const store = await prisma.tenant.findUnique({ where: { id: storeId }, select: { id: true } });
@@ -62,6 +62,15 @@ export async function requireTenantStaff(): Promise<SessionUser & { tenantId: st
   }
   if (!user.tenantId) redirect("/login");
   return user as SessionUser & { tenantId: string };
+}
+
+/**
+ * Roles that aren't tied to a single store and instead browse into any store's
+ * portal via the store picker (see /superuser). Both the hidden SUPERUSER debug
+ * role and platform admins qualify.
+ */
+export function isStoreInspector(role: Role | undefined): boolean {
+  return role === "SUPERUSER" || role === "PLATFORM_ADMIN";
 }
 
 /**

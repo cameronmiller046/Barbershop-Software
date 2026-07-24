@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireStaffWithPerms, getPortalTenant } from "@/lib/rbac";
+import { requireStaffWithPerms, getPortalTenant, isStoreInspector } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { PortalShell, type EditNotif } from "@/components/portal/PortalShell";
 import { signOut } from "@/lib/auth";
@@ -53,9 +53,9 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="portal min-h-screen">
       {/* Live portal: pull fresh server data every ~10s + on tab focus. */}
       <AutoRefresh intervalMs={10000} />
-      {user.role === "SUPERUSER" && (
+      {isStoreInspector(user.role) && (
         <div className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 border-b border-brass/30 bg-brass/15 px-4 py-1.5 text-center text-xs text-brass">
-          <span>🛠 Superuser mode — viewing <b className="text-cream">{tenant?.name ?? "store"}</b> for debugging</span>
+          <span>🛠 Inspecting <b className="text-cream">{tenant?.name ?? "store"}</b> — dev/admin view</span>
           <a href="/superuser" className="font-semibold underline hover:no-underline">Switch store</a>
         </div>
       )}

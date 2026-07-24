@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/rbac";
+import { requireUser, isStoreInspector } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { getSelectedStoreId, setSelectedStoreId } from "@/lib/superuser";
 import { signOut } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// Hidden dev-team console: a SUPERUSER picks any store and is dropped into that
-// store's portal (full access) for troubleshooting. Not linked anywhere public.
+// Dev-team console: a SUPERUSER or platform admin picks any store and is dropped
+// into that store's portal (full access) for troubleshooting. Not linked publicly.
 export default async function SuperuserStores() {
   const user = await requireUser("/superuser");
-  if (user.role !== "SUPERUSER") redirect("/portal");
+  if (!isStoreInspector(user.role)) redirect("/portal");
 
   const [stores, current] = await Promise.all([
     prisma.tenant.findMany({
@@ -23,7 +23,7 @@ export default async function SuperuserStores() {
   async function pick(formData: FormData) {
     "use server";
     const u = await requireUser("/superuser");
-    if (u.role !== "SUPERUSER") redirect("/portal");
+    if (!isStoreInspector(u.role)) redirect("/portal");
     const id = String(formData.get("id") || "");
     const store = await prisma.tenant.findUnique({ where: { id }, select: { id: true } });
     if (!store) redirect("/superuser");

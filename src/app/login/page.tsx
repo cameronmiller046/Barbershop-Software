@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { signIn, auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDemoData } from "@/lib/demo";
-import { YGGDRASIL_URL } from "@/lib/rbac";
 import { AuthError } from "next-auth";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +27,9 @@ export default async function LoginPage({
     // JWT; without this check it would ping-pong forever between /login and the
     // portal (which redirects it right back). Fall through to the form instead.
     const stillActive = await prisma.user.findFirst({ where: { id: session.user.id, active: true }, select: { id: true } });
-    if (stillActive) redirect(session.user.role === "PLATFORM_ADMIN" ? YGGDRASIL_URL : "/portal");
+    // Everyone lands in /portal; the portal routes dev-team roles (SUPERUSER +
+    // platform admins) on to the store picker. Yggdrasil is reached via its URL.
+    if (stillActive) redirect("/portal");
   }
 
   async function login(formData: FormData) {
