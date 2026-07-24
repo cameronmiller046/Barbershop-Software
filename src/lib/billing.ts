@@ -1,10 +1,81 @@
 import type Stripe from "stripe";
 import type { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { planLimits, stripePriceId } from "@/lib/plans";
 import {
   stripeConfigured, retrieveSubscription, retrieveCheckoutSession,
   mapStripeStatus, isLiveStatus, periodEnd,
+  ensureStripeCustomer, createIncompleteSubscription, inspectSubscription, stripePublishableKey,
 } from "@/lib/stripe";
+
+// Result of preparing an on-page checkout for a tenant.
+export type PayState =
+  | { status: "live" } // already active/trialing — nothing to pay
+  | { status: "pay"; clientSecret: string; mode: "payment" | "setup"; publishableKey: string }
+  | { status: "error" };
+
+/**
+ * Ensure a tenant has an incomplete subscription ready to confirm with the
+ * Payment Element, returning the client secret. Reuses an existing incomplete
+ * subscription when it matches the current plan's price; otherwise creates one.
+ */
+export async function ensureSubscriptionIntent(tenantId: string): Promise<PayState> {
+  try {
+    const t = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true, plan: true, name: true, email: true, billingEmail: true,
+        stripeCustomerId: true, stripeSubscriptionId: true, subscriptionStatus: true,
+      },
+    });
+    if (!t) return { status: "error" };
+
+    const limits = planLimits(t.plan);
+    if (!limits.paid) return { status: "live" };
+    if (t.subscriptionStatus === "ACTIVE" || t.subscriptionStatus === "TRIALING") return { status: "live" };
+    if (!stripeConfigured()) return { status: "error" };
+
+    const pk = stripePublishableKey();
+    const priceId = stripePriceId(t.plan);
+    if (!pk || !priceId) return { status: "error" };
+
+    // Reuse an existing incomplete subscription if it matches the current price.
+    if (t.stripeSubscriptionId) {
+      const info = await inspectSubscription(t.stripeSubscriptionId);
+      if (info) {
+        if (info.status === "ACTIVE" || info.status === "TRIALING") {
+          await prisma.tenant.update({
+            where: { id: tenantId },
+            data: { subscriptionStatus: info.status, status: "ACTIVE" },
+          });
+          return { status: "live" };
+        }
+        if (info.intent && info.priceId === priceId) {
+          return { status: "pay", clientSecret: info.intent.clientSecret, mode: info.intent.mode, publishableKey: pk };
+        }
+      }
+    }
+
+    // Create a fresh customer (if needed) + incomplete subscription.
+    const customerId = await ensureStripeCustomer({
+      existingId: t.stripeCustomerId,
+      email: (t.billingEmail || t.email) || "",
+      name: t.name,
+      tenantId,
+    });
+    const { subscriptionId, clientSecret, mode } = await createIncompleteSubscription({
+      customerId, priceId, trialDays: limits.trialDays, tenantId, plan: t.plan,
+    });
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { stripeCustomerId: customerId, stripeSubscriptionId: subscriptionId, stripePriceId: priceId, subscriptionStatus: "PENDING" },
+    });
+    return { status: "pay", clientSecret, mode, publishableKey: pk };
+  } catch (err) {
+    console.error("[billing] ensureSubscriptionIntent failed:", err);
+    return { status: "error" };
+  }
+}
 
 /**
  * Write a Stripe subscription's state onto a tenant, flipping the shop live or

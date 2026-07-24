@@ -7,7 +7,7 @@ import { auth, signIn } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { selfServeSignup } from "@/lib/provision";
 import { planLimits, parsePlanKey } from "@/lib/plans";
-import { createSubscriptionCheckoutLink, stripeConfigured } from "@/lib/stripe";
+import { stripeConfigured } from "@/lib/stripe";
 import { rateLimit } from "@/lib/ratelimit";
 import { SignupForm } from "@/components/SignupForm";
 
@@ -99,19 +99,10 @@ export default async function SignupPage({
     // Free plan → live now, into the portal.
     if (!result.paid) redirect("/portal");
 
-    // Paid plan → Stripe hosted checkout. If billing isn't configured yet, land
-    // on the billing page which explains the next step instead of erroring.
+    // Paid plan → our on-page Payment Element checkout. If billing isn't
+    // configured yet, land on the billing page which explains the next step.
     if (!stripeConfigured()) redirect("/portal/billing?setup=1");
-
-    let checkoutUrl: string;
-    try {
-      checkoutUrl = await createSubscriptionCheckoutLink({
-        plan, tenantId: result.tenant.id, businessName, email,
-      });
-    } catch {
-      redirect("/portal/billing?error=checkout");
-    }
-    redirect(checkoutUrl);
+    redirect(`/signup/pay?tenant=${result.tenant.id}`);
   }
 
   return (

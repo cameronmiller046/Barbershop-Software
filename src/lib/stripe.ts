@@ -77,6 +77,80 @@ export async function createBillingPortalUrl(customerId: string, returnPath = "/
   return session.url;
 }
 
+// ── Custom on-page checkout (Payment Element) ────────────────────────────────
+// Instead of a hosted redirect, we create an incomplete subscription and hand
+// the browser a client secret to confirm with the Payment Element. Immediate
+// charges (no trial) confirm a PaymentIntent via the invoice's confirmation
+// secret; trial plans confirm a SetupIntent (pending_setup_intent).
+
+/** The Stripe publishable key for the browser. */
+export function stripePublishableKey(): string {
+  return process.env.STRIPE_PUBLISHABLE_KEY?.trim() || "";
+}
+
+export type SubscriptionIntent = { clientSecret: string; mode: "payment" | "setup" };
+
+const SUB_EXPAND = ["latest_invoice.confirmation_secret", "pending_setup_intent"];
+
+// Pull the confirm secret from an (expanded) subscription.
+function readIntent(sub: Stripe.Subscription): SubscriptionIntent | null {
+  const inv = typeof sub.latest_invoice === "object" && sub.latest_invoice ? sub.latest_invoice : null;
+  const conf = inv?.confirmation_secret?.client_secret;
+  if (conf) return { clientSecret: conf, mode: "payment" };
+  const psi = typeof sub.pending_setup_intent === "object" && sub.pending_setup_intent ? sub.pending_setup_intent : null;
+  if (psi?.client_secret) return { clientSecret: psi.client_secret, mode: "setup" };
+  return null;
+}
+
+/** Ensure a Stripe Customer exists for a tenant; returns its id. */
+export async function ensureStripeCustomer(input: {
+  existingId?: string | null; email: string; name: string; tenantId: string;
+}): Promise<string> {
+  if (input.existingId) return input.existingId;
+  const c = await stripe().customers.create({
+    email: input.email || undefined,
+    name: input.name,
+    metadata: { tenantId: input.tenantId },
+  });
+  return c.id;
+}
+
+/** Create an incomplete subscription and return its client secret for the Payment Element. */
+export async function createIncompleteSubscription(input: {
+  customerId: string; priceId: string; trialDays: number; tenantId: string; plan: string;
+}): Promise<{ subscriptionId: string } & SubscriptionIntent> {
+  const sub = await stripe().subscriptions.create({
+    customer: input.customerId,
+    items: [{ price: input.priceId }],
+    ...(input.trialDays > 0 ? { trial_period_days: input.trialDays } : {}),
+    payment_behavior: "default_incomplete",
+    payment_settings: { save_default_payment_method: "on_subscription" },
+    billing_mode: { type: "flexible" },
+    metadata: { tenantId: input.tenantId, plan: input.plan },
+    expand: SUB_EXPAND,
+  });
+  const intent = readIntent(sub);
+  if (!intent) throw new Error("Stripe did not return a client secret for the subscription.");
+  return { subscriptionId: sub.id, ...intent };
+}
+
+/** Retrieve an existing subscription's status + price + confirm secret (for reuse). */
+export async function inspectSubscription(subscriptionId: string): Promise<{
+  status: SubscriptionStatus; priceId: string | null; intent: SubscriptionIntent | null;
+} | null> {
+  try {
+    const sub = await stripe().subscriptions.retrieve(subscriptionId, { expand: SUB_EXPAND });
+    const live = sub.status === "active" || sub.status === "trialing";
+    return {
+      status: mapStripeStatus(sub.status),
+      priceId: sub.items.data[0]?.price?.id ?? null,
+      intent: live ? null : readIntent(sub),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Map a Stripe subscription status to our SubscriptionStatus enum. */
 export function mapStripeStatus(status: Stripe.Subscription.Status | string | undefined | null): SubscriptionStatus {
   switch (status) {

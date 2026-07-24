@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requirePortalStaff, isStoreInspector } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { planLimits, parsePlanKey, PLAN_LIMITS } from "@/lib/plans";
-import { createSubscriptionCheckoutLink, createBillingPortalUrl, stripeConfigured } from "@/lib/stripe";
+import { createBillingPortalUrl, stripeConfigured } from "@/lib/stripe";
 import { reconcileTenantBilling } from "@/lib/billing";
 import type { Plan } from "@prisma/client";
 
@@ -62,7 +62,7 @@ export default async function BillingPage({
 
     const t = await prisma.tenant.findUnique({
       where: { id: s.tenantId },
-      select: { id: true, name: true, email: true, billingEmail: true, status: true },
+      select: { id: true },
     });
     if (!t) redirect("/portal/billing?error=checkout");
 
@@ -74,19 +74,8 @@ export default async function BillingPage({
     });
 
     if (!configured) redirect("/portal/billing?setup=1");
-
-    let url: string;
-    try {
-      url = await createSubscriptionCheckoutLink({
-        plan,
-        tenantId: t.id,
-        businessName: t.name,
-        email: (t.billingEmail || t.email) ?? "",
-      });
-    } catch {
-      redirect("/portal/billing?error=checkout");
-    }
-    redirect(url);
+    // Our on-page Payment Element handles the actual card entry.
+    redirect(`/signup/pay?tenant=${t.id}`);
   }
 
   async function manageSubscription() {

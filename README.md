@@ -37,10 +37,12 @@ as every other tenant.
 Shop owners sign up themselves at **`/signup`** (the marketing/pricing CTAs point
 here). They pick a plan and:
 - **Solo (free)** → shop is provisioned and live immediately; owner lands in `/portal`.
-- **Team / Barbershop (paid)** → shop is created `PENDING`, then the owner is sent
-  to **Stripe-hosted Checkout** (subscription mode, with a 14-day free trial).
-  Stripe collects the card and calls our webhook, which flips the shop to `ACTIVE`.
-  No card data ever touches this app.
+- **Team / Barbershop (paid)** → shop is created `PENDING`, then the owner confirms
+  their subscription on our **own page via the Stripe Payment Element**
+  (`/signup/pay`, styled to the lux theme — no redirect to stripe.com). Immediate
+  charges confirm a PaymentIntent (`latest_invoice.confirmation_secret`); trial
+  plans confirm a SetupIntent (`pending_setup_intent`). Card fields are
+  Stripe-hosted iframes, so no card data ever touches this app.
 - **Enterprise** → routes to `/contact` (sales).
 
 Until a paid shop's subscription is live (`ACTIVE`/`TRIALING`), the portal funnels
