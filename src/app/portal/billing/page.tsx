@@ -9,6 +9,7 @@ import {
 } from "@/lib/stripe";
 import { reconcileTenantBilling } from "@/lib/billing";
 import { formatMoney } from "@/lib/utils";
+import { isDemoAccount } from "@/lib/demoMode";
 import type { Plan } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,8 @@ export default async function BillingPage({
   const staff = await requirePortalStaff();
   if (staff.role !== "OWNER" && !isStoreInspector(staff.role)) redirect("/portal");
 
+  const isDemo = isDemoAccount(staff.email);
+
   let tenant = await prisma.tenant.findUnique({ where: { id: staff.tenantId }, select: TENANT_SELECT });
   if (!tenant) redirect("/portal");
 
@@ -68,6 +71,7 @@ export default async function BillingPage({
   async function startCheckout(formData: FormData) {
     "use server";
     const s = await requirePortalStaff();
+    if (isDemoAccount(s.email)) redirect("/signup"); // demo shops can't subscribe
     if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
     const plan = parsePlanKey(String(formData.get("plan") ?? ""));
     if (!plan || !planLimits(plan).paid) redirect("/portal/billing?error=checkout");
@@ -81,6 +85,7 @@ export default async function BillingPage({
   async function cancelSubscription() {
     "use server";
     const s = await requirePortalStaff();
+    if (isDemoAccount(s.email)) redirect("/signup");
     if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
     const t = await prisma.tenant.findUnique({ where: { id: s.tenantId }, select: { stripeSubscriptionId: true } });
     if (!t?.stripeSubscriptionId) redirect("/portal/billing?error=checkout");
@@ -91,6 +96,7 @@ export default async function BillingPage({
   async function resumeSubscription() {
     "use server";
     const s = await requirePortalStaff();
+    if (isDemoAccount(s.email)) redirect("/signup");
     if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
     const t = await prisma.tenant.findUnique({ where: { id: s.tenantId }, select: { stripeSubscriptionId: true } });
     if (!t?.stripeSubscriptionId) redirect("/portal/billing?error=checkout");
@@ -110,6 +116,17 @@ export default async function BillingPage({
       {sp.canceled_sub && <Notice tone="amber">Your subscription is set to cancel at the end of the current period.</Notice>}
       {sp.resumed && <Notice tone="emerald">Your subscription has been resumed.</Notice>}
       {sp.error === "checkout" && <Notice tone="red">Something went wrong. Please try again in a moment.</Notice>}
+
+      {/* Demo shops can't subscribe — point them at signup for their own shop. */}
+      {isDemo && (
+        <div className="mt-6 rounded-2xl border border-brass/30 bg-brass/[0.06] p-6 text-center">
+          <h2 className="font-display text-lg text-cream">You&apos;re exploring the demo</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-cream/60">
+            Subscriptions are disabled on the demo shop. Create your own shop to pick a plan and go live.
+          </p>
+          <Link href="/signup" className="btn-gold mt-4 inline-flex">Sign up for your own shop</Link>
+        </div>
+      )}
 
       {/* Current plan */}
       <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
@@ -192,7 +209,8 @@ export default async function BillingPage({
         </div>
       )}
 
-      {/* Change plan */}
+      {/* Change plan (hidden for demo shops) */}
+      {!isDemo && (
       <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
         <h2 className="font-display text-lg text-cream">Change plan</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -218,6 +236,7 @@ export default async function BillingPage({
           Want Enterprise or multiple locations? <Link href="/contact" className="text-brass hover:underline">Contact us</Link>.
         </p>
       </div>
+      )}
 
       {/* Payment history */}
       {invoices.length > 0 && (

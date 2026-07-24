@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { ensureSubscriptionIntent } from "@/lib/billing";
 import { planLimits } from "@/lib/plans";
+import { isDemoAccount } from "@/lib/demoMode";
 import { StripePayment } from "@/components/StripePayment";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +20,16 @@ export default async function PayPage({
   const user = await requireUser("/signup/pay");
   if (!tenantId) redirect("/portal");
 
+  // The demo shop can't be subscribed to — send demo visitors to sign up for
+  // their own shop instead.
+  if (isDemoAccount(user.email)) redirect("/signup");
+
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { id: true, name: true, plan: true },
+    select: { id: true, name: true, plan: true, isDemo: true },
   });
   if (!tenant || user.tenantId !== tenant.id) redirect("/portal");
+  if (tenant.isDemo) redirect("/signup");
 
   const res = await ensureSubscriptionIntent(tenant.id);
   if (res.status === "live") redirect("/portal");
