@@ -213,6 +213,95 @@ export function constructWebhookEvent(rawBody: string, signature: string | null)
 
 /** The unix seconds when the current period ends → a Date, if present. */
 export function periodEnd(sub: Stripe.Subscription | null | undefined): Date | null {
-  const end = (sub as { current_period_end?: number } | null | undefined)?.current_period_end;
-  return typeof end === "number" ? new Date(end * 1000) : null;
+  // Newer API versions surface current_period_end on the subscription item.
+  const top = (sub as { current_period_end?: number } | null | undefined)?.current_period_end;
+  if (typeof top === "number") return new Date(top * 1000);
+  const item = sub?.items?.data?.[0] as { current_period_end?: number } | undefined;
+  if (typeof item?.current_period_end === "number") return new Date(item.current_period_end * 1000);
+  return null;
+}
+
+// ── In-app subscription management (replaces the hosted Customer Portal) ──────
+
+export type ManageDetails = {
+  status: SubscriptionStatus;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+  card: { brand: string; last4: string } | null;
+};
+
+/** Load a subscription's display details for the manage page (status, period, card). */
+export async function getSubscriptionForManage(subscriptionId: string): Promise<ManageDetails | null> {
+  try {
+    const sub = await stripe().subscriptions.retrieve(subscriptionId, { expand: ["default_payment_method"] });
+    const pm = typeof sub.default_payment_method === "object" ? sub.default_payment_method : null;
+    const card = pm?.card ? { brand: pm.card.brand, last4: pm.card.last4 } : null;
+    return {
+      status: mapStripeStatus(sub.status),
+      currentPeriodEnd: periodEnd(sub),
+      cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+      card,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Schedule (or undo) cancellation at the end of the current period. */
+export async function setCancelAtPeriodEnd(subscriptionId: string, cancel: boolean): Promise<boolean> {
+  try {
+    await stripe().subscriptions.update(subscriptionId, { cancel_at_period_end: cancel });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Create a SetupIntent so the owner can enter a new card with the Payment Element. */
+export async function createSetupIntentForCustomer(customerId: string): Promise<string | null> {
+  try {
+    const si = await stripe().setupIntents.create({
+      customer: customerId,
+      usage: "off_session",
+      payment_method_types: ["card"],
+    });
+    return si.client_secret;
+  } catch {
+    return null;
+  }
+}
+
+/** After a SetupIntent succeeds, make its card the customer's + subscription's default. */
+export async function applySetupIntentAsDefault(
+  setupIntentId: string, customerId: string, subscriptionId: string | null,
+): Promise<boolean> {
+  try {
+    const si = await stripe().setupIntents.retrieve(setupIntentId);
+    const pm = typeof si.payment_method === "string" ? si.payment_method : si.payment_method?.id;
+    if (!pm) return false;
+    await stripe().customers.update(customerId, { invoice_settings: { default_payment_method: pm } });
+    if (subscriptionId) await stripe().subscriptions.update(subscriptionId, { default_payment_method: pm });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type InvoiceRow = { id: string; date: Date; amountCents: number; currency: string; status: string; url: string | null };
+
+/** Recent invoices for the customer (payment history). */
+export async function listInvoices(customerId: string, limit = 6): Promise<InvoiceRow[]> {
+  try {
+    const res = await stripe().invoices.list({ customer: customerId, limit });
+    return res.data.map((i) => ({
+      id: i.id ?? "",
+      date: new Date((i.created ?? 0) * 1000),
+      amountCents: i.total ?? 0,
+      currency: (i.currency ?? "usd").toUpperCase(),
+      status: i.status ?? "",
+      url: i.hosted_invoice_url ?? i.invoice_pdf ?? null,
+    }));
+  } catch {
+    return [];
+  }
 }
