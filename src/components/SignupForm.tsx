@@ -7,9 +7,9 @@ import { useFormStatus } from "react-dom";
 // Plan options shown on the signup form. Prices/labels mirror lib/plans.ts and
 // the /pricing page. Enterprise is contact-sales (not self-serve).
 const PLAN_OPTIONS = [
-  { key: "SOLO", name: "Solo", price: "Free", blurb: "1 barber · online booking · client CRM" },
-  { key: "TEAM", name: "Team", price: "$49/mo", blurb: "3 barbers · reports · loyalty · reviews" },
-  { key: "BARBERSHOP", name: "Barbershop", price: "$129/mo", blurb: "8 barbers · SMS reminders · priority support" },
+  { key: "SOLO", name: "Solo", price: "$0.01/mo", blurb: "1 barber · online booking · client CRM", paid: true },
+  { key: "TEAM", name: "Team", price: "$49/mo", blurb: "3 barbers · reports · loyalty · reviews", paid: true },
+  { key: "BARBERSHOP", name: "Barbershop", price: "$129/mo", blurb: "8 barbers · SMS reminders · priority support", paid: true },
 ] as const;
 
 const ERRORS: Record<string, string> = {
@@ -30,7 +30,7 @@ export function SignupForm({
   const [plan, setPlan] = useState(
     PLAN_OPTIONS.some((p) => p.key === defaultPlan) ? defaultPlan : "TEAM",
   );
-  const paid = plan !== "SOLO";
+  const paid = PLAN_OPTIONS.find((p) => p.key === plan)?.paid ?? true;
 
   return (
     <form action={action} className="glass space-y-4 rounded-2xl p-6 sm:p-7">

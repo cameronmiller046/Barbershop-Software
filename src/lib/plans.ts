@@ -25,8 +25,11 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
+  // NOTE: Solo is temporarily a $0.01 PAID plan for end-to-end checkout testing.
+  // To restore the free tier: price "Free", priceCents 0, paid false, drop stripePriceEnv.
   SOLO: {
-    label: "Solo", price: "Free", priceCents: 0, paid: false, offeredAtSignup: true, contactSales: false,
+    label: "Solo", price: "$0.01", priceCents: 1, paid: true, offeredAtSignup: true, contactSales: false,
+    stripePriceEnv: "STRIPE_PRICE_SOLO",
     includedBarbers: 1, maxBarbers: 1,
     reports: false, reviews: false, noShowTracking: false, multiLocation: false, prioritySupport: false,
   },

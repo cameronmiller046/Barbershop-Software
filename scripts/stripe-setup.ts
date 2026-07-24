@@ -30,6 +30,7 @@ const stripe = new Stripe(key);
 
 // Keep these in sync with lib/plans.ts (label + monthly price in cents).
 const PLANS = [
+  { key: "SOLO", name: "The Chair — Solo", cents: 1, envVar: "STRIPE_PRICE_SOLO" },
   { key: "TEAM", name: "The Chair — Team", cents: 4900, envVar: "STRIPE_PRICE_TEAM" },
   { key: "BARBERSHOP", name: "The Chair — Barbershop", cents: 12900, envVar: "STRIPE_PRICE_BARBERSHOP" },
 ];
