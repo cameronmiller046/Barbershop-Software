@@ -16,6 +16,16 @@ enum Role {
   RECEPTIONIST // front desk
   CUSTOMER // end client (self-serve)
   SUPERUSER // hidden dev-team debug role; can open any store's portal. tenantId is null; never a real barber and never public.
+  SALES_REP // sales agent who enrolls shops (SWSales-Page app); tenantId is null
+  SALES_MANAGER // sales lead: creates reps + sees the team leaderboard; tenantId is null
+}
+
+// Outcome of a sales rep's store visit (feeds conversion reporting).
+enum VisitStatus {
+  VISITED
+  INTERESTED
+  ENROLLED
+  DECLINED
 }
 
 enum TenantStatus {
@@ -134,6 +144,11 @@ model Tenant {
   billingEmail         String? // where Stripe sends receipts (defaults to owner email)
   trialEndsAt          DateTime?
   currentPeriodEnd     DateTime? // end of the paid period Stripe last invoiced
+
+  // Sales attribution: which sales rep (User with role SALES_REP) enrolled this
+  // shop. Set by the SWSales-Page app; null for self-serve signups.
+  salesRep   User?   @relation("EnrolledTenants", fields: [salesRepId], references: [id], onDelete: SetNull)
+  salesRepId String?
 
   // Branding
   tagline           String?
@@ -284,10 +299,40 @@ model User {
   ticketComments     TicketComment[]
   ticketActivity     TicketActivity[]
 
+  // Sales (SWSales-Page): shops this user enrolled + stores they've visited.
+  enrolledTenants    Tenant[]          @relation("EnrolledTenants")
+  storeVisits        StoreVisit[]      @relation("RepVisits")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, role])
+}
+
+// ───────────────────── Sales (SWSales-Page app) ─────────────────────
+// A store a sales rep visited while prospecting. Logged even before (or without)
+// enrollment; conversion = enrolled visits / total visits. If the visit turns
+// into a shop, enrolledTenantId links to it.
+model StoreVisit {
+  id           String      @id @default(cuid())
+  storeName    String
+  address      String?
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  notes        String?
+  status       VisitStatus @default(VISITED)
+
+  salesRep   User   @relation("RepVisits", fields: [salesRepId], references: [id], onDelete: Cascade)
+  salesRepId String
+
+  enrolledTenantId String? // set when this visit becomes an enrolled shop
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salesRepId, createdAt])
+  @@index([status])
 }
 
 // ───────────────────────── Catalog ─────────────────────────

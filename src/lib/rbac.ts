@@ -125,6 +125,8 @@ export async function requirePortalStaff(): Promise<StaffWithPerms> {
 
 const RANK: Record<Role, number> = {
   CUSTOMER: 0,
+  SALES_REP: 0, // sales roles have no shop authority (separate SWSales-Page app)
+  SALES_MANAGER: 0,
   RECEPTIONIST: 1,
   BARBER: 1,
   OWNER: 2,

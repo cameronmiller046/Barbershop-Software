@@ -38,6 +38,9 @@ const DEFAULTS: Record<Role, Record<PermKey, boolean>> = {
   RECEPTIONIST: { "shop.viewAll": true, "shop.clients": true, "shop.services": false, "shop.team": false, "shop.settings": false },
   BARBER: { "shop.viewAll": false, "shop.clients": true, "shop.services": false, "shop.team": false, "shop.settings": false },
   CUSTOMER: { ...ALL_FALSE },
+  // Sales roles have no shop-level capabilities (they use the SWSales-Page app).
+  SALES_REP: { ...ALL_FALSE },
+  SALES_MANAGER: { ...ALL_FALSE },
 };
 
 export function roleDefault(role: Role, key: PermKey): boolean {

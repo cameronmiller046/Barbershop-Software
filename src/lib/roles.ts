@@ -16,6 +16,8 @@ export const ROLE_LABEL: Record<Role, string> = {
   BARBER: "Barber",
   RECEPTIONIST: "Barber", // legacy → treated as Barber
   CUSTOMER: "Customer",
+  SALES_REP: "Sales rep",
+  SALES_MANAGER: "Sales manager",
 };
 
 export const ROLE_SHORT: Record<Role, string> = ROLE_LABEL;
@@ -23,6 +25,8 @@ export const ROLE_SHORT: Record<Role, string> = ROLE_LABEL;
 // Higher number = more authority. Used to gate who can edit whom.
 export const ROLE_RANK: Record<Role, number> = {
   CUSTOMER: 0,
+  SALES_REP: 0, // sales roles aren't shop staff — no shop authority in this app
+  SALES_MANAGER: 0,
   RECEPTIONIST: 1,
   BARBER: 1,
   OWNER: 2,
