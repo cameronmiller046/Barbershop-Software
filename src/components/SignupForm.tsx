@@ -7,9 +7,9 @@ import { useFormStatus } from "react-dom";
 // Plan options shown on the signup form. Prices/labels mirror lib/plans.ts and
 // the /pricing page. Enterprise is contact-sales (not self-serve).
 const PLAN_OPTIONS = [
-  { key: "SOLO", name: "Solo", price: "$0.01/mo", blurb: "1 barber · online booking · client CRM", paid: true },
-  { key: "TEAM", name: "Team", price: "$49/mo", blurb: "3 barbers · reports · loyalty · reviews", paid: true },
-  { key: "BARBERSHOP", name: "Barbershop", price: "$129/mo", blurb: "8 barbers · SMS reminders · priority support", paid: true },
+  { key: "SOLO", name: "Solo", price: "$0.50/mo", blurb: "1 barber · online booking · client CRM", paid: true, trial: false },
+  { key: "TEAM", name: "Team", price: "$49/mo", blurb: "3 barbers · reports · loyalty · reviews", paid: true, trial: true },
+  { key: "BARBERSHOP", name: "Barbershop", price: "$129/mo", blurb: "8 barbers · SMS reminders · priority support", paid: true, trial: true },
 ] as const;
 
 const ERRORS: Record<string, string> = {
@@ -30,7 +30,9 @@ export function SignupForm({
   const [plan, setPlan] = useState(
     PLAN_OPTIONS.some((p) => p.key === defaultPlan) ? defaultPlan : "TEAM",
   );
-  const paid = PLAN_OPTIONS.find((p) => p.key === plan)?.paid ?? true;
+  const selected = PLAN_OPTIONS.find((p) => p.key === plan);
+  const paid = selected?.paid ?? true;
+  const trial = selected?.trial ?? false;
 
   return (
     <form action={action} className="glass space-y-4 rounded-2xl p-6 sm:p-7">
@@ -109,7 +111,9 @@ export function SignupForm({
 
       <p className="text-center text-xs text-cream/45">
         {paid
-          ? "You'll be taken to Stripe's secure checkout to start your subscription — with a 14-day free trial."
+          ? (trial
+              ? "You'll be taken to Stripe's secure checkout to start your subscription — with a 14-day free trial."
+              : "You'll be taken to Stripe's secure checkout — your card is charged today to start your subscription.")
           : "No credit card required. Your shop goes live instantly."}
       </p>
 

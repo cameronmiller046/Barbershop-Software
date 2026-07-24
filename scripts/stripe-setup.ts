@@ -30,7 +30,7 @@ const stripe = new Stripe(key);
 
 // Keep these in sync with lib/plans.ts (label + monthly price in cents).
 const PLANS = [
-  { key: "SOLO", name: "The Chair — Solo", cents: 1, envVar: "STRIPE_PRICE_SOLO" },
+  { key: "SOLO", name: "The Chair — Solo", cents: 50, envVar: "STRIPE_PRICE_SOLO" },
   { key: "TEAM", name: "The Chair — Team", cents: 4900, envVar: "STRIPE_PRICE_TEAM" },
   { key: "BARBERSHOP", name: "The Chair — Barbershop", cents: 12900, envVar: "STRIPE_PRICE_BARBERSHOP" },
 ];
@@ -48,7 +48,21 @@ async function main() {
     const existing = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
     let price = existing.data[0];
 
-    if (!price) {
+    if (price && price.unit_amount !== p.cents) {
+      // Amount changed — Prices are immutable, so create a new one and move the
+      // lookup key onto it (transfer_lookup_key detaches it from the old price).
+      const productId = typeof price.product === "string" ? price.product : price.product.id;
+      price = await stripe.prices.create({
+        product: productId,
+        unit_amount: p.cents,
+        currency: "usd",
+        recurring: { interval: "month" },
+        lookup_key: lookupKey,
+        transfer_lookup_key: true,
+        metadata: { plan: p.key },
+      });
+      console.log(`  updated ${p.name} → ${price.id} ($${(p.cents / 100).toFixed(2)})`);
+    } else if (!price) {
       const product = await stripe.products.create({
         name: p.name,
         metadata: { plan: p.key },

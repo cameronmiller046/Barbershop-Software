@@ -15,6 +15,7 @@ export type PlanLimits = {
   contactSales: boolean; // Enterprise — routes to /contact instead of checkout
   // Env var holding this tier's Stripe Price id (paid tiers).
   stripePriceEnv?: string;
+  trialDays: number; // free-trial length applied at checkout (0 = charge immediately)
   includedBarbers: number; // seats bundled into the base price
   maxBarbers: number; // chairs (hard cap today; metered extra seats are future work)
   reports: boolean; // owner reports & sales goals
@@ -25,34 +26,37 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  // NOTE: Solo is temporarily a $0.01 PAID plan for end-to-end checkout testing.
+  // NOTE: Solo is temporarily a $0.50 PAID plan with NO trial, so a real charge
+  // processes immediately for testing ($0.50 is Stripe's charge minimum).
   // To restore the free tier: price "Free", priceCents 0, paid false, drop stripePriceEnv.
   SOLO: {
-    label: "Solo", price: "$0.01", priceCents: 1, paid: true, offeredAtSignup: true, contactSales: false,
-    stripePriceEnv: "STRIPE_PRICE_SOLO",
+    label: "Solo", price: "$0.50", priceCents: 50, paid: true, offeredAtSignup: true, contactSales: false,
+    stripePriceEnv: "STRIPE_PRICE_SOLO", trialDays: 0,
     includedBarbers: 1, maxBarbers: 1,
     reports: false, reviews: false, noShowTracking: false, multiLocation: false, prioritySupport: false,
   },
   // Legacy tier — same capabilities as TEAM, retained for existing/demo shops.
   PRO: {
     label: "Pro", price: "$49", priceCents: 4900, paid: false, offeredAtSignup: false, contactSales: false,
+    trialDays: 14,
     includedBarbers: 6, maxBarbers: 6,
     reports: true, reviews: true, noShowTracking: true, multiLocation: false, prioritySupport: false,
   },
   TEAM: {
     label: "Team", price: "$49", priceCents: 4900, paid: true, offeredAtSignup: true, contactSales: false,
-    stripePriceEnv: "STRIPE_PRICE_TEAM",
+    stripePriceEnv: "STRIPE_PRICE_TEAM", trialDays: 14,
     includedBarbers: 3, maxBarbers: 3,
     reports: true, reviews: true, noShowTracking: true, multiLocation: false, prioritySupport: false,
   },
   BARBERSHOP: {
     label: "Barbershop", price: "$129", priceCents: 12900, paid: true, offeredAtSignup: true, contactSales: false,
-    stripePriceEnv: "STRIPE_PRICE_BARBERSHOP",
+    stripePriceEnv: "STRIPE_PRICE_BARBERSHOP", trialDays: 14,
     includedBarbers: 8, maxBarbers: 8,
     reports: true, reviews: true, noShowTracking: true, multiLocation: false, prioritySupport: true,
   },
   ENTERPRISE: {
     label: "Enterprise", price: "Custom", priceCents: 0, paid: false, offeredAtSignup: true, contactSales: true,
+    trialDays: 0,
     includedBarbers: Infinity, maxBarbers: Infinity,
     reports: true, reviews: true, noShowTracking: true, multiLocation: true, prioritySupport: true,
   },

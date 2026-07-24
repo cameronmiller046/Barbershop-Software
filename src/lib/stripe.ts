@@ -27,9 +27,6 @@ export function stripe(): Stripe {
   return _stripe;
 }
 
-// Free-trial length for paid plans (matches the "14-Day Free Trial" marketing).
-const TRIAL_DAYS = 14;
-
 /**
  * Create a Stripe-hosted Checkout Session that subscribes the buyer to a paid
  * plan. Returns the URL to redirect the owner to. Throws if the plan isn't a
@@ -58,7 +55,8 @@ export async function createSubscriptionCheckoutLink(input: {
     // resolve the tenant without an email lookup.
     metadata: { tenantId: input.tenantId, plan: input.plan },
     subscription_data: {
-      trial_period_days: TRIAL_DAYS,
+      // Per-plan trial; 0 means charge immediately (no trial).
+      ...(limits.trialDays > 0 ? { trial_period_days: limits.trialDays } : {}),
       metadata: { tenantId: input.tenantId, plan: input.plan },
     },
     success_url: appUrl(`/signup/success?tenant=${input.tenantId}&session_id={CHECKOUT_SESSION_ID}`),
