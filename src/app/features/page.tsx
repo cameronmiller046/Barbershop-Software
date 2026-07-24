@@ -95,7 +95,7 @@ export default function FeaturesPage() {
         </Reveal>
         <Reveal delay={0.18}>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/beta" className="btn-gold text-base">Start Free <Icon.arrow className="h-4 w-4" /></Link>
+            <Link href="/signup" className="btn-gold text-base">Start Free <Icon.arrow className="h-4 w-4" /></Link>
             <Link href="/pricing" className="btn-outline-gold text-base">View Pricing</Link>
           </div>
         </Reveal>
@@ -169,7 +169,7 @@ export default function FeaturesPage() {
       <LuxCTA
         title={<>One platform for <span className="gold-text">everything your shop does.</span></>}
         sub="Start free today — set up your shop in minutes, no credit card required."
-        actions={[{ label: "Start Free", href: "/beta", primary: true }, { label: "View Pricing", href: "/pricing" }]}
+        actions={[{ label: "Start Free", href: "/signup", primary: true }, { label: "View Pricing", href: "/pricing" }]}
       />
     </LuxPage>
   );

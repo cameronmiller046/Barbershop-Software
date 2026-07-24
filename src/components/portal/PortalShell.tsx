@@ -33,8 +33,11 @@ const MANAGEMENT: NavItem[] = [
   { label: "User Management", href: "/portal/team", icon: "users", perm: "shop.team" },
 ];
 
+// Owner-only; shown separately since it isn't gated by a per-feature permission.
+const BILLING: NavItem = { label: "Billing", href: "/portal/billing", icon: "crown" };
+
 export function PortalShell({
-  user, tenant, perms, reports, planLabel, showUpgrade, siteUrl, demo, notifications, signOutAction, children,
+  user, tenant, perms, reports, planLabel, showUpgrade, showBilling, siteUrl, demo, notifications, signOutAction, children,
 }: {
   user: { name: string; roleLabel: string; email: string };
   tenant: { name: string };
@@ -42,6 +45,7 @@ export function PortalShell({
   reports: boolean;
   planLabel: string;
   showUpgrade: boolean;
+  showBilling: boolean;
   siteUrl: string;
   demo: boolean;
   notifications: EditNotif[];
@@ -104,6 +108,7 @@ export function PortalShell({
           {management.map((i) => <NavLink key={i.label} item={i} active={isActive(i)} compact={compact} />)}
         </>
       )}
+      {showBilling && <NavLink item={BILLING} active={isActive(BILLING)} compact={compact} />}
     </nav>
   );
 

@@ -117,7 +117,7 @@ export default function ContactPage() {
       <LuxCTA
         title={<>Let&apos;s build something <span className="gold-text">great together.</span></>}
         sub="Start free in minutes, or book a personalized demo with our team."
-        actions={[{ label: "Start Free", href: "/beta", primary: true }, { label: "Book a Demo", href: "#contact-form" }]}
+        actions={[{ label: "Start Free", href: "/signup", primary: true }, { label: "Book a Demo", href: "#contact-form" }]}
       />
     </LuxPage>
   );

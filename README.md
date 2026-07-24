@@ -33,8 +33,46 @@ as every other tenant.
 - **Generic core models** (`Service`, `User`/staff, `Appointment`, `Client`) so
   the platform can later support salons, spas, tattoo studios, etc.
 
+### Self-serve signup & billing (Square)
+Shop owners sign up themselves at **`/signup`** (the marketing/pricing CTAs point
+here). They pick a plan and:
+- **Solo (free)** → shop is provisioned and live immediately; owner lands in `/portal`.
+- **Team / Barbershop (paid)** → shop is created `PENDING`, then the owner is sent
+  to **Square-hosted checkout**. Square charges the card and calls our webhook,
+  which flips the shop to `ACTIVE`. No card data ever touches this app.
+- **Enterprise** → routes to `/contact` (sales).
+
+Until a paid shop's subscription is `ACTIVE`, the portal funnels the owner to
+`/portal/billing` to finish checkout. Plans/limits live in `src/lib/plans.ts`
+(single source of truth); the Square integration is in `src/lib/square.ts` and
+the webhook at `src/app/api/square/webhook`.
+
+The older invite-style `/beta` apply-and-approve flow still exists but is no
+longer the front door.
+
+#### One-time Square setup
+1. In the [Square Developer Dashboard](https://developer.squareup.com/apps),
+   open (or create) your app and copy the **Sandbox Access Token**, then find your
+   **Location ID**.
+2. Put `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, and `SQUARE_ENVIRONMENT=sandbox`
+   in `.env`.
+3. Create the subscription plans + monthly variations:
+   ```bash
+   npm run square:setup
+   ```
+   Paste the printed `SQUARE_PLAN_VARIATION_TEAM` / `SQUARE_PLAN_VARIATION_BARBERSHOP`
+   lines into `.env`.
+4. Add a **webhook** (Developer Dashboard → your app → Webhooks) pointing to
+   `https://<your-app>/api/square/webhook`, subscribe to `subscription.created`,
+   `subscription.updated`, and `invoice.payment_made`, and put its **signature
+   key** in `SQUARE_WEBHOOK_SIGNATURE_KEY`.
+5. Test with a [sandbox test card](https://developer.squareup.com/docs/devtools/sandbox/payments)
+   (e.g. `4111 1111 1111 1111`). Flip `SQUARE_ENVIRONMENT=production` and swap in
+   production credentials when you go live.
+
 ### Deferred (scaffolded, not wired)
-- **Phase 6 — Billing & subscriptions** (Stripe). Plans/flags exist on `Tenant`.
+- **Metered per-barber seats** — paid plans currently hard-cap chairs at their
+  included seat count; billing for extra seats is future work.
 - **Phase 7 — AI tools & integrations** (e.g. caption generation, live social
   posting). The social planner is built; live publishing is future work.
 

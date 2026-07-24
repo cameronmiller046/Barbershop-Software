@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
+import type { Plan, TenantStatus, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify, appUrl } from "@/lib/utils";
 import { sendEmail, emailLayout } from "@/lib/email";
 import { audit } from "@/lib/audit";
+import { isPaidPlan } from "@/lib/plans";
 
 function tempPassword() {
   // readable temporary password; owner changes it on first login (future phase)
@@ -23,28 +25,22 @@ async function uniqueSlug(base: string) {
 }
 
 /**
- * Provision a brand-new tenant from an approved application:
- * creates the Tenant, the OWNER user, starter content, and emails credentials.
- * (PRD: Closed Beta Workflow → "System provisions tenant, owner account, ...")
+ * Shared low-level creation: makes the Tenant, its OWNER user, starter services,
+ * and weekday working hours so the shop can take bookings immediately. Used by
+ * both the (admin-approved) beta path and self-serve signup — the two callers
+ * differ only in how the password is set and what billing state they start in.
  */
-export async function provisionTenant(input: {
+async function createTenantWithOwner(input: {
   businessName: string;
   ownerName: string;
-  ownerEmail: string;
+  email: string;
   phone?: string | null;
-  applicationId?: string;
+  passwordHash: string;
+  plan: Plan;
+  status: TenantStatus;
+  subscriptionStatus: SubscriptionStatus;
 }) {
-  const email = input.ownerEmail.toLowerCase().trim();
-
-  // Guard against duplicate owner emails.
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    throw new Error(`A user with email ${email} already exists.`);
-  }
-
   const slug = await uniqueSlug(input.businessName);
-  const password = tempPassword();
-  const passwordHash = await bcrypt.hash(password, 10);
 
   // Random store number (1–999), avoiding existing ones.
   const usedNums = new Set((await prisma.tenant.findMany({ select: { storeNumber: true } })).map((t) => t.storeNumber));
@@ -56,17 +52,19 @@ export async function provisionTenant(input: {
       slug,
       name: input.businessName,
       storeNumber,
-      status: "ACTIVE",
-      plan: "SOLO",
+      status: input.status,
+      plan: input.plan,
+      subscriptionStatus: input.subscriptionStatus,
+      billingEmail: input.email,
       tagline: "Sharp cuts. Good company.",
-      email,
+      email: input.email,
       phone: input.phone ?? null,
       users: {
         create: {
-          email,
+          email: input.email,
           name: input.ownerName,
           role: "OWNER",
-          passwordHash,
+          passwordHash: input.passwordHash,
         },
       },
       // Starter services so the new shop isn't empty.
@@ -92,6 +90,43 @@ export async function provisionTenant(input: {
       startMin: 9 * 60,
       endMin: 18 * 60,
     })),
+  });
+
+  return { tenant, owner, slug };
+}
+
+/**
+ * Provision a brand-new tenant from an approved application:
+ * creates the Tenant, the OWNER user, starter content, and emails credentials.
+ * (PRD: Closed Beta Workflow → "System provisions tenant, owner account, ...")
+ */
+export async function provisionTenant(input: {
+  businessName: string;
+  ownerName: string;
+  ownerEmail: string;
+  phone?: string | null;
+  applicationId?: string;
+}) {
+  const email = input.ownerEmail.toLowerCase().trim();
+
+  // Guard against duplicate owner emails.
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new Error(`A user with email ${email} already exists.`);
+  }
+
+  const password = tempPassword();
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const { tenant, owner, slug } = await createTenantWithOwner({
+    businessName: input.businessName,
+    ownerName: input.ownerName,
+    email,
+    phone: input.phone ?? null,
+    passwordHash,
+    plan: "SOLO",
+    status: "ACTIVE",
+    subscriptionStatus: "NONE",
   });
 
   if (input.applicationId) {
@@ -126,4 +161,71 @@ export async function provisionTenant(input: {
   });
 
   return { tenant, owner, tempPassword: password, siteUrl, portalUrl };
+}
+
+/**
+ * Self-serve signup: a shop owner creates their own account and picks a plan.
+ * Free (SOLO) shops go live immediately; paid shops are created in a PENDING /
+ * subscriptionStatus=PENDING state and the caller sends the owner to Square
+ * checkout — the Square webhook flips them to ACTIVE once payment succeeds.
+ *
+ * The owner sets their OWN password here (no temporary password is emailed).
+ */
+export async function selfServeSignup(input: {
+  businessName: string;
+  ownerName: string;
+  ownerEmail: string;
+  password: string;
+  phone?: string | null;
+  plan: Plan;
+}) {
+  const email = input.ownerEmail.toLowerCase().trim();
+
+  // Guard against duplicate owner emails.
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new Error(`An account with email ${email} already exists. Try logging in instead.`);
+  }
+
+  const paid = isPaidPlan(input.plan);
+  const passwordHash = await bcrypt.hash(input.password, 10);
+
+  const { tenant, owner, slug } = await createTenantWithOwner({
+    businessName: input.businessName,
+    ownerName: input.ownerName,
+    email,
+    phone: input.phone ?? null,
+    passwordHash,
+    plan: input.plan,
+    // Paid shops stay PENDING until Square confirms payment; free shops go live now.
+    status: paid ? "PENDING" : "ACTIVE",
+    subscriptionStatus: paid ? "PENDING" : "NONE",
+  });
+
+  const siteUrl = appUrl(`/t/${slug}`);
+
+  // Free shops are live immediately — welcome them now. Paid shops get their
+  // "you're live" email from the webhook once the subscription activates.
+  if (!paid) {
+    const portalUrl = appUrl("/portal");
+    await sendEmail({
+      to: email,
+      subject: `Your barbershop is live: ${tenant.name}`,
+      html: emailLayout("Welcome to The Chair", `
+        <p>Hi ${input.ownerName}, your shop <b>${tenant.name}</b> is ready.</p>
+        <p><b>Your website:</b> <a href="${siteUrl}" style="color:#c9a24b">${siteUrl}</a></p>
+        <p><b>Your portal:</b> <a href="${portalUrl}" style="color:#c9a24b">${portalUrl}</a></p>
+        <p>We added 3 starter services and weekday hours so you can take bookings right away.</p>
+      `),
+    });
+  }
+
+  await audit({
+    action: "tenant.signup",
+    tenantId: tenant.id,
+    target: tenant.slug,
+    meta: { ownerEmail: email, plan: input.plan, paid },
+  });
+
+  return { tenant, owner, slug, siteUrl, paid };
 }

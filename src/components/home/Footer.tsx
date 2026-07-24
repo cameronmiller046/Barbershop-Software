@@ -15,7 +15,7 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },
-      { label: "Request access", href: "/beta" },
+      { label: "Request access", href: "/signup" },
       { label: "Sign in", href: "/login" },
     ],
   },
@@ -57,7 +57,7 @@ export function Footer() {
             <p className="mt-4 max-w-xs text-sm text-cream/50">
               The all-in-one platform to run your barbershop — bookings, clients, payments, and growth.
             </p>
-            <form action="/beta" className="mt-6 flex max-w-xs items-center gap-2">
+            <form action="/signup" className="mt-6 flex max-w-xs items-center gap-2">
               <input
                 type="email" name="email" required placeholder="Get product updates"
                 className="w-full rounded-full border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm text-cream outline-none placeholder:text-cream/35 focus:border-brass/50"

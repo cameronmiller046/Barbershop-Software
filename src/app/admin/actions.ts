@@ -6,7 +6,7 @@ import { requirePlatformAdmin } from "@/lib/rbac";
 import { provisionTenant } from "@/lib/provision";
 import { audit } from "@/lib/audit";
 import { loadDemoData, clearDemoData } from "@/lib/demo";
-import type { TenantStatus } from "@prisma/client";
+import type { TenantStatus, Plan } from "@prisma/client";
 
 // ── Demo data (Superadmin) ──
 export async function loadDemo() {
@@ -67,8 +67,8 @@ export async function setTenantStatus(id: string, status: TenantStatus) {
 export async function setTenantPlan(id: string, formData: FormData) {
   const admin = await requirePlatformAdmin();
   const plan = String(formData.get("plan") || "");
-  if (!["SOLO", "PRO", "ENTERPRISE"].includes(plan)) return;
-  await prisma.tenant.update({ where: { id }, data: { plan: plan as "SOLO" | "PRO" | "ENTERPRISE" } });
+  if (!["SOLO", "PRO", "TEAM", "BARBERSHOP", "ENTERPRISE"].includes(plan)) return;
+  await prisma.tenant.update({ where: { id }, data: { plan: plan as Plan } });
   await audit({ action: "admin.tenant.plan", userId: admin.id, target: id, meta: { plan } });
   revalidatePath("/admin/tenants");
 }

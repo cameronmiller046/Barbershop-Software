@@ -13,7 +13,11 @@ export default auth((req) => {
     url.searchParams.set("from", pathname);
     return NextResponse.redirect(url);
   }
-  return NextResponse.next();
+  // Forward the current path so server layouts can make path-aware decisions
+  // (e.g. the billing gate exempts /portal/billing itself).
+  const headers = new Headers(req.headers);
+  headers.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers } });
 });
 
 export const config = {

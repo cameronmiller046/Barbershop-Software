@@ -44,7 +44,7 @@ export function Hero() {
 
         <Reveal delay={0.18}>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/beta" className="btn-gold text-base">
+            <Link href="/signup" className="btn-gold text-base">
               Book a free demo <Icon.arrow className="h-4 w-4" />
             </Link>
             <Link href="/t/professional-barbershop" className="btn-outline-gold text-base">

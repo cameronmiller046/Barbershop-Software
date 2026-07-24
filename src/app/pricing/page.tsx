@@ -39,7 +39,7 @@ const PLANS: Plan[] = [
   {
     key: "solo", name: "Solo", icon: "staff", price: "FREE",
     desc: "Perfect for independent barbers.",
-    cta: { label: "Start Free", href: "/beta" },
+    cta: { label: "Start Free", href: "/signup?plan=solo" },
     features: [{ t: "1 barber" }, { t: "Unlimited appointments" }, { t: "Online booking" }, { t: "Client CRM" }, { t: "Booking calendar" }, { t: "Works on any device" }],
   },
   {
@@ -47,7 +47,7 @@ const PLANS: Plan[] = [
     desc: "Built for growing teams.",
     includes: "Includes 3 Barbers", extra: "+$10/month per additional barber",
     plus: "Everything in Solo, plus:",
-    cta: { label: "Start Trial", href: "/beta" },
+    cta: { label: "Start Trial", href: "/signup?plan=team" },
     features: [{ t: "Team scheduling" }, { t: "Advanced reports" }, { t: "Custom branding" }, { t: "Loyalty program" }, { t: "POS integrations", soon: true }],
   },
   {
@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
     desc: "Everything you need to run a modern barbershop.",
     includes: "Includes 8 Barbers", extra: "+$8/month per additional barber",
     plus: "Everything in Team, plus:",
-    cta: { label: "Start 14-Day Trial", href: "/beta" },
+    cta: { label: "Start 14-Day Trial", href: "/signup?plan=barbershop" },
     features: [{ t: "Advanced scheduling" }, { t: "Staff permissions" }, { t: "Analytics dashboard" }, { t: "SMS reminders" }, { t: "Inventory management", soon: true }, { t: "Payroll exports", soon: true }, { t: "Commission tracking", soon: true }, { t: "Memberships", soon: true }, { t: "Multi-location (up to 3)", soon: true }, { t: "Business intelligence", soon: true }],
   },
   {
@@ -258,7 +258,7 @@ export default function PricingPage() {
                 Join thousands of barbers who trust The Chair to run their business. Start free today — no credit card required.
               </p>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/beta" className="btn-gold text-base">Start Free <Icon.arrow className="h-4 w-4" /></Link>
+                <Link href="/signup" className="btn-gold text-base">Start Free <Icon.arrow className="h-4 w-4" /></Link>
                 <Link href="/contact" className="btn-outline-gold text-base">Contact Sales</Link>
               </div>
               <div className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-cream/45">

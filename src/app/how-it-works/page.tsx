@@ -64,7 +64,7 @@ export default function HowItWorksPage() {
           </Reveal>
           <Reveal delay={0.18}>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/beta" className="btn-gold text-base">Start Free <Icon.arrow className="h-4 w-4" /></Link>
+              <Link href="/signup" className="btn-gold text-base">Start Free <Icon.arrow className="h-4 w-4" /></Link>
               <Link href="/pricing" className="btn-outline-gold text-base">View Pricing</Link>
             </div>
           </Reveal>
@@ -158,7 +158,7 @@ export default function HowItWorksPage() {
       <LuxCTA
         title={<>Spend less time managing your shop and <span className="gold-text">more time growing it.</span></>}
         sub="Start free today — no credit card required. Set up your shop in minutes."
-        actions={[{ label: "Start Free", href: "/beta", primary: true }, { label: "View Pricing", href: "/pricing" }]}
+        actions={[{ label: "Start Free", href: "/signup", primary: true }, { label: "View Pricing", href: "/pricing" }]}
       />
     </LuxPage>
   );

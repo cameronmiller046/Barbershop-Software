@@ -112,7 +112,7 @@ export default async function FeatureDetail({ params }: { params: Promise<{ slug
           <h2 className="font-display text-3xl">Run your whole shop from one chair 💈</h2>
           <p className="mx-auto mt-3 max-w-xl text-cream/70">Flat monthly price, no per-booking fees. Bring your brand — we&apos;ll handle the tech.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/beta" className="btn-barber px-7 py-3 text-base">✨ Request beta access</Link>
+            <Link href="/signup" className="btn-barber px-7 py-3 text-base">✨ Get started free</Link>
             <Link href="/pricing" className="btn-ghost px-7 py-3 text-base">See pricing 💰</Link>
           </div>
         </div>

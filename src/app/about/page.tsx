@@ -131,7 +131,7 @@ export default function AboutPage() {
       <LuxCTA
         title={<>Ready to experience the <span className="gold-text">future of barbershop management?</span></>}
         sub="Join the shops running smoother and growing faster with The Chair. Start free — no credit card required."
-        actions={[{ label: "Start Free", href: "/beta", primary: true }, { label: "Contact Sales", href: "/contact" }]}
+        actions={[{ label: "Start Free", href: "/signup", primary: true }, { label: "Contact Sales", href: "/contact" }]}
       />
     </LuxPage>
   );

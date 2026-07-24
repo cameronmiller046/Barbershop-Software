@@ -20,6 +20,8 @@ export type Feature = {
 export const TIER_META: Record<Plan, { label: string; badge: string }> = {
   SOLO: { label: "Solo", badge: "bg-emerald-500/20 text-emerald-200" },
   PRO: { label: "Pro", badge: "bg-amber-500/20 text-amber-200" },
+  TEAM: { label: "Team", badge: "bg-amber-500/20 text-amber-200" },
+  BARBERSHOP: { label: "Barbershop", badge: "bg-brass/20 text-brass" },
   ENTERPRISE: { label: "Enterprise", badge: "bg-flame/20 text-flame" },
 };
 

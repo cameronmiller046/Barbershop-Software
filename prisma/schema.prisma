@@ -26,8 +26,21 @@ enum TenantStatus {
 
 enum Plan {
   SOLO
-  PRO
+  PRO // legacy tier (kept for existing/demo shops); new signups use TEAM/BARBERSHOP
+  TEAM
+  BARBERSHOP
   ENTERPRISE
+}
+
+// Billing state of a tenant's Square subscription. Free (SOLO) shops sit at
+// NONE; paid shops move PENDING → ACTIVE via the Square checkout + webhook.
+enum SubscriptionStatus {
+  NONE // free plan — no subscription needed
+  PENDING // paid plan chosen, Square checkout not yet completed
+  TRIALING // in a free-trial phase
+  ACTIVE // paid and current
+  PAST_DUE // a recurring charge failed
+  CANCELED // subscription ended
 }
 
 enum BetaStatus {
@@ -109,6 +122,18 @@ model Tenant {
   isDemo      Boolean      @default(false)
   status      TenantStatus @default(PENDING)
   plan        Plan         @default(SOLO)
+
+  // ── Billing / subscription (Square). Free (SOLO) shops stay at NONE; paid
+  //    shops are provisioned PENDING and flipped to ACTIVE by the Square webhook
+  //    once checkout completes. IDs let us reconcile against Square. No card data
+  //    is ever stored here — Square hosts the payment page. ──
+  subscriptionStatus    SubscriptionStatus @default(NONE)
+  squareCustomerId      String?
+  squareSubscriptionId  String?
+  squarePlanVariationId String? // the Square catalog subscription-plan-variation being billed
+  billingEmail          String? // where Square sends receipts (defaults to owner email)
+  trialEndsAt           DateTime?
+  currentPeriodEnd      DateTime? // end of the paid period Square last invoiced
 
   // Branding
   tagline           String?

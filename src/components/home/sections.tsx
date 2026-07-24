@@ -217,7 +217,7 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
-              <Link href="/beta" className={`mt-7 w-full text-center ${p.featured ? "btn-gold" : "btn-outline-gold"}`}>
+              <Link href="/signup" className={`mt-7 w-full text-center ${p.featured ? "btn-gold" : "btn-outline-gold"}`}>
                 Start free trial
               </Link>
             </div>
@@ -246,7 +246,7 @@ export function FinalCTA() {
             Join the shops booking more and running smoother with The Chair. Start free — no credit card required.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/beta" className="btn-gold text-base">Get Started Free <Icon.arrow className="h-4 w-4" /></Link>
+            <Link href="/signup" className="btn-gold text-base">Get Started Free <Icon.arrow className="h-4 w-4" /></Link>
             <Link href="/t/professional-barbershop" className="btn-outline-gold text-base">See it live</Link>
           </div>
           <div className="mt-6 text-xs text-cream/40">No credit card · Set up in minutes · Cancel anytime</div>

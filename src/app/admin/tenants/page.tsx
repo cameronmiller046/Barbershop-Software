@@ -52,7 +52,9 @@ export default async function TenantsPage() {
                     <form action={setTenantPlan.bind(null, t.id)} className="flex items-center gap-1">
                       <select name="plan" defaultValue={t.plan} className="rounded-md border border-white/10 bg-smoke px-2 py-0.5 text-xs text-cream">
                         <option value="SOLO">Solo</option>
-                        <option value="PRO">Pro</option>
+                        <option value="PRO">Pro (legacy)</option>
+                        <option value="TEAM">Team</option>
+                        <option value="BARBERSHOP">Barbershop</option>
                         <option value="ENTERPRISE">Enterprise</option>
                       </select>
                       <button className="rounded-md bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20">Set plan</button>

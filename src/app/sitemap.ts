@@ -5,7 +5,7 @@ import { appUrl } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const marketing = ["", "/features", "/pricing", "/about", "/contact", "/beta"].map((r) => ({
+  const marketing = ["", "/features", "/pricing", "/about", "/contact", "/signup", "/beta"].map((r) => ({
     url: appUrl(r || "/"),
     changeFrequency: "weekly" as const,
     priority: r === "" ? 1 : 0.7,

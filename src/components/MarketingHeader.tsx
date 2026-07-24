@@ -29,7 +29,7 @@ export function MarketingHeader() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link href="/login" className="btn-ghost hidden sm:inline-flex">Sign in</Link>
-          <Link href="/beta" className="btn-primary">Request access</Link>
+          <Link href="/signup" className="btn-primary">Request access</Link>
 
           {/* Mobile menu */}
           <details className="relative md:hidden">

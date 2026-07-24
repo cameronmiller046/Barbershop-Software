@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { requireStaffWithPerms, getPortalTenant, isStoreInspector } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { PortalShell, type EditNotif } from "@/components/portal/PortalShell";
@@ -20,6 +21,17 @@ export default async function PortalLayout({ children }: { children: React.React
   const tenant = await getPortalTenant(user.tenantId);
   const perms = permMap(user);
   const limits = planLimits(tenant?.plan ?? "SOLO");
+
+  // Billing gate: a shop whose subscription isn't active — a new paid signup
+  // awaiting payment (PENDING) or a canceled/suspended shop — is funnelled to the
+  // billing page until it's sorted. Free shops are ACTIVE and pass straight
+  // through. Store inspectors (dev/admin) bypass so they can view any shop.
+  if (tenant && tenant.status !== "ACTIVE" && !isStoreInspector(user.role)) {
+    const path = (await headers()).get("x-pathname") || "";
+    if (!path.startsWith("/portal/billing")) redirect("/portal/billing");
+  }
+  // A live shop whose recurring payment failed keeps working but gets a nudge.
+  const pastDue = tenant?.subscriptionStatus === "PAST_DUE";
 
   // Pending timeclock edit requests → the notifications bell (managers only).
   // The bell is non-essential: never let a failure here 500 the whole portal.
@@ -59,6 +71,12 @@ export default async function PortalLayout({ children }: { children: React.React
           <a href="/superuser" className="font-semibold underline hover:no-underline">Switch store</a>
         </div>
       )}
+      {pastDue && (
+        <div className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 border-b border-red-500/30 bg-red-500/15 px-4 py-1.5 text-center text-xs text-red-200">
+          <span>⚠ Your last payment didn&apos;t go through.</span>
+          <a href="/portal/billing" className="font-semibold underline hover:no-underline">Update billing</a>
+        </div>
+      )}
       <PortalShell
         user={{ name: user.name, roleLabel: roleLabel(user.role), email: user.email }}
         tenant={{ name: tenant?.name ?? "Portal" }}
@@ -66,6 +84,7 @@ export default async function PortalLayout({ children }: { children: React.React
         reports={limits.reports}
         planLabel={limits.label}
         showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
+        showBilling={user.role === "OWNER" || isStoreInspector(user.role)}
         siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
         demo={isDemo}
         notifications={notifications}

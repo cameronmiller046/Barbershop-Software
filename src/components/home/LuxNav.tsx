@@ -63,7 +63,7 @@ export function LuxNav() {
           <Link href="/login" className="hidden rounded-full border border-white/15 px-4 py-2 text-sm text-cream/90 transition hover:border-brass/50 hover:text-cream sm:inline-flex">
             Login
           </Link>
-          <Link href="/beta" className="btn-gold !py-2 !px-4 text-sm">Get Started Free</Link>
+          <Link href="/signup" className="btn-gold !py-2 !px-4 text-sm">Get Started Free</Link>
           <button
             aria-label="Menu" onClick={() => setOpen((o) => !o)}
             className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-cream lg:hidden"
