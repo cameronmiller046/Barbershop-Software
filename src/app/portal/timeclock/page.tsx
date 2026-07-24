@@ -1,7 +1,7 @@
-import { requireStaffWithPerms } from "@/lib/rbac";
+import { requireStaffWithPerms, getPortalTenant } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
-import { startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { startOfDayInTz, startOfWeekInTz, endOfWeekInTz } from "@/lib/tz";
 import { TimeClock } from "@/components/portal/TimeClock";
 import { SuggestTimeEdit } from "@/components/portal/SuggestTimeEdit";
 import { clockOutStaff } from "./actions";
@@ -22,8 +22,11 @@ export default async function TimeClockPage() {
   const user = await requireStaffWithPerms();
   const tenantId = user.tenantId;
   const seesAll = can(user, "shop.viewAll") || can(user, "shop.team");
+  // Shop-local day/week so hours roll over at the shop's midnight, not the server's.
+  const tenant = await getPortalTenant(tenantId); // request-cached by the layout
+  const tz = tenant?.timezone || "America/New_York";
   const now = new Date();
-  const dayStart = startOfDay(now), weekStart = startOfWeek(now), weekEnd = endOfWeek(now);
+  const dayStart = startOfDayInTz(now, tz), weekStart = startOfWeekInTz(now, tz), weekEnd = endOfWeekInTz(now, tz);
 
   const [open, myWeek, pendingReqs] = await Promise.all([
     prisma.timeEntry.findFirst({ where: { tenantId, userId: user.id, clockOut: null }, orderBy: { clockIn: "desc" }, include: { breaks: { select: { start: true, end: true } } } }),

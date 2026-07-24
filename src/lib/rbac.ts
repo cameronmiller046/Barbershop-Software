@@ -90,7 +90,7 @@ export const requireStaffWithPerms = cache(async (): Promise<StaffWithPerms> => 
  * Cached so the layout and page don't each hit the DB for the same row.
  */
 export const getPortalTenant = cache((tenantId: string) =>
-  prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, slug: true, plan: true } })
+  prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, slug: true, plan: true, timezone: true } })
 );
 
 /**

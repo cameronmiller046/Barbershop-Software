@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/utils";
 import { apptState, STATE_LABEL, type ApptState } from "@/lib/apptStatus";
-import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek } from "date-fns";
+import { startOfDayInTz, endOfDayInTz, addDaysInTz, startOfWeekInTz, endOfWeekInTz } from "@/lib/tz";
 import { Reveal, Counter } from "@/components/home/motion";
 import { Icon, type IconName } from "@/components/home/icons";
 import { WalkInLogger } from "@/components/WalkInLogger";
@@ -35,13 +35,16 @@ async function DashboardBody({ user, seesAll }: { user: StaffWithPerms; seesAll:
   const tenantId = user.tenantId;
   const scope = seesAll ? {} : { barberId: user.id };
 
+  // Day/week windows must be in the SHOP's timezone, not the server's (UTC in
+  // production) — otherwise "today" resets at 8pm local instead of midnight.
+  const tenant = await getPortalTenant(tenantId); // request-cached: already loaded by the layout
+  const tz = tenant?.timezone || "America/New_York";
   const now = new Date();
-  const dayStart = startOfDay(now), dayEnd = endOfDay(now);
-  const yStart = startOfDay(subDays(now, 1)), yEnd = endOfDay(subDays(now, 1));
-  const weekStart = startOfWeek(now), weekEnd = endOfWeek(now);
+  const dayStart = startOfDayInTz(now, tz), dayEnd = endOfDayInTz(now, tz);
+  const yStart = addDaysInTz(now, tz, -1), yEnd = new Date(dayStart.getTime() - 1);
+  const weekStart = startOfWeekInTz(now, tz), weekEnd = endOfWeekInTz(now, tz);
 
-  const [tenant, services, clientList, barbers, todays, yesterday, weekRev, myClockOpen, myClockToday] = await Promise.all([
-    getPortalTenant(tenantId),
+  const [services, clientList, barbers, todays, yesterday, weekRev, myClockOpen, myClockToday] = await Promise.all([
     prisma.service.findMany({ where: { tenantId, active: true }, select: { id: true, name: true, priceCents: true }, orderBy: { sortOrder: "asc" } }),
     prisma.client.findMany({ where: { tenantId }, select: { name: true, phone: true }, orderBy: { name: "asc" }, take: 1000 }),
     prisma.user.findMany({ where: { tenantId, role: "BARBER", active: true, kioskOnly: false }, select: { id: true } }),

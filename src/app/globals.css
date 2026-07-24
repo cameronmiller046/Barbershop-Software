@@ -287,15 +287,21 @@ body {
     radial-gradient(900px 700px at 90% 10%, rgba(169, 119, 47, 0.14) 0%, transparent 55%),
     radial-gradient(700px 600px at 8% 30%, rgba(120, 82, 30, 0.10) 0%, transparent 55%),
     linear-gradient(180deg, #0a090b 0%, #08080a 40%, #060607 100%);
+  /* Own compositing layer: the fixed backdrop must not be re-rasterized on
+     every scroll frame (that made soft gold glows flicker). */
+  transform: translateZ(0);
+  will-change: transform;
+  isolation: isolate;
 }
-/* Vignette + fine grain over the top of the glow. */
+/* Vignette over the glow. The overlay is pure black, so plain alpha
+   compositing is mathematically identical to multiply — but without forcing a
+   full-viewport re-blend of everything beneath it while scrolling. */
 .lux-atmosphere::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
     radial-gradient(120% 120% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
-  mix-blend-mode: multiply;
 }
 .lux-grain {
   position: fixed;
@@ -303,6 +309,8 @@ body {
   z-index: 0;
   pointer-events: none;
   opacity: 0.05;
+  transform: translateZ(0);
+  will-change: transform;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -368,6 +376,10 @@ body {
   box-shadow: 0 10px 30px -8px rgba(216, 178, 92, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
   overflow: hidden;
+  /* Keep the soft gold glow on a stable layer so scrolling can't re-rasterize
+     it mid-frame (the cause of the flicker under this button). */
+  will-change: transform;
+  backface-visibility: hidden;
 }
 .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -10px rgba(216, 178, 92, 0.6); filter: brightness(1.04); }
 .btn-outline-gold {
