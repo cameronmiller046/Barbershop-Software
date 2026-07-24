@@ -145,10 +145,10 @@ model Tenant {
   trialEndsAt          DateTime?
   currentPeriodEnd     DateTime? // end of the paid period Stripe last invoiced
 
-  // Sales attribution: which sales rep (User with role SALES_REP) enrolled this
-  // shop. Set by the SWSales-Page app; null for self-serve signups.
-  salesRep   User?   @relation("EnrolledTenants", fields: [salesRepId], references: [id], onDelete: SetNull)
-  salesRepId String?
+  // Sales attribution. The SWSales-Page app has its OWN database now, so the
+  // rep is stored as plain cross-service refs (id + email), not a FK.
+  salesRepId    String? // the SalesUser id from the sales app
+  salesRepEmail String? // rep email (for display without a cross-DB join)
 
   // Branding
   tagline           String?
@@ -299,8 +299,8 @@ model User {
   ticketComments     TicketComment[]
   ticketActivity     TicketActivity[]
 
-  // Sales (SWSales-Page): shops this user enrolled + stores they've visited.
-  enrolledTenants    Tenant[]          @relation("EnrolledTenants")
+  // Legacy sales relation (reps now live in the SWSales-Page DB; StoreVisit here
+  // is retained but unused).
   storeVisits        StoreVisit[]      @relation("RepVisits")
 
   createdAt DateTime @default(now())
