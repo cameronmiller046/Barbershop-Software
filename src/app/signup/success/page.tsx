@@ -7,15 +7,15 @@ import { planLimits } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
-// Landing page after Square hosted checkout. The owner is already signed in
-// (we signed them in before sending them to Square), so we confirm ownership,
+// Landing page after Stripe hosted checkout. The owner is already signed in
+// (we signed them in before sending them to Stripe), so we confirm ownership,
 // try to reconcile their subscription immediately, and show the result.
 export default async function SignupSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tenant?: string }>;
+  searchParams: Promise<{ tenant?: string; session_id?: string }>;
 }) {
-  const { tenant: tenantId } = await searchParams;
+  const { tenant: tenantId, session_id } = await searchParams;
   const user = await requireUser("/signup/success");
   if (!tenantId) redirect("/portal");
 
@@ -26,9 +26,10 @@ export default async function SignupSuccessPage({
   });
   if (!tenant || user.tenantId !== tenant.id) redirect("/portal");
 
-  // Fold in whatever Square already knows (webhook may not have landed yet).
-  const status = (await reconcileTenantBilling(tenant.id)) ?? tenant.subscriptionStatus;
-  const active = status === "ACTIVE";
+  // Fold in whatever Stripe already knows (webhook may not have landed yet) —
+  // the Checkout session id lets us resolve the subscription right away.
+  const status = (await reconcileTenantBilling(tenant.id, session_id)) ?? tenant.subscriptionStatus;
+  const active = status === "ACTIVE" || status === "TRIALING";
   const label = planLimits(tenant.plan).label;
 
   return (

@@ -109,7 +109,7 @@ export function SignupForm({
 
       <p className="text-center text-xs text-cream/45">
         {paid
-          ? "You'll be taken to Square's secure checkout to start your subscription."
+          ? "You'll be taken to Stripe's secure checkout to start your subscription — with a 14-day free trial."
           : "No credit card required. Your shop goes live instantly."}
       </p>
 

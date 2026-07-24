@@ -33,42 +33,45 @@ as every other tenant.
 - **Generic core models** (`Service`, `User`/staff, `Appointment`, `Client`) so
   the platform can later support salons, spas, tattoo studios, etc.
 
-### Self-serve signup & billing (Square)
+### Self-serve signup & billing (Stripe)
 Shop owners sign up themselves at **`/signup`** (the marketing/pricing CTAs point
 here). They pick a plan and:
 - **Solo (free)** → shop is provisioned and live immediately; owner lands in `/portal`.
 - **Team / Barbershop (paid)** → shop is created `PENDING`, then the owner is sent
-  to **Square-hosted checkout**. Square charges the card and calls our webhook,
-  which flips the shop to `ACTIVE`. No card data ever touches this app.
+  to **Stripe-hosted Checkout** (subscription mode, with a 14-day free trial).
+  Stripe collects the card and calls our webhook, which flips the shop to `ACTIVE`.
+  No card data ever touches this app.
 - **Enterprise** → routes to `/contact` (sales).
 
-Until a paid shop's subscription is `ACTIVE`, the portal funnels the owner to
-`/portal/billing` to finish checkout. Plans/limits live in `src/lib/plans.ts`
-(single source of truth); the Square integration is in `src/lib/square.ts` and
-the webhook at `src/app/api/square/webhook`.
+Until a paid shop's subscription is live (`ACTIVE`/`TRIALING`), the portal funnels
+the owner to `/portal/billing` to finish checkout. That page also opens the Stripe
+**Customer Portal** so owners can update their card or cancel. Plans/limits live in
+`src/lib/plans.ts` (single source of truth); the Stripe integration is in
+`src/lib/stripe.ts` + `src/lib/billing.ts` and the webhook at
+`src/app/api/stripe/webhook`.
+
+The `tenantId` is carried in Checkout/Subscription **metadata**, so webhooks map
+back to the shop with no email guessing.
 
 The older invite-style `/beta` apply-and-approve flow still exists but is no
 longer the front door.
 
-#### One-time Square setup
-1. In the [Square Developer Dashboard](https://developer.squareup.com/apps),
-   open (or create) your app and copy the **Sandbox Access Token**, then find your
-   **Location ID**.
-2. Put `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, and `SQUARE_ENVIRONMENT=sandbox`
-   in `.env`.
-3. Create the subscription plans + monthly variations:
+#### One-time Stripe setup
+1. In the [Stripe Dashboard](https://dashboard.stripe.com/apikeys) (Test mode),
+   copy your **Secret key** (`sk_test_…`) into `STRIPE_SECRET_KEY` in `.env`.
+2. Create the products + monthly prices:
    ```bash
-   npm run square:setup
+   npm run stripe:setup
    ```
-   Paste the printed `SQUARE_PLAN_VARIATION_TEAM` / `SQUARE_PLAN_VARIATION_BARBERSHOP`
-   lines into `.env`.
-4. Add a **webhook** (Developer Dashboard → your app → Webhooks) pointing to
-   `https://<your-app>/api/square/webhook`, subscribe to `subscription.created`,
-   `subscription.updated`, and `invoice.payment_made`, and put its **signature
-   key** in `SQUARE_WEBHOOK_SIGNATURE_KEY`.
-5. Test with a [sandbox test card](https://developer.squareup.com/docs/devtools/sandbox/payments)
-   (e.g. `4111 1111 1111 1111`). Flip `SQUARE_ENVIRONMENT=production` and swap in
-   production credentials when you go live.
+   Paste the printed `STRIPE_PRICE_TEAM` / `STRIPE_PRICE_BARBERSHOP` lines into `.env`.
+3. Add a **webhook** (Developers → Webhooks → `https://<your-app>/api/stripe/webhook`)
+   for `checkout.session.completed`, `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`, and
+   `invoice.payment_failed`; put its **signing secret** (`whsec_…`) in
+   `STRIPE_WEBHOOK_SECRET`. For local testing, `stripe listen --forward-to
+   localhost:3000/api/stripe/webhook` prints a `whsec_…` to use.
+4. Test with card `4242 4242 4242 4242` (any future expiry / CVC). Swap in your
+   **live** key + a live webhook when you go to production.
 
 ### Deferred (scaffolded, not wired)
 - **Metered per-barber seats** — paid plans currently hard-cap chairs at their

@@ -166,8 +166,8 @@ export async function provisionTenant(input: {
 /**
  * Self-serve signup: a shop owner creates their own account and picks a plan.
  * Free (SOLO) shops go live immediately; paid shops are created in a PENDING /
- * subscriptionStatus=PENDING state and the caller sends the owner to Square
- * checkout — the Square webhook flips them to ACTIVE once payment succeeds.
+ * subscriptionStatus=PENDING state and the caller sends the owner to Stripe
+ * checkout — the Stripe webhook flips them to ACTIVE once payment succeeds.
  *
  * The owner sets their OWN password here (no temporary password is emailed).
  */
@@ -197,7 +197,7 @@ export async function selfServeSignup(input: {
     phone: input.phone ?? null,
     passwordHash,
     plan: input.plan,
-    // Paid shops stay PENDING until Square confirms payment; free shops go live now.
+    // Paid shops stay PENDING until Stripe confirms payment; free shops go live now.
     status: paid ? "PENDING" : "ACTIVE",
     subscriptionStatus: paid ? "PENDING" : "NONE",
   });

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requirePortalStaff, isStoreInspector } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { planLimits, parsePlanKey, PLAN_LIMITS } from "@/lib/plans";
-import { createSubscriptionCheckoutLink, squareConfigured } from "@/lib/square";
+import { createSubscriptionCheckoutLink, createBillingPortalUrl, stripeConfigured } from "@/lib/stripe";
 import { reconcileTenantBilling } from "@/lib/billing";
 import type { Plan } from "@prisma/client";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const STATUS_COPY: Record<string, { label: string; tone: string }> = {
   NONE: { label: "Free plan", tone: "text-cream/70" },
   PENDING: { label: "Payment pending", tone: "text-amber-300" },
-  TRIALING: { label: "Trial", tone: "text-brass" },
+  TRIALING: { label: "Free trial", tone: "text-brass" },
   ACTIVE: { label: "Active", tone: "text-emerald-300" },
   PAST_DUE: { label: "Payment past due", tone: "text-red-300" },
   CANCELED: { label: "Canceled", tone: "text-red-300" },
@@ -26,29 +26,31 @@ const UPGRADE_PLANS = (Object.keys(PLAN_LIMITS) as Plan[]).filter(
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ setup?: string; error?: string }>;
+  searchParams: Promise<{ setup?: string; error?: string; canceled?: string }>;
 }) {
   const sp = await searchParams;
   const staff = await requirePortalStaff();
   // Billing is an owner concern (store inspectors may view it too).
   if (staff.role !== "OWNER" && !isStoreInspector(staff.role)) redirect("/portal");
 
-  // Refresh from Square in case a webhook was missed.
+  // Refresh from Stripe in case a webhook was missed.
   await reconcileTenantBilling(staff.tenantId);
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: staff.tenantId },
     select: {
       id: true, name: true, plan: true, status: true, subscriptionStatus: true,
-      currentPeriodEnd: true, trialEndsAt: true,
+      currentPeriodEnd: true, trialEndsAt: true, stripeCustomerId: true,
     },
   });
   if (!tenant) redirect("/portal");
 
   const limits = planLimits(tenant.plan);
   const status = STATUS_COPY[tenant.subscriptionStatus] ?? STATUS_COPY.NONE;
-  const configured = squareConfigured();
-  const needsPayment = limits.paid && tenant.subscriptionStatus !== "ACTIVE";
+  const configured = stripeConfigured();
+  const live = tenant.subscriptionStatus === "ACTIVE" || tenant.subscriptionStatus === "TRIALING";
+  const needsPayment = limits.paid && !live;
+  const canManage = Boolean(tenant.stripeCustomerId) && configured;
 
   async function startCheckout(formData: FormData) {
     "use server";
@@ -87,6 +89,21 @@ export default async function BillingPage({
     redirect(url);
   }
 
+  async function manageSubscription() {
+    "use server";
+    const s = await requirePortalStaff();
+    if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
+    const t = await prisma.tenant.findUnique({ where: { id: s.tenantId }, select: { stripeCustomerId: true } });
+    if (!t?.stripeCustomerId || !stripeConfigured()) redirect("/portal/billing?error=checkout");
+    let url: string;
+    try {
+      url = await createBillingPortalUrl(t.stripeCustomerId);
+    } catch {
+      redirect("/portal/billing?error=checkout");
+    }
+    redirect(url);
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-2xl text-cream">Billing &amp; subscription</h1>
@@ -95,12 +112,17 @@ export default async function BillingPage({
       {sp.setup && (
         <p className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           Card payments aren&apos;t connected on this server yet. Your shop is created — an admin needs to finish the
-          Square setup before checkout can run.
+          Stripe setup before checkout can run.
+        </p>
+      )}
+      {sp.canceled && (
+        <p className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-cream/70">
+          Checkout canceled — no charge was made. You can pick up where you left off whenever you&apos;re ready.
         </p>
       )}
       {sp.error === "checkout" && (
         <p className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          We couldn&apos;t start checkout. Please try again in a moment.
+          Something went wrong. Please try again in a moment.
         </p>
       )}
 
@@ -117,10 +139,20 @@ export default async function BillingPage({
           </div>
         </div>
         <div className="gold-hairline my-5" />
-        <div className="text-sm text-cream/60">
-          {limits.price === "Free" ? "Free forever" : `${limits.price}/month`}
-          {tenant.currentPeriodEnd && tenant.subscriptionStatus === "ACTIVE" && (
-            <> · renews {tenant.currentPeriodEnd.toLocaleDateString()}</>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-cream/60">
+            {limits.price === "Free" ? "Free forever" : `${limits.price}/month`}
+            {tenant.subscriptionStatus === "TRIALING" && tenant.trialEndsAt && (
+              <> · trial ends {tenant.trialEndsAt.toLocaleDateString()}</>
+            )}
+            {tenant.subscriptionStatus === "ACTIVE" && tenant.currentPeriodEnd && (
+              <> · renews {tenant.currentPeriodEnd.toLocaleDateString()}</>
+            )}
+          </div>
+          {canManage && (
+            <form action={manageSubscription}>
+              <button className="btn-outline-gold !py-2 text-sm">Manage subscription</button>
+            </form>
           )}
         </div>
       </div>
@@ -130,7 +162,7 @@ export default async function BillingPage({
         <div className="mt-5 rounded-2xl border border-brass/25 bg-brass/[0.05] p-6">
           <h2 className="font-display text-lg text-cream">Finish setting up {limits.label}</h2>
           <p className="mt-1 text-sm text-cream/60">
-            Complete checkout on Square&apos;s secure page to activate your subscription.
+            Complete checkout on Stripe&apos;s secure page to activate your subscription — your 14-day free trial starts now.
           </p>
           <form action={startCheckout} className="mt-4">
             <input type="hidden" name="plan" value={tenant.plan} />
@@ -145,7 +177,7 @@ export default async function BillingPage({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {UPGRADE_PLANS.map((p) => {
             const pl = planLimits(p);
-            const current = p === tenant.plan && tenant.subscriptionStatus === "ACTIVE";
+            const current = p === tenant.plan && live;
             return (
               <form key={p} action={startCheckout} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <input type="hidden" name="plan" value={p} />
@@ -165,8 +197,9 @@ export default async function BillingPage({
           })}
         </div>
         <p className="mt-4 text-xs text-cream/45">
-          Need to cancel or change payment details, or want Enterprise?{" "}
-          <Link href="/contact" className="text-brass hover:underline">Contact us</Link>.
+          {canManage
+            ? <>Cancel or update your card anytime with <b className="text-cream/70">Manage subscription</b> above.</>
+            : <>Want Enterprise or multiple locations? <Link href="/contact" className="text-brass hover:underline">Contact us</Link>.</>}
         </p>
       </div>
     </div>
