@@ -18,6 +18,7 @@ const PRIMARY: NavItem[] = [
   { label: "Dashboard", href: "/portal", icon: "home", exact: true },
   { label: "Appointments", href: "/portal/appointments", icon: "booking" },
   { label: "Clients", href: "/portal/clients", icon: "customers", perm: "shop.clients" },
+  { label: "Portfolio", href: "/portal/portfolio", icon: "star" },
   { label: "Time Clock", href: "/portal/timeclock", icon: "clock" },
   { label: "My Requests", href: "/portal/feedback", icon: "messages" },
   // Account settings live in the sidebar footer (next to Log out) — no duplicate here.
