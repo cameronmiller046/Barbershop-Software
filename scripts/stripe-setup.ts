@@ -35,9 +35,10 @@ const PLANS = [
 ];
 
 const live = key.startsWith("sk_live_");
-console.log(`\n→ Creating subscription prices in Stripe (${live ? "LIVE" : "test"} mode)…\n`);
 
-try {
+async function main() {
+  console.log(`\n→ Creating subscription prices in Stripe (${live ? "LIVE" : "test"} mode)…\n`);
+
   const out: string[] = [];
   for (const p of PLANS) {
     const lookupKey = `chair_${p.key.toLowerCase()}_monthly`;
@@ -72,8 +73,10 @@ try {
   console.log("checkout.session.completed, customer.subscription.*, invoice.payment_failed,");
   console.log("and put its signing secret in STRIPE_WEBHOOK_SECRET.\n");
   process.exit(0);
-} catch (err) {
+}
+
+main().catch((err) => {
   console.error("\n✗ Stripe setup failed:", err instanceof Error ? err.message : err);
   console.error("Check that STRIPE_SECRET_KEY is valid.\n");
   process.exit(1);
-}
+});
