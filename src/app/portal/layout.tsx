@@ -32,6 +32,9 @@ export default async function PortalLayout({ children }: { children: React.React
   }
   // A live shop whose recurring payment failed keeps working but gets a nudge.
   const pastDue = tenant?.subscriptionStatus === "PAST_DUE";
+  // Don't nag paying customers to upgrade — only prompt shops that haven't
+  // subscribed yet (and never Enterprise, which is already top tier).
+  const subscribed = tenant?.subscriptionStatus === "ACTIVE" || tenant?.subscriptionStatus === "TRIALING";
 
   // Pending timeclock edit requests → the notifications bell (managers only).
   // The bell is non-essential: never let a failure here 500 the whole portal.
@@ -83,7 +86,7 @@ export default async function PortalLayout({ children }: { children: React.React
         perms={perms}
         reports={limits.reports}
         planLabel={limits.label}
-        showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE"}
+        showUpgrade={(tenant?.plan ?? "SOLO") !== "ENTERPRISE" && !subscribed}
         showBilling={user.role === "OWNER" || isStoreInspector(user.role)}
         siteUrl={appUrl(`/t/${tenant?.slug ?? ""}`)}
         demo={isDemo}
