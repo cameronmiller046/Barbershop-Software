@@ -95,7 +95,7 @@ export default async function PortalLayout({ children }: { children: React.React
       >
         {children}
       </PortalShell>
-      <FeedbackFab user={{ name: user.name, email: user.email }} />
+      {!isDemo && <FeedbackFab user={{ name: user.name, email: user.email }} />}
     </div>
   );
 }

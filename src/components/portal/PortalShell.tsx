@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Icon, type IconName } from "@/components/home/icons";
 import { approveTimeEdit, rejectTimeEdit } from "@/app/portal/timeclock/actions";
 
-type NavItem = { label: string; href: string; icon: IconName; exact?: boolean; perm?: string; plan?: boolean; soon?: boolean };
+type NavItem = { label: string; href: string; icon: IconName; exact?: boolean; perm?: string; plan?: boolean; soon?: boolean; demoHidden?: boolean };
 
 export type EditNotif = {
   id: string; barberName: string; createdISO: string; reason: string | null;
@@ -20,7 +20,7 @@ const PRIMARY: NavItem[] = [
   { label: "Clients", href: "/portal/clients", icon: "customers", perm: "shop.clients" },
   { label: "Portfolio", href: "/portal/portfolio", icon: "star" },
   { label: "Time Clock", href: "/portal/timeclock", icon: "clock" },
-  { label: "My Requests", href: "/portal/feedback", icon: "messages" },
+  { label: "My Requests", href: "/portal/feedback", icon: "messages", demoHidden: true },
   // Account settings live in the sidebar footer (next to Log out) — no duplicate here.
 ];
 
@@ -88,7 +88,7 @@ export function PortalShell({
   const toggleCollapse = () => setCollapsed((c) => { localStorage.setItem("portalNavCollapsed", c ? "0" : "1"); return !c; });
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  const canSee = (i: NavItem) => (!i.perm || perms[i.perm]) && (!i.plan || reports);
+  const canSee = (i: NavItem) => (!i.perm || perms[i.perm]) && (!i.plan || reports) && (!i.demoHidden || !demo);
   const primary = PRIMARY.filter(canSee);
   const management = MANAGEMENT.filter(canSee);
 

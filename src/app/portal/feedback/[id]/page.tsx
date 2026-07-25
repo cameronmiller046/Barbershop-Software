@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { isDemoAccount } from "@/lib/demoMode";
 import { TYPE_META, PRIORITY_META, SEVERITY_META, estimatedResponse, type TicketType, type TicketSeverity, type TicketPriority } from "@/lib/tickets";
 import { StatusBadge } from "@/app/portal/feedback/page";
 import { ReplyBox } from "@/components/feedback/ReplyBox";
@@ -16,6 +17,7 @@ const DETAIL_LABEL: Record<string, string> = {
 
 export default async function ReporterTicketDetail({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireStaffWithPerms();
+  if (isDemoAccount(user.email)) redirect("/portal");
   const { id } = await params;
   const t = await prisma.ticket.findFirst({
     where: { id, reporterId: user.id },
