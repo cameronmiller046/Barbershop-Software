@@ -15,6 +15,7 @@ import { isDemoAccount } from "@/lib/demoMode";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
 import { accrueLoyalty, loyaltyConfigOf, liveLoyaltyBalance, consumeLoyaltyReward, LOYALTY_SELECT, LOYALTY_MAX_REWARD_CENTS, LOYALTY_THRESHOLD_MAX } from "@/lib/loyalty";
 import { isPaymentMethod } from "@/lib/payments";
+import { safeImageUrl } from "@/lib/utils";
 import type { AppointmentStatus } from "@prisma/client";
 
 /**
@@ -386,7 +387,7 @@ export async function createService(formData: FormData) {
       durationMin: Math.max(5, Number(formData.get("durationMin") || 30)),
       priceCents: Math.max(0, Math.round(Number(formData.get("price") || 0) * 100)),
       barberId: (String(formData.get("barberId") || "") || null) as string | null,
-      imageUrl: String(formData.get("imageUrl") || "") || null,
+      imageUrl: safeImageUrl(formData.get("imageUrl")),
     },
   });
   await audit({ action: "service.created", tenantId: user.tenantId, userId: user.id, target: name });
@@ -397,7 +398,7 @@ export async function createService(formData: FormData) {
 export async function setServiceImage(id: string, formData: FormData) {
   const user = await requirePerm("shop.services");
   if (!user) return;
-  const imageUrl = String(formData.get("imageUrl") || "") || null;
+  const imageUrl = safeImageUrl(formData.get("imageUrl"));
   await prisma.service.updateMany({ where: { id, tenantId: user.tenantId }, data: { imageUrl } });
   revalidatePath("/portal/services");
 }
@@ -478,7 +479,7 @@ export async function setStaffAvatar(id: string, formData: FormData) {
     where: { id, tenantId: user.tenantId, role: { in: ["BARBER", "RECEPTIONIST"] } },
   });
   if (!target) return;
-  await prisma.user.update({ where: { id: target.id }, data: { avatarUrl: String(formData.get("imageUrl") || "") || null } });
+  await prisma.user.update({ where: { id: target.id }, data: { avatarUrl: safeImageUrl(formData.get("imageUrl")) } });
   await audit({ action: "team.avatar", tenantId: user.tenantId, userId: user.id, target: target.id });
   revalidatePath("/portal/team");
 }
@@ -604,7 +605,7 @@ export async function setTenantImage(field: "logoUrl" | "heroImageUrl" | "favico
   if (!user) return;
   await prisma.tenant.update({
     where: { id: user.tenantId },
-    data: { [field]: String(formData.get("imageUrl") || "") || null },
+    data: { [field]: safeImageUrl(formData.get("imageUrl")) },
   });
   await audit({ action: "tenant.image", tenantId: user.tenantId, userId: user.id, meta: { field } });
   revalidatePath("/portal/settings");
@@ -673,7 +674,7 @@ export async function updateOwnProfile(formData: FormData) {
     data: {
       name: name || undefined, // display name — shown to customers + on booking
       bio: String(formData.get("bio") || "") || null,
-      avatarUrl: String(formData.get("avatarUrl") || "") || null,
+      avatarUrl: safeImageUrl(formData.get("avatarUrl")),
       instagramHandle: String(formData.get("instagramHandle") || "").replace(/^@/, "").trim() || null,
       facebookUrl: String(formData.get("facebookUrl") || "").trim() || null,
       tiktokUrl: String(formData.get("tiktokUrl") || "").trim() || null,

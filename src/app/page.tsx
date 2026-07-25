@@ -3,6 +3,7 @@ import { LuxNav } from "@/components/home/LuxNav";
 import { Hero } from "@/components/home/Hero";
 import { Features, Showcase, HowItWorks, Stats, Testimonials, Integrations, Pricing, FinalCTA } from "@/components/home/sections";
 import { Footer } from "@/components/home/Footer";
+import { jsonLdSafe } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: { absolute: "The Chair — All-in-one barbershop software 💈" },
@@ -42,7 +43,7 @@ const JSON_LD = {
 export default function Home() {
   return (
     <div className="lux relative min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(JSON_LD) }} />
 
       {/* Cinematic atmosphere */}
       <div className="lux-atmosphere" aria-hidden />

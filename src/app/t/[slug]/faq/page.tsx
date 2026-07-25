@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTenantBySlug } from "@/lib/tenant";
-import { appUrl } from "@/lib/utils";
+import { appUrl, jsonLdSafe } from "@/lib/utils";
 import { ShopHeader } from "@/components/shop/ShopHeader";
 import { Faq, type Qa } from "@/components/pricing/Faq";
 
@@ -39,7 +39,7 @@ export default async function FaqPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <main className="pb-24">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(faqLd) }} />
       <ShopHeader eyebrow="Good to Know" title={<>Common <span className="gold-text">questions</span></>} />
       <section className="relative z-10 mx-auto max-w-4xl px-5 py-12">
         <Faq columns={FAQ} gridClassName="grid gap-4 md:grid-cols-2" />

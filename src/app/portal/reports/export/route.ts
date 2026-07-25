@@ -6,7 +6,12 @@ import { resolveRange } from "@/lib/reportRange";
 import { buildReport, type ApptRow } from "@/lib/reportData";
 
 const money = (c: number) => (c / 100).toFixed(2);
-const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+const esc = (v: string | number) => {
+  // Neutralize CSV formula injection (Excel/Sheets execute cells starting = + - @).
+  let s = String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
 
 export async function GET(req: Request) {
   const user = await requireStaffWithPerms();
