@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { randomBytes, randomInt } from "crypto";
 import type { Plan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
@@ -9,9 +10,10 @@ import {
 } from "@/lib/stripe";
 
 function tempPassword() {
+  // CSPRNG temp password (not time-correlated); owner changes it on first login.
   const words = ["fade", "razor", "comb", "clipper", "shave", "chair", "trim", "blend"];
-  const w = words[Math.floor((Date.now() / 1000) % words.length)];
-  return `${w}-${(Date.now() % 9000) + 1000}`;
+  const w = words[randomInt(words.length)];
+  return `${w}-${randomBytes(6).toString("base64url")}`;
 }
 
 async function uniqueSlug(base: string) {

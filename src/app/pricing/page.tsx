@@ -5,6 +5,7 @@ import { Footer } from "@/components/home/Footer";
 import { Reveal, Stagger, Item, Counter } from "@/components/home/motion";
 import { Icon, type IconName } from "@/components/home/icons";
 import { Faq, type Qa } from "@/components/pricing/Faq";
+import { jsonLdSafe } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Pricing — flat monthly plans for barbershops",
@@ -124,7 +125,7 @@ const FAQ_JSONLD = {
 export default function PricingPage() {
   return (
     <div className="lux relative min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSONLD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(FAQ_JSONLD) }} />
       <div className="lux-atmosphere" aria-hidden />
       <div className="lux-grain" aria-hidden />
       <div className="lux-embers absolute inset-x-0 top-0 h-[110vh]" aria-hidden>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTenantBySlug, getTenantReviews } from "@/lib/tenant";
-import { appUrl } from "@/lib/utils";
+import { appUrl, jsonLdSafe } from "@/lib/utils";
 import { ShopHeader } from "@/components/shop/ShopHeader";
 import { ReviewsCarousel } from "@/components/shop/ReviewsCarousel";
 
@@ -32,7 +32,7 @@ export default async function ReviewsPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="pb-24">
-      {reviewLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewLd) }} />}
+      {reviewLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe(reviewLd) }} />}
       <ShopHeader eyebrow="Reviews" title={<>Loved by <span className="gold-text">locals</span></>} />
       <section className="relative z-10 mx-auto max-w-6xl px-5 pb-10">
         {reviews.length === 0 ? (

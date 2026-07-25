@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { randomBytes, randomInt } from "crypto";
 import type { Plan, TenantStatus, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify, appUrl } from "@/lib/utils";
@@ -7,11 +8,11 @@ import { audit } from "@/lib/audit";
 import { isPaidPlan } from "@/lib/plans";
 
 function tempPassword() {
-  // readable temporary password; owner changes it on first login (future phase)
+  // Cryptographically-random temp password (readable word + CSPRNG suffix). Not
+  // time-correlated or guessable; the owner should change it on first login.
   const words = ["fade", "razor", "comb", "clipper", "shave", "barber", "chair", "trim"];
-  const w = words[Math.floor((Date.now() / 1000) % words.length)];
-  const n = (Date.now() % 9000) + 1000;
-  return `${w}-${n}`;
+  const w = words[randomInt(words.length)];
+  return `${w}-${randomBytes(6).toString("base64url")}`; // ~48 bits of entropy
 }
 
 /** Ensure a unique tenant slug. */

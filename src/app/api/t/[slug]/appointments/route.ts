@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 import { addMinutes } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug } from "@/lib/tenant";
@@ -7,7 +8,7 @@ import { isSlotFree } from "@/lib/availability";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { sendEmail, emailLayout } from "@/lib/email";
 import { audit } from "@/lib/audit";
-import { appUrl } from "@/lib/utils";
+import { appUrl, escapeHtml } from "@/lib/utils";
 
 const schema = z.object({
   serviceId: z.string().min(1),
@@ -72,6 +73,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       endTime,
       notes: notes || null,
       status: "CONFIRMED",
+      // Unguessable manage token (this token is the sole authenticator for the
+      // customer's cancel/reschedule link) — CSPRNG, not the guessable cuid default.
+      manageToken: randomBytes(24).toString("base64url"),
     },
   });
 
@@ -83,8 +87,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       to: email,
       subject: `Booking confirmed — ${tenant.name}`,
       html: emailLayout("You're booked!", `
-        <p>Hi ${name}, your appointment at <b>${tenant.name}</b> is confirmed.</p>
-        <p><b>${service.name}</b> with ${barber.name}<br/>${startTime.toLocaleString()}</p>
+        <p>Hi ${escapeHtml(name)}, your appointment at <b>${escapeHtml(tenant.name)}</b> is confirmed.</p>
+        <p><b>${escapeHtml(service.name)}</b> with ${escapeHtml(barber.name)}<br/>${startTime.toLocaleString()}</p>
         <p>Manage your appointment: <a href="${manageUrl}" style="color:#c9a24b">${manageUrl}</a></p>
       `),
     }, { sendgridApiKey: tenant.sendgridApiKey, from: tenant.emailFromAddress });

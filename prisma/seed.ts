@@ -7,7 +7,12 @@ const prisma = new PrismaClient();
 async function main() {
   // ── Superadmin (internal role PLATFORM_ADMIN, presented as "Superadmin") ──
   const primaryEmail = (process.env.PLATFORM_ADMIN_EMAIL || "cameronmiller046@gmail.com").toLowerCase();
-  const primaryPass = process.env.PLATFORM_ADMIN_PASSWORD || "Ieokkyz7";
+  // Fail closed: never ship a hardcoded superadmin password. The platform admin
+  // controls every tenant/user, so the password MUST come from the environment.
+  const primaryPass = process.env.PLATFORM_ADMIN_PASSWORD;
+  if (!primaryPass || primaryPass.length < 10) {
+    throw new Error("Set a strong PLATFORM_ADMIN_PASSWORD (>=10 chars) in the environment before seeding.");
+  }
   const hash = await bcrypt.hash(primaryPass, 10);
 
   await prisma.user.deleteMany({ where: { email: "admin@thechair.app", role: "PLATFORM_ADMIN" } });
@@ -16,7 +21,7 @@ async function main() {
     update: { role: "PLATFORM_ADMIN", passwordHash: hash, tenantId: null, name: "Cameron Miller" },
     create: { email: primaryEmail, name: "Cameron Miller", role: "PLATFORM_ADMIN", passwordHash: hash },
   });
-  console.log(`✓ Superadmin: ${primaryEmail} / ${primaryPass}`);
+  console.log(`✓ Superadmin: ${primaryEmail} (password from PLATFORM_ADMIN_PASSWORD)`);
 
   // ── Flagship store: Professional Barber & Beauty Salon (public, view-only) ──
   const tenantFields = {
