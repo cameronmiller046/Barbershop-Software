@@ -8,7 +8,6 @@ import { appUrl } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 import { permMap } from "@/lib/permissions";
 import { planLimits } from "@/lib/plans";
-import { isDemoAccount } from "@/lib/demoMode";
 import { FeedbackFab } from "@/components/feedback/FeedbackFab";
 import { AutoRefresh } from "@/components/AutoRefresh";
 
@@ -56,7 +55,7 @@ export default async function PortalLayout({ children }: { children: React.React
     }
   }
 
-  const isDemo = isDemoAccount(user.email);
+  const isDemo = false; // demo is now an isolated in-browser sandbox, not real accounts
   async function signOutAction() {
     "use server";
     // Demo visitors flow back into the funnel (book a free demo) instead of

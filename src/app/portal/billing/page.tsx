@@ -9,7 +9,6 @@ import {
 } from "@/lib/stripe";
 import { reconcileTenantBilling } from "@/lib/billing";
 import { formatMoney } from "@/lib/utils";
-import { isDemoAccount } from "@/lib/demoMode";
 import type { Plan } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +40,7 @@ export default async function BillingPage({
   const staff = await requirePortalStaff();
   if (staff.role !== "OWNER" && !isStoreInspector(staff.role)) redirect("/portal");
 
-  const isDemo = isDemoAccount(staff.email);
+  const isDemo = false;
 
   let tenant = await prisma.tenant.findUnique({ where: { id: staff.tenantId }, select: TENANT_SELECT });
   if (!tenant) redirect("/portal");
@@ -71,7 +70,6 @@ export default async function BillingPage({
   async function startCheckout(formData: FormData) {
     "use server";
     const s = await requirePortalStaff();
-    if (isDemoAccount(s.email)) redirect("/signup"); // demo shops can't subscribe
     if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
     const plan = parsePlanKey(String(formData.get("plan") ?? ""));
     if (!plan || !planLimits(plan).paid) redirect("/portal/billing?error=checkout");
@@ -85,7 +83,6 @@ export default async function BillingPage({
   async function cancelSubscription() {
     "use server";
     const s = await requirePortalStaff();
-    if (isDemoAccount(s.email)) redirect("/signup");
     if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
     const t = await prisma.tenant.findUnique({ where: { id: s.tenantId }, select: { stripeSubscriptionId: true } });
     if (!t?.stripeSubscriptionId) redirect("/portal/billing?error=checkout");
@@ -96,7 +93,6 @@ export default async function BillingPage({
   async function resumeSubscription() {
     "use server";
     const s = await requirePortalStaff();
-    if (isDemoAccount(s.email)) redirect("/signup");
     if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
     const t = await prisma.tenant.findUnique({ where: { id: s.tenantId }, select: { stripeSubscriptionId: true } });
     if (!t?.stripeSubscriptionId) redirect("/portal/billing?error=checkout");

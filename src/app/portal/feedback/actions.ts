@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requirePortalStaff } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
-import { isDemoAccount } from "@/lib/demoMode";
 import type { TicketType, TicketSeverity, TicketPriority } from "@/lib/tickets";
 
 const MAX_ATTACH = 6;
@@ -42,7 +41,6 @@ async function createWithRef(data: Omit<Prisma.TicketCreateInput, "ref">) {
 
 export async function submitTicket(input: SubmitTicketInput): Promise<{ ok: true; ref: string; id: string } | { ok: false; error: string }> {
   const user = await requirePortalStaff();
-  if (isDemoAccount(user.email)) return { ok: false, error: "Feedback is disabled for demo accounts." };
 
   const title = (input.title ?? "").trim();
   const description = (input.description ?? "").trim();
@@ -84,7 +82,6 @@ export async function submitTicket(input: SubmitTicketInput): Promise<{ ok: true
 // A reporter can add a public comment to their own ticket.
 export async function addReporterComment(ticketId: string, body: string) {
   const user = await requirePortalStaff();
-  if (isDemoAccount(user.email)) return { ok: false, error: "Feedback is disabled for demo accounts." };
   const text = (body ?? "").trim();
   if (!text) return;
   const ticket = await prisma.ticket.findFirst({ where: { id: ticketId, reporterId: user.id }, select: { id: true } });

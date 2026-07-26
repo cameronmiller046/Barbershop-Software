@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { isDemoAccount } from "@/lib/demoMode";
 import { TYPE_META, STATUS_META, OPEN_STATUSES, type TicketStatus, type TicketType } from "@/lib/tickets";
 import { Reveal } from "@/components/home/motion";
 
@@ -12,7 +11,6 @@ const OPEN = OPEN_STATUSES as string[];
 
 export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ tab?: string; type?: string }> }) {
   const user = await requireStaffWithPerms();
-  if (isDemoAccount(user.email)) redirect("/portal"); // feedback is off for demo accounts
   const sp = await searchParams;
   const tab = sp.tab === "closed" ? "closed" : sp.tab === "all" ? "all" : "open";
   const typeF = ["BUG", "QUESTION", "FEATURE"].includes(sp.type ?? "") ? (sp.type as TicketType) : null;

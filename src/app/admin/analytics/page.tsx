@@ -5,7 +5,7 @@ import { monthlyBuckets } from "@/lib/reporting";
 import { BarChart } from "@/components/charts/BarChart";
 import { Breakdown, type BreakdownRow } from "@/components/charts/Breakdown";
 import { KIND_LABEL } from "@/lib/appointmentMeta";
-import { DEMO_ACCOUNT_EMAILS } from "@/lib/demoMode";
+const DEMO_ACCOUNT_EMAILS: string[] = [];
 import { subDays, subMonths, startOfMonth, eachDayOfInterval, format } from "date-fns";
 
 // Demo showcase logins (test1/test2) must never skew real platform metrics.

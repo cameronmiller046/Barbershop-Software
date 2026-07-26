@@ -9,7 +9,6 @@ import { selfServeSignup } from "@/lib/provision";
 import { planLimits, parsePlanKey } from "@/lib/plans";
 import { stripeConfigured } from "@/lib/stripe";
 import { rateLimit } from "@/lib/ratelimit";
-import { isDemoAccount } from "@/lib/demoMode";
 import { SignupForm } from "@/components/SignupForm";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +45,7 @@ export default async function SignupPage({
   // Already signed in → straight to the portal. Exception: demo accounts land
   // here to create their OWN shop (signing up replaces their demo session).
   const session = await auth();
-  if (session?.user && !isDemoAccount(session.user.email)) {
+  if (session?.user) {
     const stillActive = await prisma.user.findFirst({ where: { id: session.user.id, active: true }, select: { id: true } });
     if (stillActive) redirect("/portal");
   }
