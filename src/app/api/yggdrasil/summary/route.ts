@@ -7,6 +7,7 @@ import {
   LINK_PRODUCT,
   isPaired,
   verifyLink,
+  yggdrasilEnabled,
 } from "@/lib/yggdrasilLink";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export const runtime = "nodejs";
 // Unauthed callers only learn whether a pairing exists (no secrets).
 export async function GET(req: Request) {
   try {
+    if (!yggdrasilEnabled()) return NextResponse.json({ error: "not found" }, { status: 404 });
     if (!(await verifyLink(req))) {
       return NextResponse.json({ paired: await isPaired() }, { status: 401 });
     }

@@ -16,6 +16,17 @@ export function sha256Hex(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+/**
+ * Kill switch for the whole bridge. Enabled by default (back-compat); a buyer's
+ * deployment can turn Yggdrasil fully off by setting YGGDRASIL_ENABLED to a
+ * falsey value. When off, every /api/yggdrasil/* route 404s as if it doesn't
+ * exist and verifyLink refuses all tokens.
+ */
+export function yggdrasilEnabled(): boolean {
+  const v = (process.env.YGGDRASIL_ENABLED ?? "").trim().toLowerCase();
+  return !(v === "false" || v === "0" || v === "off" || v === "no" || v === "disabled");
+}
+
 // Constant-time compare of two sha256 hex digests (always equal length).
 function digestsMatch(aHex: string, bHex: string): boolean {
   const a = Buffer.from(aHex);
@@ -36,6 +47,7 @@ export function presentedToken(req: Request): string | null {
 
 /** True when the request carries the paired token (or the optional env override). */
 export async function verifyLink(req: Request): Promise<boolean> {
+  if (!yggdrasilEnabled()) return false; // bridge disabled — refuse every token
   const token = presentedToken(req);
   if (!token) return false;
   const presentedHash = sha256Hex(token);
