@@ -16,7 +16,7 @@ const EMBERS = [
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; error?: string }>;
+  searchParams: Promise<{ from?: string; error?: string; reset?: string }>;
 }) {
   const sp = await searchParams;
   const session = await auth();
@@ -81,6 +81,11 @@ export default async function LoginPage({
                 Invalid email or password.
               </p>
             )}
+            {sp.reset === "1" && (
+              <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+                Password updated — sign in with your new password.
+              </p>
+            )}
             <input type="hidden" name="from" value={sp.from ?? ""} />
             <div>
               <label className="label">Email or username</label>
@@ -91,6 +96,9 @@ export default async function LoginPage({
               <input name="password" type="password" required className="c-input" />
             </div>
             <button type="submit" className="btn-gold w-full">Sign in</button>
+            <Link href="/forgot" className="block text-center text-sm text-cream/50 transition hover:text-brass">
+              Forgot your password?
+            </Link>
           </form>
 
           {/* Try the demo — an isolated in-browser sandbox (no account, no sign-in) */}

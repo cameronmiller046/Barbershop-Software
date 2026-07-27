@@ -260,6 +260,11 @@ model User {
   role         Role    @default(BARBER)
   active       Boolean @default(true)
 
+  // Brute-force protection: consecutive failed sign-ins, and a lockout deadline
+  // set once the threshold is crossed. Both are cleared on a successful login.
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
   // Per-user permission overrides layered on top of role defaults.
   // Shape: { "shop.settings": true, "shop.viewAll": false }. Absent key = use role default.
   permissionOverrides Json?
@@ -298,6 +303,7 @@ model User {
   assignedTickets    Ticket[]          @relation("TicketAssignee")
   ticketComments     TicketComment[]
   ticketActivity     TicketActivity[]
+  passwordResetTokens PasswordResetToken[]
 
   // Legacy sales relation (reps now live in the SWSales-Page DB; StoreVisit here
   // is retained but unused).
@@ -768,4 +774,19 @@ model ProcessedWebhookEvent {
 
   @@index([processedAt])
   @@map("processed_webhook_event")
+}
+
+// ───────────────────── Password reset ─────────────────────
+// Single-use reset tokens. We store only the sha256 hash — the raw token lives
+// only in the emailed link — so a DB leak can't be used to reset passwords.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique // sha256(rawToken)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

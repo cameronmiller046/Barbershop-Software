@@ -5,6 +5,11 @@ import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
+// Per-account brute-force lockout: after this many consecutive failed sign-ins,
+// the account is locked for the cooldown below. A successful login clears it.
+const LOCK_THRESHOLD = 8;
+const LOCK_MS = 15 * 60 * 1000; // 15 minutes
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // 7-day sessions (down from NextAuth's 30-day default), refreshed daily.
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
@@ -32,8 +37,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.active) return null;
 
+        // Account-level lockout: refuse while a lock is active (don't extend it).
+        const now = Date.now();
+        if (user.lockedUntil && user.lockedUntil.getTime() > now) return null;
+
         const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) {
+          // Count the failure and lock once the threshold is crossed. A lock
+          // that has already expired starts a fresh window. Fail open on any DB
+          // error so a write hiccup can't wedge the account.
+          try {
+            const priorFails = user.lockedUntil && user.lockedUntil.getTime() <= now ? 0 : user.failedLoginCount;
+            const fails = priorFails + 1;
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { failedLoginCount: fails, lockedUntil: fails >= LOCK_THRESHOLD ? new Date(now + LOCK_MS) : null },
+            });
+          } catch { /* fail open */ }
+          return null;
+        }
+
+        // Success — clear any accumulated failures / lock.
+        if (user.failedLoginCount > 0 || user.lockedUntil) {
+          try {
+            await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
+          } catch { /* non-fatal */ }
+        }
 
         return {
           id: user.id,
