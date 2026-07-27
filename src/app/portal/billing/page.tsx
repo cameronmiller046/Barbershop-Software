@@ -45,13 +45,19 @@ export default async function BillingPage({
   let tenant = await prisma.tenant.findUnique({ where: { id: staff.tenantId }, select: TENANT_SELECT });
   if (!tenant) redirect("/portal");
 
-  // Returning from a card update → make the new card the default.
+  // Returning from a card update → make the new card the default. Stripe calls
+  // are wrapped so a transient API hiccup degrades gracefully instead of
+  // blanking the whole page (the page still renders from our own DB data).
   if (sp.setup_intent && tenant.stripeCustomerId && stripeConfigured()) {
-    await applySetupIntentAsDefault(sp.setup_intent, tenant.stripeCustomerId, tenant.stripeSubscriptionId);
+    try {
+      await applySetupIntentAsDefault(sp.setup_intent, tenant.stripeCustomerId, tenant.stripeSubscriptionId);
+    } catch { /* non-fatal */ }
   }
   // Refresh status from Stripe in case a webhook was missed.
-  await reconcileTenantBilling(staff.tenantId);
-  tenant = (await prisma.tenant.findUnique({ where: { id: staff.tenantId }, select: TENANT_SELECT })) ?? tenant;
+  try {
+    await reconcileTenantBilling(staff.tenantId);
+    tenant = (await prisma.tenant.findUnique({ where: { id: staff.tenantId }, select: TENANT_SELECT })) ?? tenant;
+  } catch { /* non-fatal — show last-known status from our DB */ }
 
   const configured = stripeConfigured();
   const limits = planLimits(tenant.plan);
@@ -61,8 +67,10 @@ export default async function BillingPage({
 
   let manage: ManageDetails | null = null;
   let invoices: InvoiceRow[] = [];
-  if (configured && tenant.stripeSubscriptionId) manage = await getSubscriptionForManage(tenant.stripeSubscriptionId);
-  if (configured && tenant.stripeCustomerId) invoices = await listInvoices(tenant.stripeCustomerId);
+  try {
+    if (configured && tenant.stripeSubscriptionId) manage = await getSubscriptionForManage(tenant.stripeSubscriptionId);
+    if (configured && tenant.stripeCustomerId) invoices = await listInvoices(tenant.stripeCustomerId);
+  } catch { /* non-fatal — hide the manage/history blocks rather than crash the page */ }
 
   const periodEndDate = manage?.currentPeriodEnd ?? tenant.currentPeriodEnd;
   const canManage = Boolean(tenant.stripeCustomerId) && configured;
