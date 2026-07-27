@@ -42,7 +42,7 @@ export default async function ResetPage({
               <h1 className="font-display text-2xl">Link expired or invalid</h1>
               <div className="gold-hairline mt-1" />
               <p className="text-sm text-cream/70">
-                This reset link is no longer valid. Request a fresh one and it'll arrive within a minute.
+                This reset link is no longer valid. Request a fresh one and it&apos;ll arrive within a minute.
               </p>
               <Link href="/forgot" className="btn-gold mt-2 inline-block w-full text-center">Request a new link</Link>
             </div>
@@ -59,7 +59,7 @@ export default async function ResetPage({
               )}
               {err === "mismatch" && (
                 <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                  The two passwords don't match.
+                  The two passwords don&apos;t match.
                 </p>
               )}
               <input type="hidden" name="token" value={token} />

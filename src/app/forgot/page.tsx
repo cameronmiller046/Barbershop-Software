@@ -43,7 +43,7 @@ export default async function ForgotPage({
               <h1 className="font-display text-2xl">Check your email</h1>
               <div className="gold-hairline mt-1" />
               <p className="text-sm text-cream/70">
-                If an account exists for that address, we've sent a link to reset your password.
+                If an account exists for that address, we&apos;ve sent a link to reset your password.
                 The link expires in one hour.
               </p>
               <Link href="/login" className="btn-gold mt-2 inline-block w-full text-center">Back to sign in</Link>
@@ -55,7 +55,7 @@ export default async function ForgotPage({
                 <div className="gold-hairline mt-3" />
               </div>
               <p className="text-sm text-cream/60">
-                Enter your account email and we'll send you a link to set a new password.
+                Enter your account email and we&apos;ll send you a link to set a new password.
               </p>
               <div>
                 <label className="label">Email</label>
