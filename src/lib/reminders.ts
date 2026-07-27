@@ -75,3 +75,43 @@ export async function sendDueReminders(now = new Date()): Promise<{ sent: number
   }
   return { sent, email, sms, failed };
 }
+
+/**
+ * Notify a client that the shop canceled their appointment. Best-effort over the
+ * shop's own email/SMS creds (falling back to server env); SMS respects opt-out.
+ * Never throws — a failed notification must not break the cancel action.
+ */
+export async function notifyClientCanceled(appointmentId: string): Promise<void> {
+  try {
+    const a = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      select: {
+        startTime: true,
+        tenant: { select: { name: true, timezone: true, sendgridApiKey: true, emailFromAddress: true, twilioAccountSid: true, twilioAuthToken: true, twilioFromNumber: true } },
+        client: { select: { name: true, email: true, phone: true, smsOptOut: true } },
+        service: { select: { name: true } },
+      },
+    });
+    if (!a || !a.client) return;
+    const when = whenLabel(a.startTime, a.tenant.timezone);
+    if (a.client.email) {
+      await sendEmail({
+        to: a.client.email,
+        subject: `Your appointment at ${a.tenant.name} was canceled`,
+        html: emailLayout("Appointment canceled", `
+          <p>Hi ${a.client.name}, your <b>${a.service.name}</b> appointment at <b>${a.tenant.name}</b> on ${when} has been canceled.</p>
+          <p>Sorry for any inconvenience — you're welcome to book a new time whenever works for you.</p>
+        `),
+      }, { sendgridApiKey: a.tenant.sendgridApiKey, from: a.tenant.emailFromAddress });
+    }
+    if (a.client.phone && !a.client.smsOptOut) {
+      await sendSms(
+        a.client.phone,
+        `${a.tenant.name}: your ${a.service.name} appointment on ${when} was canceled. Feel free to rebook anytime.`,
+        { accountSid: a.tenant.twilioAccountSid, authToken: a.tenant.twilioAuthToken, from: a.tenant.twilioFromNumber },
+      );
+    }
+  } catch (err) {
+    console.error("[notify] cancel notification failed:", err);
+  }
+}

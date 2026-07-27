@@ -14,6 +14,7 @@ import { planLimits } from "@/lib/plans";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
 import { accrueLoyalty, loyaltyConfigOf, liveLoyaltyBalance, consumeLoyaltyReward, LOYALTY_SELECT, LOYALTY_MAX_REWARD_CENTS, LOYALTY_THRESHOLD_MAX } from "@/lib/loyalty";
 import { isPaymentMethod } from "@/lib/payments";
+import { notifyClientCanceled } from "@/lib/reminders";
 import { safeImageUrl } from "@/lib/utils";
 import type { AppointmentStatus } from "@prisma/client";
 
@@ -89,6 +90,7 @@ export async function cancelAppointment(id: string, reason: string) {
   const status = reasonToStatus(reason);
   await prisma.appointment.update({ where: { id }, data: { status, statusReason: reason } });
   await audit({ action: "appointment.cancelled", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { reason, status } });
+  if (status === "CANCELLED") await notifyClientCanceled(id);
   revalidateAppointments();
 }
 
@@ -104,6 +106,7 @@ export async function deleteAppointment(id: string, reason: string) {
   const status = reasonToStatus(reason); // "No show" → NO_SHOW, else CANCELLED
   await prisma.appointment.update({ where: { id }, data: { active: false, status, statusReason: reason } });
   await audit({ action: "appointment.removed", tenantId: ctx.user.tenantId, userId: ctx.user.id, target: id, meta: { reason } });
+  if (status === "CANCELLED") await notifyClientCanceled(id);
   revalidateAppointments();
 }
 
