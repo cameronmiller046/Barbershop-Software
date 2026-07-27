@@ -24,6 +24,11 @@ export function PageViewTracker({ slug }: { slug?: string }) {
 
   useEffect(() => {
     if (!pathname) return;
+    // Respect an explicit tracking opt-out: if the visitor declined, send no
+    // beacon at all (previously only the persistent visitor-id was gated).
+    try {
+      if (localStorage.getItem("cc") === "declined") return;
+    } catch { /* storage blocked — fall through to a cookieless beacon */ }
     const body = JSON.stringify({ path: pathname, ref: document.referrer || "", slug, vid: persistentVid() });
     try {
       if (typeof navigator !== "undefined" && navigator.sendBeacon) {

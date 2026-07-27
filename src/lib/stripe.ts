@@ -19,6 +19,16 @@ export function stripeConfigured(): boolean {
   return Boolean(SECRET_KEY);
 }
 
+/**
+ * Stripe Tax (automatic VAT/sales-tax) is opt-in via STRIPE_TAX_ENABLED — it
+ * requires Stripe Tax to be activated in the dashboard and a customer billing
+ * address for calculation, so it stays OFF by default (unchanged behavior).
+ */
+export function taxEnabled(): boolean {
+  const v = (process.env.STRIPE_TAX_ENABLED ?? "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "on" || v === "yes";
+}
+
 let _stripe: Stripe | null = null;
 export function stripe(): Stripe {
   if (!SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not set.");
@@ -62,6 +72,8 @@ export async function createSubscriptionCheckoutLink(input: {
     success_url: appUrl(`/signup/success?tenant=${input.tenantId}&session_id={CHECKOUT_SESSION_ID}`),
     cancel_url: appUrl("/portal/billing?canceled=1"),
     allow_promotion_codes: true,
+    automatic_tax: { enabled: taxEnabled() },
+    ...(taxEnabled() ? { billing_address_collection: "required" as const } : {}),
   });
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
@@ -127,6 +139,7 @@ export async function createIncompleteSubscription(input: {
     payment_settings: { save_default_payment_method: "on_subscription" },
     billing_mode: { type: "flexible" },
     metadata: { tenantId: input.tenantId, plan: input.plan },
+    automatic_tax: { enabled: taxEnabled() },
     expand: SUB_EXPAND,
   });
   const intent = readIntent(sub);

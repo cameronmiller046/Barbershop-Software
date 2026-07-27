@@ -24,9 +24,9 @@ const OPTIONS: { icon: IconName; title: string; copy: string; cta: string }[] = 
 const OFFICE: { icon: IconName; title: string; lines: string[] }[] = [
   { icon: "clock", title: "Business Hours", lines: ["Mon–Fri · 9:00am – 6:00pm ET", "Weekends · Limited support"] },
   { icon: "messages", title: "Email", lines: ["hello@thechair.co", "sales@thechair.co"] },
-  { icon: "headset", title: "Phone", lines: ["+1 (555) 012-3456", "Mon–Fri business hours"] },
+  { icon: "headset", title: "Book a call", lines: ["Request a call from the form", "Mon–Fri business hours"] },
   { icon: "store", title: "Headquarters", lines: ["The Chair, Inc.", "Atlanta, GA · USA"] },
-  { icon: "shield", title: "Support Availability", lines: ["Priority support on Pro+", "24/7 status & uptime monitoring"] },
+  { icon: "shield", title: "Support Availability", lines: ["Priority support on paid plans", "Same-business-day email replies"] },
 ];
 
 const FAQ: Qa[][] = [
@@ -36,7 +36,7 @@ const FAQ: Qa[][] = [
     { q: "Can I schedule a demo?", a: "Absolutely. Choose \"Book a demo\" in the form and we'll set up a walkthrough tailored to your shop." },
   ],
   [
-    { q: "Do you provide phone support?", a: "Yes — phone support is available during business hours, and Pro and Shop plans include priority support." },
+    { q: "Do you provide phone support?", a: "We're happy to hop on a call during business hours — request one from the form. Paid plans include priority support." },
     { q: "Can I migrate from another system?", a: "Definitely. We'll help you import your existing clients and appointments from a spreadsheet or another platform." },
   ],
 ];
