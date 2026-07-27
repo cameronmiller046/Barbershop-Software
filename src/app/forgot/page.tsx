@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { requestPasswordReset } from "@/lib/reset";
-import { rateLimit } from "@/lib/ratelimit";
+import { limit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export default async function ForgotPage({
     // confirmation and send nothing (no enumeration, no email).
     const h = await headers();
     const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
-    if (!rateLimit(`forgot:${ip}`, 5, 60_000).ok) redirect("/forgot?sent=1");
+    if (!(await limit(`forgot:${ip}`, 5, 60_000)).ok) redirect("/forgot?sent=1");
     await requestPasswordReset(String(formData.get("email") || ""));
     // Always the same outcome — never reveal whether the email is registered.
     redirect("/forgot?sent=1");

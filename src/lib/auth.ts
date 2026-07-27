@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { limit, clientIp } from "@/lib/ratelimit";
 
 // Per-account brute-force lockout: after this many consecutive failed sign-ins,
 // the account is locked for the cooldown below. A successful login clears it.
@@ -31,7 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // here can never lock legitimate users out.
         try {
           const ip = request ? clientIp(request as unknown as Request) : "unknown";
-          if (!rateLimit(`login:${ip}`, 20, 60_000).ok) return null;
+          if (!(await limit(`login:${ip}`, 20, 60_000)).ok) return null;
         } catch { /* fail open */ }
 
         const user = await prisma.user.findUnique({ where: { email } });

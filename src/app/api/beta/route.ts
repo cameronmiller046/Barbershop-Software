@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { limit, clientIp } from "@/lib/ratelimit";
 import { audit } from "@/lib/audit";
 import { sendEmail, emailLayout } from "@/lib/email";
 import { escapeHtml } from "@/lib/utils";
@@ -16,7 +16,7 @@ const schema = z.object({
 
 // POST /api/beta — a business requests closed-beta access.
 export async function POST(req: Request) {
-  const rl = rateLimit(`beta:${clientIp(req)}`, 5, 60_000);
+  const rl = await limit(`beta:${clientIp(req)}`, 5, 60_000);
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
   }

@@ -5,7 +5,7 @@ import { addMinutes } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug } from "@/lib/tenant";
 import { isSlotFree } from "@/lib/availability";
-import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { limit, clientIp } from "@/lib/ratelimit";
 import { sendEmail, emailLayout } from "@/lib/email";
 import { audit } from "@/lib/audit";
 import { appUrl, escapeHtml } from "@/lib/utils";
@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   // A suspended (canceled / non-paying) shop can't take new bookings.
   if (tenant.status === "SUSPENDED") return NextResponse.json({ error: "This shop isn't accepting bookings right now." }, { status: 403 });
 
-  const rl = rateLimit(`book:${tenant.id}:${clientIp(req)}`, 8, 60_000);
+  const rl = await limit(`book:${tenant.id}:${clientIp(req)}`, 8, 60_000);
   if (!rl.ok) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));

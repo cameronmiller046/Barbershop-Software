@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { limit, clientIp } from "@/lib/ratelimit";
 import { prisma } from "@/lib/prisma";
 import { isBot, recordPageView } from "@/lib/track";
 
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (isBot(ua)) return new NextResponse(null, { status: 204 });
 
   const ip = clientIp(req);
-  if (!rateLimit(`track:${ip}`, 120, 60_000).ok) return new NextResponse(null, { status: 204 });
+  if (!(await limit(`track:${ip}`, 120, 60_000)).ok) return new NextResponse(null, { status: 204 });
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new NextResponse(null, { status: 204 });

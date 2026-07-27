@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { selfServeSignup } from "@/lib/provision";
 import { planLimits, parsePlanKey } from "@/lib/plans";
 import { stripeConfigured } from "@/lib/stripe";
-import { rateLimit } from "@/lib/ratelimit";
+import { limit } from "@/lib/ratelimit";
 import { SignupForm } from "@/components/SignupForm";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +60,7 @@ export default async function SignupPage({
 
     // Coarse rate limit by client IP (server actions have no Request object).
     const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    if (!rateLimit(`signup:${ip}`, 6, 60_000).ok) {
+    if (!(await limit(`signup:${ip}`, 6, 60_000)).ok) {
       redirect("/signup?error=invalid");
     }
 
