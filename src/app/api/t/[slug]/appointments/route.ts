@@ -18,6 +18,7 @@ const schema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().trim().min(7).max(40).refine((v) => v.replace(/\D/g, "").length >= 7, "A valid phone number is required"),
   notes: z.string().max(500).optional().or(z.literal("")),
+  smsConsent: z.boolean().optional(),
 });
 
 // POST /api/t/[slug]/appointments — public booking, scoped to one tenant.
@@ -31,7 +32,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid booking details" }, { status: 400 });
-  const { serviceId, barberId, start, name, email, phone, notes } = parsed.data;
+  const { serviceId, barberId, start, name, email, phone, notes, smsConsent } = parsed.data;
 
   // Validate service + barber belong to THIS tenant (isolation).
   const [service, barber] = await Promise.all([
@@ -60,8 +61,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const client =
     existingClient ??
     (await prisma.client.create({
-      data: { tenantId: tenant.id, name, email: email || null, phone: phone || null },
+      data: {
+        tenantId: tenant.id, name, email: email || null, phone: phone || null,
+        ...(smsConsent ? { smsConsent: true, smsConsentAt: new Date() } : {}),
+      },
     }));
+
+  // Record consent on an existing client too (never downgrade an existing opt-in).
+  if (existingClient && smsConsent && !existingClient.smsConsent) {
+    await prisma.client.update({
+      where: { id: existingClient.id },
+      data: { smsConsent: true, smsConsentAt: new Date() },
+    });
+  }
 
   const appointment = await prisma.appointment.create({
     data: {

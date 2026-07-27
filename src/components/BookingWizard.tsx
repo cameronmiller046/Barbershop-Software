@@ -31,7 +31,7 @@ export function BookingWizard({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "", smsConsent: false });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,6 +189,11 @@ export function BookingWizard({
                 <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
               <div className="sm:col-span-2"><label className="label">Notes (optional)</label>
                 <textarea className="input min-h-[72px]" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+              <label className="sm:col-span-2 flex cursor-pointer items-start gap-2 text-sm text-white/70">
+                <input type="checkbox" className="mt-0.5" checked={form.smsConsent}
+                  onChange={(e) => setForm({ ...form, smsConsent: e.target.checked })} />
+                <span>Text me appointment reminders and updates at this number. Msg &amp; data rates may apply; reply STOP to opt out at any time.</span>
+              </label>
             </div>
           </section>
         )}

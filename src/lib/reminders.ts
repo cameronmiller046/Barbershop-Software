@@ -24,7 +24,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ sent: number
     select: {
       id: true, startTime: true, manageToken: true,
       tenant: { select: { name: true, slug: true, timezone: true, reminderEmail: true, reminderSms: true, reminderHoursBefore: true, twilioAccountSid: true, twilioAuthToken: true, twilioFromNumber: true, sendgridApiKey: true, emailFromAddress: true } },
-      client: { select: { name: true, email: true, phone: true } },
+      client: { select: { name: true, email: true, phone: true, smsOptOut: true } },
       service: { select: { name: true } },
       barber: { select: { name: true } },
     },
@@ -56,7 +56,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ sent: number
       }, { sendgridApiKey: a.tenant.sendgridApiKey, from: a.tenant.emailFromAddress });
       if (r.ok) { email++; delivered = true; } else failed++;
     }
-    if (a.tenant.reminderSms && a.client.phone) {
+    if (a.tenant.reminderSms && a.client.phone && !a.client.smsOptOut) {
       attempted = true;
       const r = await sendSms(
         a.client.phone,

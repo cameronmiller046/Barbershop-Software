@@ -379,6 +379,14 @@ model Client {
   address   String?
   notes     String?
 
+  // SMS compliance (TCPA). smsConsent records the client agreeing to texts (with
+  // a timestamp for the paper trail); smsOptOut is set when they reply STOP (see
+  // /api/sms/inbound). Reminder SMS are suppressed whenever smsOptOut is true.
+  smsConsent   Boolean   @default(false)
+  smsConsentAt DateTime?
+  smsOptOut    Boolean   @default(false)
+  smsOptOutAt  DateTime?
+
   // Loyalty (see lib/loyalty.ts). The live balance is derived from loyaltyEntries
   // (so expiry is automatic); loyaltyPoints is deprecated/unused.
   loyaltyPoints          Int @default(0) // deprecated — balance now comes from the ledger

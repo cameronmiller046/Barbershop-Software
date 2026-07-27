@@ -7,6 +7,27 @@
  */
 export type TwilioCreds = { accountSid?: string | null; authToken?: string | null; from?: string | null };
 
+// Standard carrier opt-out / opt-in / help keywords (case-insensitive, first word).
+const STOP_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit", "optout", "revoke"]);
+const START_WORDS = new Set(["start", "unstop", "yes", "optin"]);
+const HELP_WORDS = new Set(["help", "info"]);
+
+export type SmsKeyword = "stop" | "start" | "help" | null;
+
+/** Classify an inbound SMS body as a compliance keyword (STOP/START/HELP) or null. */
+export function parseSmsKeyword(body: string): SmsKeyword {
+  const first = (body || "").trim().toLowerCase().split(/\s+/)[0] || "";
+  if (STOP_WORDS.has(first)) return "stop";
+  if (START_WORDS.has(first)) return "start";
+  if (HELP_WORDS.has(first)) return "help";
+  return null;
+}
+
+/** Normalize a phone to its digit run (last 10 for US) for matching stored numbers. */
+export function phoneDigits(v: string): string {
+  return (v || "").replace(/\D/g, "");
+}
+
 function resolve(creds?: TwilioCreds) {
   return {
     sid: creds?.accountSid || process.env.TWILIO_ACCOUNT_SID || "",
