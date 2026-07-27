@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { planLimits, parsePlanKey, PLAN_LIMITS, stripePriceId } from "@/lib/plans";
 import {
   stripeConfigured, getSubscriptionForManage, setCancelAtPeriodEnd,
-  applySetupIntentAsDefault, listInvoices, changeSubscriptionPlan, type InvoiceRow, type ManageDetails,
+  applySetupIntentAsDefault, listInvoices, changeSubscriptionPlan, refundInvoice, type InvoiceRow, type ManageDetails,
 } from "@/lib/stripe";
 import { reconcileTenantBilling } from "@/lib/billing";
 import { formatMoney } from "@/lib/utils";
@@ -34,7 +34,7 @@ const TENANT_SELECT = {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ setup?: string; error?: string; canceled?: string; card?: string; setup_intent?: string; canceled_sub?: string; resumed?: string }>;
+  searchParams: Promise<{ setup?: string; error?: string; canceled?: string; card?: string; setup_intent?: string; canceled_sub?: string; resumed?: string; plan_changed?: string; refunded?: string }>;
 }) {
   const sp = await searchParams;
   const staff = await requirePortalStaff();
@@ -135,6 +135,17 @@ export default async function BillingPage({
     redirect(`/signup/pay?tenant=${t.id}`);
   }
 
+  // Refund a paid invoice — platform staff only (an owner can't refund themselves).
+  async function refundPayment(formData: FormData) {
+    "use server";
+    const s = await requirePortalStaff();
+    if (!isStoreInspector(s.role)) redirect("/portal/billing?error=refund");
+    const invoiceId = String(formData.get("invoiceId") || "");
+    if (!invoiceId) redirect("/portal/billing?error=refund");
+    const res = await refundInvoice(invoiceId);
+    redirect(`/portal/billing?${res.ok ? "refunded=1" : "error=refund"}`);
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-2xl text-cream">Billing &amp; subscription</h1>
@@ -146,7 +157,11 @@ export default async function BillingPage({
       {sp.card && <Notice tone="emerald">Card updated — future charges will use your new card.</Notice>}
       {sp.canceled_sub && <Notice tone="amber">Your subscription is set to cancel at the end of the current period.</Notice>}
       {sp.resumed && <Notice tone="emerald">Your subscription has been resumed.</Notice>}
+      {sp.plan_changed && <Notice tone="emerald">Plan updated — Stripe will prorate the difference on your next invoice.</Notice>}
+      {sp.refunded && <Notice tone="emerald">Refund issued to the customer.</Notice>}
       {sp.error === "checkout" && <Notice tone="red">Something went wrong. Please try again in a moment.</Notice>}
+      {sp.error === "plan" && <Notice tone="red">Couldn&apos;t change the plan on Stripe. Please try again or check the subscription.</Notice>}
+      {sp.error === "refund" && <Notice tone="red">Refund failed — issue it from the Stripe dashboard instead.</Notice>}
 
       {/* Demo shops can't subscribe — point them at signup for their own shop. */}
       {isDemo && (
@@ -282,6 +297,12 @@ export default async function BillingPage({
                 {inv.url
                   ? <a href={inv.url} target="_blank" rel="noreferrer" className="text-xs text-brass hover:underline">Receipt ↗</a>
                   : <span className="w-14" />}
+                {isStoreInspector(staff.role) && inv.status === "paid" && (
+                  <form action={refundPayment}>
+                    <input type="hidden" name="invoiceId" value={inv.id} />
+                    <button className="text-xs text-red-300 hover:underline">Refund</button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

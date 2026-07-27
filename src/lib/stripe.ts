@@ -287,6 +287,33 @@ export async function changeSubscriptionPlan(subscriptionId: string, plan: Plan)
   }
 }
 
+/**
+ * Refund the payment behind an invoice (platform-initiated). Resolves the
+ * payment across API-version shapes (payment_intent / charge / payments[]) and
+ * issues a full refund. Returns the refunded amount, or an error message.
+ */
+export async function refundInvoice(invoiceId: string): Promise<{ ok: boolean; amountCents?: number; error?: string }> {
+  try {
+    const inv = (await stripe().invoices.retrieve(invoiceId)) as unknown as Record<string, unknown>;
+    const idOf = (v: unknown): string | null =>
+      typeof v === "string" ? v : v && typeof v === "object" && "id" in v ? String((v as { id: unknown }).id) : null;
+
+    let pi = idOf(inv.payment_intent);
+    const charge = idOf(inv.charge);
+    if (!pi && !charge) {
+      const payments = (inv.payments as { data?: unknown[] } | undefined)?.data;
+      const p0 = Array.isArray(payments) ? (payments[0] as Record<string, unknown>) : null;
+      pi = idOf(p0?.payment_intent) || idOf((p0?.payment as Record<string, unknown> | undefined)?.payment_intent);
+    }
+    if (!pi && !charge) return { ok: false, error: "No completed payment found to refund." };
+
+    const refund = await stripe().refunds.create(pi ? { payment_intent: pi } : { charge: charge! });
+    return { ok: true, amountCents: refund.amount };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
 /** Schedule (or undo) cancellation at the end of the current period. */
 export async function setCancelAtPeriodEnd(subscriptionId: string, cancel: boolean): Promise<boolean> {
   try {
