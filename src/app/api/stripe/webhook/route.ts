@@ -11,14 +11,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Stripe posts subscription lifecycle + payment events here. We verify the
-// signature, then sync the matching tenant's billing state. The endpoint always
-// returns 200 for accepted events so Stripe doesn't retry-storm; only a bad
-// signature returns 400.
+// signature, dedupe on the event id (Stripe retries, and may deliver the same
+// event twice), then sync the matching tenant's billing state. The endpoint
+// always returns 200 for accepted events so Stripe doesn't retry-storm; only a
+// bad signature returns 400.
 export async function POST(req: Request) {
   const raw = await req.text();
   const event = constructWebhookEvent(raw, req.headers.get("stripe-signature"));
   if (!event) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  // Idempotency: claim the event id before doing any work. A duplicate delivery
+  // hits the primary-key conflict, so side effects run exactly once per event.
+  try {
+    await prisma.processedWebhookEvent.create({ data: { id: event.id, type: event.type } });
+  } catch {
+    // Already processed (or a race lost the insert) — acknowledge without redoing work.
+    return NextResponse.json({ received: true, duplicate: true });
   }
 
   try {
@@ -41,6 +51,29 @@ export async function POST(req: Request) {
         if (tenantId) await applySubscription(tenantId, sub, { welcomeOnLive: true });
         break;
       }
+      case "customer.subscription.trial_will_end": {
+        // Fires ~3 days before a trial converts to a paid charge. Nudge the shop
+        // to confirm a card is on file so the first charge doesn't fail.
+        const sub = event.data.object as Stripe.Subscription;
+        const tenantId = await resolveTenantId(sub);
+        if (tenantId) await sendTrialEndingSoon(tenantId, sub);
+        break;
+      }
+      case "invoice.paid":
+      case "invoice.payment_succeeded": {
+        // A successful payment clears any past-due flag. If the subscription is
+        // expanded/known, re-sync so status + period end reflect the new cycle.
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
+        const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+        if (subId) {
+          const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true } });
+          if (tenant) {
+            const sub = await retrieveSubscription(subId);
+            if (sub) await applySubscription(tenant.id, sub, { welcomeOnLive: false });
+          }
+        }
+        break;
+      }
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
         const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
@@ -48,8 +81,17 @@ export async function POST(req: Request) {
           const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true } });
           if (tenant) {
             await prisma.tenant.update({ where: { id: tenant.id }, data: { subscriptionStatus: "PAST_DUE" } });
+            await audit({ action: "billing.payment.failed", tenantId: tenant.id, target: subId });
+            await sendPaymentFailed(tenant.id, invoice);
           }
         }
+        break;
+      }
+      case "charge.dispute.created": {
+        // A customer disputed a charge (chargeback). Alert the platform operator
+        // so they can respond within Stripe's evidence window.
+        const dispute = event.data.object as Stripe.Dispute;
+        await alertDispute(dispute);
         break;
       }
       default:
@@ -97,6 +139,79 @@ async function sendWelcomeLive(tenantId: string) {
       <p>Your subscription is active and <b>${t.name}</b> is ready to take bookings.</p>
       <p><b>Your website:</b> <a href="${siteUrl}" style="color:#c9a24b">${siteUrl}</a></p>
       <p><b>Your portal:</b> <a href="${portalUrl}" style="color:#c9a24b">${portalUrl}</a></p>
+    `),
+  });
+}
+
+/** Dunning: a charge failed — ask the shop to update their card before Stripe retries run out. */
+async function sendPaymentFailed(tenantId: string, invoice: Stripe.Invoice) {
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, email: true, billingEmail: true },
+  });
+  if (!t) return;
+  const to = t.billingEmail || t.email;
+  if (!to) return;
+  const billingUrl = appUrl("/portal/billing/card");
+  const amount = typeof invoice.amount_due === "number"
+    ? ` of $${(invoice.amount_due / 100).toFixed(2)}` : "";
+  await sendEmail({
+    to,
+    subject: `Payment failed for ${t.name} — action needed`,
+    html: emailLayout("Your payment didn't go through", `
+      <p>We couldn't process your latest payment${amount} for <b>${t.name}</b>.</p>
+      <p>Stripe will retry automatically, but to avoid any interruption to your
+         booking site, please update your card now:</p>
+      <p><a href="${billingUrl}" style="display:inline-block;background:#c9a24b;color:#0f0f10;
+         padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Update payment method</a></p>
+      <p style="font-size:13px;color:#8a8a8a">If you've already fixed this, you can ignore this message.</p>
+    `),
+  });
+}
+
+/** Nudge a trialing shop that their card will be charged soon. */
+async function sendTrialEndingSoon(tenantId: string, sub: Stripe.Subscription) {
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, email: true, billingEmail: true },
+  });
+  if (!t) return;
+  const to = t.billingEmail || t.email;
+  if (!to) return;
+  const billingUrl = appUrl("/portal/billing/card");
+  const when = sub.trial_end ? new Date(sub.trial_end * 1000).toLocaleDateString() : "soon";
+  await sendEmail({
+    to,
+    subject: `Your free trial ends ${when}`,
+    html: emailLayout("Your trial is ending", `
+      <p>Your free trial for <b>${t.name}</b> ends on <b>${when}</b>, and your
+         subscription will start automatically.</p>
+      <p>Make sure your payment method is up to date so there's no interruption:</p>
+      <p><a href="${billingUrl}" style="display:inline-block;background:#c9a24b;color:#0f0f10;
+         padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Review payment method</a></p>
+    `),
+  });
+}
+
+/** Alert the platform operator about a chargeback so they can submit evidence in time. */
+async function alertDispute(dispute: Stripe.Dispute) {
+  const to = process.env.PLATFORM_ADMIN_EMAIL?.trim();
+  await audit({
+    action: "billing.dispute.created",
+    target: dispute.id,
+    meta: { amount: dispute.amount, reason: dispute.reason, status: dispute.status },
+  });
+  if (!to) return;
+  const amount = `$${((dispute.amount ?? 0) / 100).toFixed(2)}`;
+  const dashUrl = `https://dashboard.stripe.com/disputes/${dispute.id}`;
+  await sendEmail({
+    to,
+    subject: `⚠️ Chargeback opened — ${amount} (${dispute.reason})`,
+    html: emailLayout("A payment was disputed", `
+      <p>A customer opened a dispute for <b>${amount}</b>.</p>
+      <p><b>Reason:</b> ${dispute.reason}<br/><b>Status:</b> ${dispute.status}</p>
+      <p>Respond before the evidence deadline in Stripe:</p>
+      <p><a href="${dashUrl}" style="color:#c9a24b">${dashUrl}</a></p>
     `),
   });
 }

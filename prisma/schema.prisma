@@ -755,3 +755,17 @@ model YggdrasilLink {
 
   @@map("yggdrasil_link")
 }
+
+// ───────────────────── Stripe webhook idempotency ─────────────────────
+// One row per Stripe event we've accepted. The webhook inserts the event id
+// before doing any work; a duplicate delivery (Stripe retries, or two events
+// racing) hits the primary-key conflict and is skipped, so side effects
+// (status flips, dunning emails) run exactly once per event.
+model ProcessedWebhookEvent {
+  id          String   @id // the Stripe event id (evt_…)
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+  @@map("processed_webhook_event")
+}
