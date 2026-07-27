@@ -8,11 +8,13 @@ export const runtime = "nodejs";
 // runs it every 5 min). Protected by CRON_SECRET when that env var is set.
 async function handle(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const url = new URL(req.url);
-    const token = url.searchParams.get("token") || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    if (token !== secret) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  // Fail closed: the external trigger stays disabled until a secret is set, so
+  // an unset CRON_SECRET can never leave this endpoint open. (The in-process
+  // scheduler still runs reminders regardless of this route.)
+  if (!secret) return NextResponse.json({ error: "cron disabled — set CRON_SECRET" }, { status: 403 });
+  const url = new URL(req.url);
+  const token = url.searchParams.get("token") || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (token !== secret) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const result = await sendDueReminders();
   return NextResponse.json({ ok: true, ...result });
 }

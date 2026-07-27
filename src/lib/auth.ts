@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt" },
+  // 7-day sessions (down from NextAuth's 30-day default), refreshed daily.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
   pages: { signIn: "/login" },
   trustHost: true,
   providers: [

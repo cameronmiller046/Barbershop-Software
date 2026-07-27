@@ -68,6 +68,15 @@ async function main() {
   });
 
   // ── Clean baseline: keep only the flagship store + the Superadmin ──
+  // GUARD: this deletes every non-demo tenant and every non-admin user. It must
+  // never run by accident against a live database, so it refuses unless the
+  // operator explicitly opts in with CONFIRM_SEED=1.
+  if (process.env.CONFIRM_SEED !== "1") {
+    throw new Error(
+      "Refusing to run the destructive reseed: it deletes ALL non-demo tenants and non-admin users. " +
+      "If you really mean to reset this database to the demo baseline, re-run with CONFIRM_SEED=1.",
+    );
+  }
   await prisma.tenant.deleteMany({ where: { slug: { not: DEMO_SLUG } } });
   await prisma.user.deleteMany({ where: { role: { not: "PLATFORM_ADMIN" } } });
   await prisma.appointment.deleteMany({ where: { tenantId: tenant.id } });

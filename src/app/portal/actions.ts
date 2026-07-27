@@ -682,7 +682,8 @@ export async function changeOwnPassword(formData: FormData) {
   const user = await requirePortalStaff();
   const current = String(formData.get("current") || "");
   const next = String(formData.get("next") || "");
-  if (next.length < 6) redirect("/portal/account?pw=short");
+  // Require 8+ chars with at least one letter and one number.
+  if (next.length < 8 || !/[a-zA-Z]/.test(next) || !/[0-9]/.test(next)) redirect("/portal/account?pw=short");
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
   if (!dbUser || !(await bcrypt.compare(current, dbUser.passwordHash))) {
