@@ -2,10 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requirePortalStaff, isStoreInspector } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { planLimits, parsePlanKey, PLAN_LIMITS } from "@/lib/plans";
+import { planLimits, parsePlanKey, PLAN_LIMITS, stripePriceId } from "@/lib/plans";
 import {
   stripeConfigured, getSubscriptionForManage, setCancelAtPeriodEnd,
-  applySetupIntentAsDefault, listInvoices, type InvoiceRow, type ManageDetails,
+  applySetupIntentAsDefault, listInvoices, changeSubscriptionPlan, type InvoiceRow, type ManageDetails,
 } from "@/lib/stripe";
 import { reconcileTenantBilling } from "@/lib/billing";
 import { formatMoney } from "@/lib/utils";
@@ -106,6 +106,33 @@ export default async function BillingPage({
     if (!t?.stripeSubscriptionId) redirect("/portal/billing?error=checkout");
     await setCancelAtPeriodEnd(t.stripeSubscriptionId, false);
     redirect("/portal/billing?resumed=1");
+  }
+
+  // Switch to a different paid plan. For a LIVE subscriber this changes the price
+  // on Stripe (prorated) so billing actually follows the plan; otherwise it sets
+  // the target plan and routes into the pay flow.
+  async function switchPlan(formData: FormData) {
+    "use server";
+    const s = await requirePortalStaff();
+    if (s.role !== "OWNER") redirect("/portal/billing?error=checkout");
+    const plan = parsePlanKey(String(formData.get("plan") ?? ""));
+    if (!plan || !planLimits(plan).paid) redirect("/portal/billing?error=checkout");
+    const t = await prisma.tenant.findUnique({
+      where: { id: s.tenantId },
+      select: { id: true, plan: true, stripeSubscriptionId: true, subscriptionStatus: true },
+    });
+    if (!t) redirect("/portal/billing?error=checkout");
+    if (t.plan === plan) redirect("/portal/billing");
+    const isLive = t.subscriptionStatus === "ACTIVE" || t.subscriptionStatus === "TRIALING";
+    if (isLive && t.stripeSubscriptionId && stripeConfigured()) {
+      const ok = await changeSubscriptionPlan(t.stripeSubscriptionId, plan);
+      if (!ok) redirect("/portal/billing?error=plan");
+      await prisma.tenant.update({ where: { id: t.id }, data: { plan, stripePriceId: stripePriceId(plan) } });
+      redirect("/portal/billing?plan_changed=1");
+    }
+    await prisma.tenant.update({ where: { id: t.id }, data: { plan, subscriptionStatus: "PENDING" } });
+    if (!stripeConfigured()) redirect("/portal/billing?setup=1");
+    redirect(`/signup/pay?tenant=${t.id}`);
   }
 
   return (
@@ -222,7 +249,7 @@ export default async function BillingPage({
             const pl = planLimits(p);
             const current = p === tenant.plan && live;
             return (
-              <form key={p} action={startCheckout} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <form key={p} action={switchPlan} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <input type="hidden" name="plan" value={p} />
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-cream">{pl.label}</span>

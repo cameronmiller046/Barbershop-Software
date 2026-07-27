@@ -247,6 +247,33 @@ export async function getSubscriptionForManage(subscriptionId: string): Promise<
   }
 }
 
+/**
+ * Swap a LIVE subscription onto a different plan's price, on Stripe, with
+ * proration — so an upgrade/downgrade actually changes what the customer is
+ * billed instead of only flipping our local plan field. Returns false if the
+ * plan has no configured price or Stripe rejects the change.
+ */
+export async function changeSubscriptionPlan(subscriptionId: string, plan: Plan): Promise<boolean> {
+  try {
+    const priceId = stripePriceId(plan);
+    if (!priceId) return false;
+    const sub = await stripe().subscriptions.retrieve(subscriptionId);
+    const itemId = sub.items.data[0]?.id;
+    if (!itemId) return false;
+    // Already on this price? Nothing to do — treat as success.
+    if (sub.items.data[0]?.price?.id === priceId) return true;
+    await stripe().subscriptions.update(subscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: "create_prorations",
+      payment_behavior: "allow_incomplete",
+    });
+    return true;
+  } catch (err) {
+    console.error("[stripe] changeSubscriptionPlan failed:", err);
+    return false;
+  }
+}
+
 /** Schedule (or undo) cancellation at the end of the current period. */
 export async function setCancelAtPeriodEnd(subscriptionId: string, cancel: boolean): Promise<boolean> {
   try {

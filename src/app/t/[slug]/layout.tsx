@@ -13,6 +13,24 @@ export default async function ShopLayout({ children, params }: { children: React
   const tenant = await getTenantBySlug(slug);
   if (!tenant) notFound();
 
+  // A suspended (e.g. canceled / non-paying) shop stops being publicly bookable.
+  // Show a neutral notice instead of the full storefront; the booking API
+  // enforces the same rule server-side.
+  if (tenant.status === "SUSPENDED") {
+    return (
+      <div
+        className="lux relative grid min-h-screen place-items-center px-6 text-center"
+        style={{ "--brass": hexToRgbTriple(tenant.secondaryColor || tenant.primaryColor) } as React.CSSProperties}
+      >
+        <div className="lux-grain" aria-hidden />
+        <div className="relative max-w-md">
+          <h1 className="font-display text-2xl text-cream">{tenant.name}</h1>
+          <p className="mt-3 text-cream/60">This shop isn&apos;t accepting online bookings right now. Please check back soon.</p>
+        </div>
+      </div>
+    );
+  }
+
   const base = `/t/${tenant.slug}`;
   const brand = tenant.primaryColor;
   const onBrand = readableOn(brand);

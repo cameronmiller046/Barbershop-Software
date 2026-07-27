@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { requestPasswordReset } from "@/lib/reset";
+import { rateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,12 @@ export default async function ForgotPage({
 
   async function submit(formData: FormData) {
     "use server";
+    // Throttle per source IP so the form can't be used to mail-bomb a victim or
+    // burn the email provider's quota. Over the limit → show the same
+    // confirmation and send nothing (no enumeration, no email).
+    const h = await headers();
+    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+    if (!rateLimit(`forgot:${ip}`, 5, 60_000).ok) redirect("/forgot?sent=1");
     await requestPasswordReset(String(formData.get("email") || ""));
     // Always the same outcome — never reveal whether the email is registered.
     redirect("/forgot?sent=1");

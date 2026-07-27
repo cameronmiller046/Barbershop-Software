@@ -26,6 +26,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const tenant = await getTenantBySlug(slug);
   if (!tenant) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  // A suspended (canceled / non-paying) shop can't take new bookings.
+  if (tenant.status === "SUSPENDED") return NextResponse.json({ error: "This shop isn't accepting bookings right now." }, { status: 403 });
 
   const rl = rateLimit(`book:${tenant.id}:${clientIp(req)}`, 8, 60_000);
   if (!rl.ok) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
