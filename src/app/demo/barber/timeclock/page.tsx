@@ -52,7 +52,7 @@ export default function TimeclockPage() {
           )}
         </Panel>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <KPI label="Hours logged" value={fmtDur(totalMs)} icon="clock" hint="This period" />
             <KPI label="Shifts" value={shifts} icon="calendar" hint="Recorded" accent="#34d399" />
@@ -60,13 +60,13 @@ export default function TimeclockPage() {
           <Panel pad={false} className="overflow-hidden">
             <div className="px-4 pt-3"><SectionTitle>Recent shifts</SectionTitle></div>
             <div className="overflow-x-auto p-scroll">
-              <table className="w-full min-w-[420px] text-sm">
+              <table className="w-full min-w-[340px] text-sm">
                 <thead>
                   <tr className="border-y border-white/8 text-left text-xs uppercase tracking-wide text-cream/40">
-                    <th className="px-4 py-2 font-medium">Date</th>
-                    <th className="px-4 py-2 font-medium">In</th>
-                    <th className="px-4 py-2 font-medium">Out</th>
-                    <th className="px-4 py-2 text-right font-medium">Hours</th>
+                    <th className="px-3 py-2 font-medium">Date</th>
+                    <th className="px-3 py-2 font-medium">In</th>
+                    <th className="px-3 py-2 font-medium">Out</th>
+                    <th className="px-3 py-2 text-right font-medium">Hours</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -75,10 +75,10 @@ export default function TimeclockPage() {
                     const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "—");
                     return (
                       <tr key={t.id} className="border-b border-white/5">
-                        <td className="px-4 py-2.5 text-cream/70">{new Date(t.clockInISO).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</td>
-                        <td className="px-4 py-2.5 text-cream/70">{fmt(t.clockInISO)}</td>
-                        <td className="px-4 py-2.5">{t.clockOutISO ? <span className="text-cream/70">{fmt(t.clockOutISO)}</span> : <span className="text-emerald-300">On shift</span>}</td>
-                        <td className="px-4 py-2.5 text-right text-cream/70">{fmtDur(end - new Date(t.clockInISO).getTime())}</td>
+                        <td className="px-3 py-2.5 text-cream/70">{new Date(t.clockInISO).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</td>
+                        <td className="px-3 py-2.5 text-cream/70">{fmt(t.clockInISO)}</td>
+                        <td className="px-3 py-2.5">{t.clockOutISO ? <span className="text-cream/70">{fmt(t.clockOutISO)}</span> : <span className="text-emerald-300">On shift</span>}</td>
+                        <td className="px-3 py-2.5 text-right text-cream/70">{fmtDur(end - new Date(t.clockInISO).getTime())}</td>
                       </tr>
                     );
                   })}

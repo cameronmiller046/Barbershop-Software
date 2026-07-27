@@ -29,7 +29,9 @@ export function PageHeader({
 }
 
 export function Panel({ children, className, pad = true }: { children: React.ReactNode; className?: string; pad?: boolean }) {
-  return <div className={cx("p-panel", pad && "p-5", className)}>{children}</div>;
+  // min-w-0 lets a Panel shrink inside a CSS grid/flex track instead of forcing
+  // its intrinsic content width and overflowing the viewport on mobile.
+  return <div className={cx("p-panel min-w-0", pad && "p-5", className)}>{children}</div>;
 }
 
 export function SectionTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
@@ -46,7 +48,7 @@ export function KPI({
 }: { label: string; value: React.ReactNode; icon: IconName; delta?: number; hint?: string; accent?: string }) {
   const I = Icon[icon];
   return (
-    <div className="p-panel p-kpi p-4 sm:p-5">
+    <div className="p-panel p-kpi min-w-0 p-4 sm:p-5">
       <div className="flex items-center justify-between">
         <span className="grid h-9 w-9 place-items-center rounded-xl sm:h-10 sm:w-10" style={{ background: `${accent}1f`, color: accent }}>
           <I className="h-5 w-5" />

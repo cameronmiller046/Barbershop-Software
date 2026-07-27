@@ -45,7 +45,7 @@ export default function BarberToday() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Panel className="lg:col-span-2">
+        <Panel className="min-w-0 lg:col-span-2">
           <SectionTitle right={<Link href="/demo/barber/calendar" className="text-xs font-semibold text-brass hover:underline">Calendar →</Link>}>Today&apos;s chair</SectionTitle>
           {mine.length === 0 ? (
             <p className="py-6 text-center text-sm text-cream/40">No appointments booked today.</p>
@@ -76,7 +76,7 @@ export default function BarberToday() {
           )}
         </Panel>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Panel>
             <SectionTitle>Up next</SectionTitle>
             {next ? (() => {
