@@ -2,6 +2,7 @@
 
 import { useDemo, serviceById, customerById } from "@/lib/demo/store";
 import { PageHeader, Panel, KPI, Money, SectionTitle, Avatar } from "@/components/demo/ui";
+import { ClientButton } from "@/components/demo/ClientProfile";
 import { BarChart } from "@/components/demo/charts";
 import { totalTips, revenueSeries } from "@/lib/demo/metrics";
 
@@ -49,7 +50,7 @@ export default function TipsPage() {
             return (
               <li key={a.id} className="flex items-center gap-3 px-5 py-3">
                 <Avatar name={c?.name ?? "?"} size={34} />
-                <div className="min-w-0 flex-1"><div className="truncate text-sm text-cream">{c?.name}</div><div className="text-xs text-cream/45">{v?.name} · {new Date(a.startISO).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div></div>
+                <ClientButton id={a.customerId} className="min-w-0 flex-1"><div className="truncate text-sm text-cream transition hover:text-brass">{c?.name}</div><div className="text-xs text-cream/45">{v?.name} · {new Date(a.startISO).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div></ClientButton>
                 <div className="text-right"><div className="font-medium text-brass"><Money cents={a.tipCents} /></div><div className="text-xs text-cream/40">{Math.round((a.tipCents / a.priceCents) * 100)}%</div></div>
               </li>
             );

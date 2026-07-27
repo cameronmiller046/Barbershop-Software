@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useDemo, serviceById, customerById } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, Btn, Money, Avatar, EmptyState, SectionTitle, cx } from "@/components/demo/ui";
+import { ClientButton } from "@/components/demo/ClientProfile";
 import { Icon } from "@/components/home/icons";
 import { formatMoney } from "@/lib/utils";
 import { todayAppts } from "@/lib/demo/metrics";
@@ -92,7 +93,7 @@ export default function CheckoutPage() {
           <Panel>
             <div className="flex items-center gap-3 border-b border-white/8 pb-4">
               <Avatar name={cust?.name ?? "?"} size={48} />
-              <div><div className="font-display text-lg text-cream">{cust?.name}</div><div className="text-sm text-cream/50">{svc.name} · {svc.durationMin} min</div></div>
+              <div><ClientButton id={sel.customerId} className="font-display text-lg text-cream transition hover:text-brass">{cust?.name}</ClientButton><div className="text-sm text-cream/50">{svc.name} · {svc.durationMin} min</div></div>
             </div>
 
             <div className="py-4">

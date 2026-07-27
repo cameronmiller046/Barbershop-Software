@@ -12,8 +12,10 @@ export function BarChart({
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
     <div className="flex items-end gap-2" style={{ height }}>
-      {data.map((d) => (
-        <div key={d.label} className="group flex flex-1 flex-col items-center justify-end gap-1.5">
+      {data.map((d, i) => (
+        // key MUST be the index, not d.label — weekday labels repeat over a 14-day
+        // window, and duplicate keys made React collapse ~14 bars down to ~7.
+        <div key={i} className="group flex flex-1 flex-col items-center justify-end gap-1.5">
           <span className="text-[10px] font-medium text-cream/0 transition group-hover:text-cream/70">
             {money ? formatMoney(d.value) : d.value}
           </span>

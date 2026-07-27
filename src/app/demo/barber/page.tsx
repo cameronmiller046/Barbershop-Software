@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useDemo, serviceById, customerById, staffById, openTimeEntry } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
 import { Panel, Money, StatusBadge, Avatar, Btn, Tag, cx } from "@/components/demo/ui";
+import { ClientButton } from "@/components/demo/ClientProfile";
 import { Icon, type IconName } from "@/components/home/icons";
 import { formatMoney, minutesToLabel } from "@/lib/utils";
 import { todayAppts, revenueToday, totalTips, commissionOf } from "@/lib/demo/metrics";
@@ -92,10 +93,10 @@ export default function BarberToday() {
                     <div className="grid shrink-0 place-items-center rounded-xl border border-brass/20 bg-brass/[0.06] px-2.5 py-1.5 text-center">
                       <span className="text-sm font-semibold leading-none text-brass">{minutesToLabel(t.getHours() * 60 + t.getMinutes())}</span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-cream">{cust?.name}</div>
+                    <ClientButton id={a.customerId} className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-cream transition hover:text-brass">{cust?.name}</div>
                       <div className="truncate text-xs text-cream/45">{svc?.name} · {formatMoney(svc?.priceCents ?? 0)}</div>
-                    </div>
+                    </ClientButton>
                     {done ? (
                       <StatusBadge status={a.status} />
                     ) : (
@@ -122,7 +123,7 @@ export default function BarberToday() {
               return (
                 <div className="text-center">
                   <div className="mx-auto"><Avatar name={cust?.name ?? "?"} color={me.color} size={60} /></div>
-                  <div className="mt-2.5 font-display text-lg text-cream">{cust?.name}</div>
+                  <ClientButton id={next.customerId} className="mt-2.5 inline-block font-display text-lg text-cream transition hover:text-brass">{cust?.name}</ClientButton>
                   <div className="text-sm text-cream/50">{svc?.name}</div>
                   <div className="mt-1.5 inline-block rounded-full bg-brass/12 px-3 py-1 text-sm font-semibold text-brass">{new Date(next.startISO).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</div>
                   {cust?.notes && <p className="mt-3 rounded-xl border border-white/8 bg-white/[0.02] p-2.5 text-left text-xs text-cream/60">📝 {cust.notes}</p>}
