@@ -34,10 +34,10 @@ export default function PayrollPage() {
 
   return (
     <>
-      <PageHeader title="Payroll" subtitle="Current pay period · commission + hourly + tips."
+      <PageHeader title="Payroll" subtitle="Current pay period · commission + hourly + tips." badge="Coming soon"
         actions={<Btn variant="gold" onClick={() => toast("Payroll run — pay stubs generated", "success")}><span>Run payroll</span></Btn>} />
 
-      <SandboxNote>This is a simulated pay run. No payments are processed and no employee records change.</SandboxNote>
+      <SandboxNote>Preview of a planned feature — a simulated pay run on sample data. Payroll isn&apos;t in the live product yet; no payments are processed.</SandboxNote>
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPI label="Gross payroll" value={<Money cents={totalGross} />} icon="dollar" hint="This period" />

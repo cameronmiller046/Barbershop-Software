@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
-import { PageHeader, Panel, Btn, Field, Modal, KPI, Tag, Money } from "@/components/demo/ui";
+import { PageHeader, Panel, Btn, Field, Modal, KPI, Tag, Money, SandboxNote } from "@/components/demo/ui";
 import { Icon } from "@/components/home/icons";
 import { lowStock } from "@/lib/demo/metrics";
 
@@ -19,8 +19,9 @@ export default function InventoryPage() {
 
   return (
     <>
-      <PageHeader title="Inventory" subtitle="Retail products and back-bar supplies."
+      <PageHeader title="Inventory" subtitle="Retail products and back-bar supplies." badge="Coming soon"
         actions={<Btn variant="gold" onClick={() => setAdding(true)}><Icon.plus className="h-4 w-4" /> Add item</Btn>} />
+      <SandboxNote>Preview of a planned feature — sample data only. Inventory isn&apos;t in the live product yet.</SandboxNote>
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPI label="SKUs" value={state.inventory.length} icon="inventory" hint="Tracked products" />

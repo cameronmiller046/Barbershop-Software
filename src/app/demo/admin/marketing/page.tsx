@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
-import { PageHeader, Panel, Btn, Field, Modal, KPI, Money, Tag, SectionTitle } from "@/components/demo/ui";
+import { PageHeader, Panel, Btn, Field, Modal, KPI, Money, Tag, SectionTitle, SandboxNote } from "@/components/demo/ui";
 import { Icon } from "@/components/home/icons";
 import type { Campaign } from "@/lib/demo/types";
 
@@ -22,8 +22,9 @@ export default function MarketingPage() {
 
   return (
     <>
-      <PageHeader title="Marketing" subtitle="Campaigns, reach and the revenue they drive."
+      <PageHeader title="Marketing" subtitle="Campaigns, reach and the revenue they drive." badge="Coming soon"
         actions={<Btn variant="gold" onClick={() => setCreating(true)}><Icon.plus className="h-4 w-4" /> New campaign</Btn>} />
+      <SandboxNote>Preview of a planned feature — sample data only. Marketing automation isn&apos;t in the live product yet.</SandboxNote>
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPI label="Campaigns" value={state.campaigns.length} icon="marketing" hint="Total created" />

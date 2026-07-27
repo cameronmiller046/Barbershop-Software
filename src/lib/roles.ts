@@ -1,7 +1,9 @@
 import type { Role } from "@prisma/client";
 
 // The master superadmin — protected from being demoted, deactivated, or deleted.
-export const MASTER_ADMIN_EMAIL = "cameronmiller046@gmail.com";
+// Configurable via the MASTER_ADMIN_EMAIL env var so a new owner can repoint this
+// to their own address at handoff; falls back to the founder's address when unset.
+export const MASTER_ADMIN_EMAIL = (process.env.MASTER_ADMIN_EMAIL || "cameronmiller046@gmail.com").toLowerCase();
 export function isMasterAdmin(email: string | null | undefined) {
   return !!email && email.toLowerCase() === MASTER_ADMIN_EMAIL;
 }

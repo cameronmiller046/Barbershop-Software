@@ -15,12 +15,15 @@ export function Money({ cents, className }: { cents: number; className?: string 
 }
 
 export function PageHeader({
-  title, subtitle, actions,
-}: { title: string; subtitle?: string; actions?: React.ReactNode }) {
+  title, subtitle, actions, badge,
+}: { title: string; subtitle?: string; actions?: React.ReactNode; badge?: string }) {
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-6 sm:gap-4">
       <div className="min-w-0">
-        <h1 className="font-display text-xl text-cream sm:text-3xl">{title}</h1>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="font-display text-xl text-cream sm:text-3xl">{title}</h1>
+          {badge && <span className="rounded-full border border-brass/40 bg-brass/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-brass">{badge}</span>}
+        </div>
         {subtitle && <p className="mt-0.5 text-[13px] text-cream/50 sm:mt-1 sm:text-sm">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

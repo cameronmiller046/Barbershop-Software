@@ -1,7 +1,7 @@
 "use client";
 
 import { useDemo } from "@/lib/demo/store";
-import { PageHeader, Panel, KPI, Money, SectionTitle, Tag } from "@/components/demo/ui";
+import { PageHeader, Panel, KPI, Money, SectionTitle, Tag, SandboxNote } from "@/components/demo/ui";
 import { Donut } from "@/components/demo/charts";
 import { totalRevenue, totalTips, commissionOf } from "@/lib/demo/metrics";
 
@@ -39,7 +39,8 @@ export default function FinancialsPage() {
 
   return (
     <>
-      <PageHeader title="Financials" subtitle="Profit & loss overview for the current period." />
+      <PageHeader title="Financials" subtitle="Profit & loss overview for the current period." badge="Coming soon" />
+      <SandboxNote>Preview of a planned feature — figures are simulated sample data. Financials aren&apos;t in the live product yet.</SandboxNote>
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPI label="Revenue" value={<Money cents={revenue} />} icon="dollar" delta={14} hint="Services + retail" />
