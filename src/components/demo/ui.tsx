@@ -18,10 +18,10 @@ export function PageHeader({
   title, subtitle, actions,
 }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="font-display text-2xl text-cream sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-cream/50">{subtitle}</p>}
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-6 sm:gap-4">
+      <div className="min-w-0">
+        <h1 className="font-display text-xl text-cream sm:text-3xl">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-[13px] text-cream/50 sm:mt-1 sm:text-sm">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -46,9 +46,9 @@ export function KPI({
 }: { label: string; value: React.ReactNode; icon: IconName; delta?: number; hint?: string; accent?: string }) {
   const I = Icon[icon];
   return (
-    <div className="p-panel p-kpi p-5">
+    <div className="p-panel p-kpi p-4 sm:p-5">
       <div className="flex items-center justify-between">
-        <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${accent}1f`, color: accent }}>
+        <span className="grid h-9 w-9 place-items-center rounded-xl sm:h-10 sm:w-10" style={{ background: `${accent}1f`, color: accent }}>
           <I className="h-5 w-5" />
         </span>
         {typeof delta === "number" && (
@@ -57,8 +57,8 @@ export function KPI({
           </span>
         )}
       </div>
-      <div className="mt-3 text-2xl font-semibold text-cream">{value}</div>
-      <div className="mt-0.5 text-xs text-cream/50">{hint ?? label}</div>
+      <div className="mt-2.5 text-xl font-semibold text-cream sm:mt-3 sm:text-2xl">{value}</div>
+      <div className="mt-0.5 text-[11px] text-cream/50 sm:text-xs">{hint ?? label}</div>
     </div>
   );
 }

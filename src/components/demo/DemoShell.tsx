@@ -121,8 +121,9 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
 
   return (
     <div className="portal flex min-h-screen flex-col">
-      {/* Persistent demo banner — always visible across every screen */}
-      <div className="sticky top-0 z-50 flex items-center justify-center gap-3 border-b border-brass/30 bg-gradient-to-r from-[#2a2314] via-[#1c1710] to-[#2a2314] px-4 py-2 text-center">
+      {/* Demo banner — scrolls away on mobile so the sticky header doesn't stack
+          two bars and eat the top of every screen. */}
+      <div className="z-40 flex items-center justify-center gap-3 border-b border-brass/30 bg-gradient-to-r from-[#2a2314] via-[#1c1710] to-[#2a2314] px-4 py-2 text-center">
         <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brass/20 text-brass">
           <Icon.spark className="h-3.5 w-3.5" />
         </span>
@@ -139,7 +140,7 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
 
       <div className="flex min-h-0 flex-1">
         {/* Desktop sidebar */}
-        <aside className="sticky top-[41px] hidden h-[calc(100vh-41px)] w-[250px] shrink-0 border-r border-white/8 bg-[#0c0b0e]/90 backdrop-blur md:block">
+        <aside className="sticky top-0 hidden h-screen w-[250px] shrink-0 border-r border-white/8 bg-[#0c0b0e]/90 backdrop-blur md:block">
           <Sidebar />
         </aside>
 
@@ -154,7 +155,7 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-[41px] z-30 flex h-16 items-center justify-between gap-3 border-b border-white/8 bg-[#0a090c]/80 px-4 backdrop-blur sm:px-6">
+          <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-white/8 bg-[#0a090c]/95 px-4 backdrop-blur sm:h-16 sm:px-6">
             <div className="flex items-center gap-3">
               <button onClick={() => setMobileOpen(true)} aria-label="Menu" className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-cream md:hidden">
                 <Icon.menu className="h-5 w-5" />
@@ -178,7 +179,7 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
             </div>
           </header>
 
-          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+          <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6 lg:px-8">{children}</main>
         </div>
       </div>
     </div>

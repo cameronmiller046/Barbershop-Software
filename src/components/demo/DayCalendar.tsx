@@ -21,6 +21,14 @@ const isoAt = (day: Date, minutes: number) => {
   d.setMinutes(minutes);
   return d.toISOString();
 };
+// Local (not UTC) yyyy-mm-dd for <input type="date">, and back to an ISO instant.
+const toYmd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const fromYmdMin = (ymd: string, minutes: number) => {
+  const [y, mo, d] = ymd.split("-").map(Number);
+  const dt = new Date(y, (mo ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
+  dt.setMinutes(minutes);
+  return dt.toISOString();
+};
 
 export function DayCalendar({ singleStaffId }: { singleStaffId?: string }) {
   const { state, actions } = useDemo();
@@ -30,6 +38,7 @@ export function DayCalendar({ singleStaffId }: { singleStaffId?: string }) {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [creating, setCreating] = useState<{ staffId: string; minutes: number } | null>(null);
 
+  const single = Boolean(singleStaffId);
   const columns = useMemo(() => {
     if (singleStaffId) return state.staff.filter((s) => s.id === singleStaffId);
     return state.staff.filter((s) => s.active && s.level !== "Owner");
@@ -67,9 +76,10 @@ export function DayCalendar({ singleStaffId }: { singleStaffId?: string }) {
         </Btn>
       </div>
 
-      {/* Grid */}
-      <div className="p-panel overflow-x-auto p-scroll">
-        <div className="flex min-w-[640px]">
+      {/* Grid. A single barber's own day fits the screen (no sideways scroll);
+          the multi-barber admin view keeps a min width and scrolls in-panel. */}
+      <div className={cx("p-panel p-scroll", single ? "overflow-x-hidden" : "overflow-x-auto")}>
+        <div className={cx("flex", single ? "min-w-0" : "min-w-[640px]")}>
           {/* time gutter */}
           <div className="w-14 shrink-0 pt-10">
             {Array.from({ length: SLOTS }).map((_, i) => (
@@ -236,6 +246,17 @@ function DetailModal({ appt, onClose }: { appt: Appointment; onClose: () => void
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [checkingOut, setCheckingOut] = useState(false);
 
+  const startD = new Date(appt.startISO);
+  const [rDate, setRDate] = useState(() => toYmd(startD));
+  const [rMin, setRMin] = useState(() => startD.getHours() * 60 + startD.getMinutes());
+  const rescheduleTimes: number[] = [];
+  for (let m = DAY_START; m < DAY_END; m += SLOT) rescheduleTimes.push(m);
+  const reschedule = (dateStr: string, minutes: number) => {
+    setRDate(dateStr); setRMin(minutes);
+    actions.moveAppointment(appt.id, fromYmdMin(dateStr, minutes), appt.staffId);
+    toast("Appointment rescheduled");
+  };
+
   const setStatus = (s: ApptStatus, label: string) => { actions.setApptStatus(appt.id, s); toast(label); };
 
   return (
@@ -250,6 +271,12 @@ function DetailModal({ appt, onClose }: { appt: Appointment; onClose: () => void
           <StatusBadge status={appt.status} />
         </div>
 
+        {cust?.notes && (
+          <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3 text-left text-xs text-cream/70">
+            <span className="mr-1">📝</span>{cust.notes}
+          </div>
+        )}
+
         {!checkingOut ? (
           <>
             <div className="grid grid-cols-2 gap-2">
@@ -258,6 +285,17 @@ function DetailModal({ appt, onClose }: { appt: Appointment; onClose: () => void
               <Btn onClick={() => setStatus("no_show", "Marked no-show")}>No show</Btn>
               <Btn variant="danger" onClick={() => { actions.setApptStatus(appt.id, "cancelled"); toast("Appointment cancelled"); onClose(); }}>Cancel</Btn>
             </div>
+
+            {/* Quick reschedule — change time/date without dragging (works on phones). */}
+            <Field label="Reschedule">
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" value={rDate} onChange={(e) => reschedule(e.target.value, rMin)} className="input" />
+                <select className="input" value={rMin} onChange={(e) => reschedule(rDate, Number(e.target.value))}>
+                  {rescheduleTimes.map((m) => <option key={m} value={m}>{minutesToLabel(m)}</option>)}
+                </select>
+              </div>
+            </Field>
+
             <Btn variant="gold" className="w-full" onClick={() => setCheckingOut(true)}>Complete & checkout</Btn>
           </>
         ) : (

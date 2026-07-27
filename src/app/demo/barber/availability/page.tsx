@@ -24,18 +24,18 @@ export default function AvailabilityPage() {
             {hours.map((h, d) => {
               const off = h.open == null;
               return (
-                <div key={d} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
-                  <span className="w-24 text-sm text-cream">{dayName(d)}</span>
+                <div key={d} className="flex flex-wrap items-center gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 sm:gap-3">
+                  <span className="w-20 text-sm text-cream sm:w-24">{dayName(d)}</span>
                   <button
                     onClick={() => { actions.setDayHours("availability", d, off ? { open: 540, close: 1020 } : { open: null, close: null }); toast(off ? "Marked available" : "Marked off"); }}
                     className={`rounded-full border px-3 py-1 text-xs ${off ? "border-white/12 text-cream/40" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"}`}>
                     {off ? "Off" : "Working"}
                   </button>
                   {!off && (
-                    <div className="ml-auto flex items-center gap-2">
-                      <input type="time" defaultValue={minutesToHHMM(h.open!)} onChange={(e) => actions.setDayHours("availability", d, { open: parseMin(e.target.value), close: h.close })} className="rounded-lg border border-white/10 bg-smoke px-2 py-1 text-sm text-cream" />
+                    <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
+                      <input type="time" defaultValue={minutesToHHMM(h.open!)} onChange={(e) => actions.setDayHours("availability", d, { open: parseMin(e.target.value), close: h.close })} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-smoke px-2 py-1 text-sm text-cream sm:flex-none" />
                       <span className="text-cream/40">–</span>
-                      <input type="time" defaultValue={minutesToHHMM(h.close ?? 0)} onChange={(e) => actions.setDayHours("availability", d, { open: h.open, close: parseMin(e.target.value) })} className="rounded-lg border border-white/10 bg-smoke px-2 py-1 text-sm text-cream" />
+                      <input type="time" defaultValue={minutesToHHMM(h.close ?? 0)} onChange={(e) => actions.setDayHours("availability", d, { open: h.open, close: parseMin(e.target.value) })} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-smoke px-2 py-1 text-sm text-cream sm:flex-none" />
                     </div>
                   )}
                 </div>

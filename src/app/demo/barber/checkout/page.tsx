@@ -15,8 +15,13 @@ export default function CheckoutPage() {
   const { state, actions } = useDemo();
   const { toast } = useToast();
   const me = state.currentStaffId;
-  const queue = todayAppts(state, me).filter((a) => a.status !== "completed" && a.status !== "cancelled" && a.status !== "no_show");
-  const [selId, setSelId] = useState<string | null>(queue[0]?.id ?? null);
+  const fullQueue = todayAppts(state, me).filter((a) => a.status !== "completed" && a.status !== "cancelled" && a.status !== "no_show");
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const queue = q
+    ? fullQueue.filter((a) => (customerById(state, a.customerId)?.name ?? "").toLowerCase().includes(q))
+    : fullQueue;
+  const [selId, setSelId] = useState<string | null>(fullQueue[0]?.id ?? null);
   const sel = state.appointments.find((a) => a.id === selId) ?? null;
 
   const [tipPct, setTipPct] = useState(0.2);
@@ -50,9 +55,17 @@ export default function CheckoutPage() {
 
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <Panel pad={false} className="overflow-hidden">
-          <div className="border-b border-white/8 px-4 py-3"><SectionTitle>Your queue</SectionTitle></div>
+          <div className="space-y-2.5 border-b border-white/8 px-4 py-3">
+            <SectionTitle>Your queue</SectionTitle>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search client…"
+              className="input w-full !py-2 text-sm"
+            />
+          </div>
           {queue.length === 0 ? (
-            <div className="p-4"><EmptyState icon="check" title="Chair's clear" hint="No open tickets to check out." /></div>
+            <div className="p-4"><EmptyState icon="check" title={q ? "No matches" : "Chair's clear"} hint={q ? "No open ticket for that client." : "No open tickets to check out."} /></div>
           ) : (
             <ul className="divide-y divide-white/5">
               {queue.map((a) => {
