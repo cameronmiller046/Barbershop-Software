@@ -15,6 +15,7 @@ import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
 import { accrueLoyalty, loyaltyConfigOf, liveLoyaltyBalance, consumeLoyaltyReward, LOYALTY_SELECT, LOYALTY_MAX_REWARD_CENTS, LOYALTY_THRESHOLD_MAX } from "@/lib/loyalty";
 import { isPaymentMethod } from "@/lib/payments";
 import { notifyClientCanceled } from "@/lib/reminders";
+import { encryptSecret } from "@/lib/secrets";
 import { safeImageUrl } from "@/lib/utils";
 import type { AppointmentStatus } from "@prisma/client";
 
@@ -298,7 +299,7 @@ export async function updateTwilio(formData: FormData) {
     where: { id: user.tenantId },
     data: !accountSid
       ? { twilioAccountSid: null, twilioFromNumber: null, twilioAuthToken: null } // disconnect
-      : { twilioAccountSid: accountSid, twilioFromNumber: fromNumber || null, ...(authToken ? { twilioAuthToken: authToken } : {}) },
+      : { twilioAccountSid: accountSid, twilioFromNumber: fromNumber || null, ...(authToken ? { twilioAuthToken: encryptSecret(authToken) } : {}) },
   });
   // Never log secrets — only whether it's connected and whether the token changed.
   await audit({ action: "twilio.settings", tenantId: user.tenantId, userId: user.id, meta: { connected: !!accountSid, tokenChanged: !!authToken } });
@@ -315,7 +316,7 @@ export async function updateEmailSender(formData: FormData) {
     where: { id: user.tenantId },
     data: !from
       ? { emailFromAddress: null, sendgridApiKey: null } // disconnect
-      : { emailFromAddress: from, ...(apiKey ? { sendgridApiKey: apiKey } : {}) },
+      : { emailFromAddress: from, ...(apiKey ? { sendgridApiKey: encryptSecret(apiKey) } : {}) },
   });
   await audit({ action: "email.settings", tenantId: user.tenantId, userId: user.id, meta: { connected: !!from, keyChanged: !!apiKey } });
   revalidatePath("/portal/settings");

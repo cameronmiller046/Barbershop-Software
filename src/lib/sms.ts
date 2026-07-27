@@ -5,6 +5,8 @@
  * configured, messages are logged to the console so flows still work in dev and
  * before a provider is connected (mirrors lib/email).
  */
+import { decryptSecret } from "@/lib/secrets";
+
 export type TwilioCreds = { accountSid?: string | null; authToken?: string | null; from?: string | null };
 
 // Standard carrier opt-out / opt-in / help keywords (case-insensitive, first word).
@@ -31,7 +33,7 @@ export function phoneDigits(v: string): string {
 function resolve(creds?: TwilioCreds) {
   return {
     sid: creds?.accountSid || process.env.TWILIO_ACCOUNT_SID || "",
-    token: creds?.authToken || process.env.TWILIO_AUTH_TOKEN || "",
+    token: decryptSecret(creds?.authToken) || process.env.TWILIO_AUTH_TOKEN || "",
     from: creds?.from || process.env.TWILIO_FROM || "",
   };
 }

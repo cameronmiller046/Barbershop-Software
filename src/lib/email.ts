@@ -4,6 +4,8 @@
  * the server's Resend env (RESEND_API_KEY / EMAIL_FROM). When nothing is
  * configured, the message is logged to the console so flows still work in dev.
  */
+import { decryptSecret } from "@/lib/secrets";
+
 export type EmailCreds = { sendgridApiKey?: string | null; from?: string | null };
 
 const DEFAULT_FROM = process.env.EMAIL_FROM || "The Chair <onboarding@resend.dev>";
@@ -24,13 +26,14 @@ export async function sendEmail(
   creds?: EmailCreds,
 ): Promise<{ ok: boolean; logged?: boolean; error?: string }> {
   const fromStr = creds?.from || DEFAULT_FROM;
+  const sendgridApiKey = decryptSecret(creds?.sendgridApiKey);
 
   // 1) Per-shop SendGrid.
-  if (creds?.sendgridApiKey) {
+  if (sendgridApiKey) {
     try {
       const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
-        headers: { Authorization: `Bearer ${creds.sendgridApiKey}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${sendgridApiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: opts.to }] }],
           from: parseFrom(fromStr),
