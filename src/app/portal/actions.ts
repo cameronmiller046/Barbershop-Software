@@ -16,6 +16,7 @@ import { accrueLoyalty, loyaltyConfigOf, liveLoyaltyBalance, consumeLoyaltyRewar
 import { isPaymentMethod } from "@/lib/payments";
 import { notifyClientCanceled } from "@/lib/reminders";
 import { encryptSecret } from "@/lib/secrets";
+import { connectEnabled, createConnectAccount, createOnboardingLink, getConnectStatus } from "@/lib/connect";
 import { safeImageUrl } from "@/lib/utils";
 import type { AppointmentStatus } from "@prisma/client";
 
@@ -319,6 +320,56 @@ export async function updateEmailSender(formData: FormData) {
       : { emailFromAddress: from, ...(apiKey ? { sendgridApiKey: encryptSecret(apiKey) } : {}) },
   });
   await audit({ action: "email.settings", tenantId: user.tenantId, userId: user.id, meta: { connected: !!from, keyChanged: !!apiKey } });
+  revalidatePath("/portal/settings");
+}
+
+// ── Stripe Connect: onboarding to take end-customer deposits (requires shop.settings) ──
+
+/** Create the shop's connected account (if needed) and send them to Stripe onboarding. */
+export async function startConnectOnboarding() {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  if (!connectEnabled()) redirect("/portal/settings?connect=unconfigured");
+  const t = await prisma.tenant.findUnique({
+    where: { id: user.tenantId },
+    select: { id: true, name: true, email: true, stripeConnectAccountId: true },
+  });
+  if (!t) return;
+  let accountId = t.stripeConnectAccountId;
+  if (!accountId) {
+    accountId = await createConnectAccount({ tenantId: t.id, email: t.email, name: t.name });
+    await prisma.tenant.update({ where: { id: t.id }, data: { stripeConnectAccountId: accountId } });
+  }
+  const url = await createOnboardingLink(accountId);
+  await audit({ action: "connect.onboarding.start", tenantId: t.id, userId: user.id });
+  redirect(url);
+}
+
+/** Re-check the connected account's status with Stripe and store it. */
+export async function refreshConnectStatus() {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const t = await prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { id: true, stripeConnectAccountId: true } });
+  if (!t?.stripeConnectAccountId) redirect("/portal/settings");
+  const s = await getConnectStatus(t.stripeConnectAccountId);
+  await prisma.tenant.update({ where: { id: t.id }, data: { connectChargesEnabled: s.chargesEnabled, connectDetailsSubmitted: s.detailsSubmitted } });
+  revalidatePath("/portal/settings");
+}
+
+/** Save deposit-to-book settings (requires shop.settings). */
+export async function updateDepositSettings(formData: FormData) {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  const enabled = formData.get("depositEnabled") === "on";
+  const type = String(formData.get("depositType") || "PERCENT") === "FIXED" ? "FIXED" : "PERCENT";
+  const raw = Math.max(0, Number(formData.get("depositValue") || 0));
+  // PERCENT stores a 0-100 percent; FIXED stores cents (input is dollars).
+  const depositValue = type === "PERCENT" ? Math.min(100, Math.round(raw)) : Math.round(raw * 100);
+  await prisma.tenant.update({
+    where: { id: user.tenantId },
+    data: { depositEnabled: enabled, depositType: type, depositValue },
+  });
+  await audit({ action: "deposit.settings", tenantId: user.tenantId, userId: user.id, meta: { enabled, type, depositValue } });
   revalidatePath("/portal/settings");
 }
 

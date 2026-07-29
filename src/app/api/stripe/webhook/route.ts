@@ -117,6 +117,18 @@ export async function POST(req: Request) {
         await alertDispute(dispute);
         break;
       }
+      case "account.updated": {
+        // A shop's Connect onboarding progressed — sync charges-enabled state.
+        const acct = event.data.object as Stripe.Account;
+        const tenantId = acct.metadata?.tenantId;
+        if (tenantId) {
+          await prisma.tenant.updateMany({
+            where: { id: tenantId },
+            data: { connectChargesEnabled: Boolean(acct.charges_enabled), connectDetailsSubmitted: Boolean(acct.details_submitted) },
+          });
+        }
+        break;
+      }
       default:
         break; // ignore other event types
     }

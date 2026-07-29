@@ -149,6 +149,16 @@ model Tenant {
   pastDueSince         DateTime?
   dunningGraceDays     Int       @default(7)
 
+  // ── Stripe Connect — end-customer deposits pay out to THIS shop's own
+  //    connected account (destination charges; the platform may take a fee). ──
+  stripeConnectAccountId  String?
+  connectChargesEnabled   Boolean @default(false) // shop can accept charges (onboarding complete)
+  connectDetailsSubmitted Boolean @default(false) // finished Stripe onboarding form
+  // Deposit-to-book settings (owner-configured).
+  depositEnabled Boolean @default(false)
+  depositType    String  @default("PERCENT") // "PERCENT" | "FIXED"
+  depositValue   Int     @default(0) // percent 0-100 when PERCENT; cents when FIXED
+
   // Sales attribution. The SWSales-Page app has its OWN database now, so the
   // rep is stored as plain cross-service refs (id + email), not a FK.
   salesRepId    String? // the SalesUser id from the sales app
@@ -453,6 +463,11 @@ model Appointment {
   collectedCents Int?
   tipCents       Int? // tip on top of the service
   paymentMethod  String? // Card | Cash | Digital wallet | Other
+
+  // Online deposit collected at booking (Stripe Connect, paid to the shop).
+  depositCents    Int     @default(0)
+  paymentIntentId String? // the Stripe PaymentIntent for the deposit
+  paymentStatus   String  @default("none") // none | held | paid | refunded
   // How the visit happened + how the client found the shop (walk-in logging).
   kind           String  @default("APPOINTMENT") // APPOINTMENT | WALKIN
   referral       String?
