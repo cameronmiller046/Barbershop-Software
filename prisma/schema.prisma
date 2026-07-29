@@ -183,6 +183,10 @@ model Tenant {
   // Booking config (Admins can customize in the portal)
   slotIntervalMin Int @default(15)
 
+  // First-run setup checklist — dismissed once the owner hides it (it also
+  // auto-hides when every step is complete).
+  onboardingDismissed Boolean @default(false)
+
   // Sales target — the monthly revenue goal shown on the Reports dashboard.
   monthlyGoalCents Int @default(0)
 

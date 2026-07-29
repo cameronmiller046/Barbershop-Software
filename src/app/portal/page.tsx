@@ -4,6 +4,9 @@ import { requireStaffWithPerms, getPortalTenant, type StaffWithPerms } from "@/l
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/utils";
+import { getOnboardingState } from "@/lib/onboarding";
+import { OnboardingChecklist } from "@/components/portal/OnboardingChecklist";
+import { dismissOnboarding } from "@/app/portal/actions";
 import { apptState, STATE_LABEL, type ApptState } from "@/lib/apptStatus";
 import { startOfDayInTz, endOfDayInTz, addDaysInTz, startOfWeekInTz, endOfWeekInTz } from "@/lib/tz";
 import { Reveal, Counter } from "@/components/home/motion";
@@ -128,8 +131,14 @@ async function DashboardBody({ user, seesAll }: { user: StaffWithPerms; seesAll:
     );
   }
 
+  const onboarding = can(user, "shop.settings") ? await getOnboardingState(tenantId) : null;
+
   return (
     <>
+      {onboarding && !onboarding.dismissed && !onboarding.allDone && (
+        <OnboardingChecklist state={onboarding} dismiss={dismissOnboarding} />
+      )}
+
       {/* Greeting */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

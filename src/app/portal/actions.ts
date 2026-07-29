@@ -323,6 +323,14 @@ export async function updateEmailSender(formData: FormData) {
   revalidatePath("/portal/settings");
 }
 
+/** Hide the first-run setup checklist (requires shop.settings). */
+export async function dismissOnboarding() {
+  const user = await requirePerm("shop.settings");
+  if (!user) return;
+  await prisma.tenant.update({ where: { id: user.tenantId }, data: { onboardingDismissed: true } });
+  revalidatePath("/portal");
+}
+
 // ── Stripe Connect: onboarding to take end-customer deposits (requires shop.settings) ──
 
 /** Create the shop's connected account (if needed) and send them to Stripe onboarding. */
