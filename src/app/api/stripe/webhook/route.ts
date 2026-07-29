@@ -70,6 +70,8 @@ export async function POST(req: Request) {
           if (tenant) {
             const sub = await retrieveSubscription(subId);
             if (sub) await applySubscription(tenant.id, sub, { welcomeOnLive: false });
+            // Payment recovered — stop the dunning grace clock.
+            await prisma.tenant.update({ where: { id: tenant.id }, data: { pastDueSince: null } });
           }
         }
         break;
@@ -78,13 +80,34 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
         const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
         if (subId) {
-          const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true } });
+          const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true, pastDueSince: true } });
           if (tenant) {
-            await prisma.tenant.update({ where: { id: tenant.id }, data: { subscriptionStatus: "PAST_DUE" } });
+            // Start the grace clock on the first failure; keep the original start on retries.
+            await prisma.tenant.update({
+              where: { id: tenant.id },
+              data: { subscriptionStatus: "PAST_DUE", ...(tenant.pastDueSince ? {} : { pastDueSince: new Date() }) },
+            });
             await audit({ action: "billing.payment.failed", tenantId: tenant.id, target: subId });
             await sendPaymentFailed(tenant.id, invoice);
           }
         }
+        break;
+      }
+      case "invoice.upcoming": {
+        // ~Renewal reminder to the owner a few days before the next charge.
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
+        const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+        if (subId) {
+          const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true } });
+          if (tenant) await sendRenewalReminder(tenant.id, invoice);
+        }
+        break;
+      }
+      case "customer.subscription.paused": {
+        // A paused subscription isn't billing — gate access like past-due.
+        const sub = event.data.object as Stripe.Subscription;
+        const tenantId = await resolveTenantId(sub);
+        if (tenantId) await prisma.tenant.update({ where: { id: tenantId }, data: { subscriptionStatus: "PAST_DUE" } });
         break;
       }
       case "charge.dispute.created": {
@@ -165,6 +188,26 @@ async function sendPaymentFailed(tenantId: string, invoice: Stripe.Invoice) {
       <p><a href="${billingUrl}" style="display:inline-block;background:#c9a24b;color:#0f0f10;
          padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Update payment method</a></p>
       <p style="font-size:13px;color:#8a8a8a">If you've already fixed this, you can ignore this message.</p>
+    `),
+  });
+}
+
+/** Friendly heads-up to the owner that their subscription renews soon. */
+async function sendRenewalReminder(tenantId: string, invoice: Stripe.Invoice) {
+  const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, email: true, billingEmail: true } });
+  if (!t) return;
+  const to = t.billingEmail || t.email;
+  if (!to) return;
+  const inv = invoice as { next_payment_attempt?: number | null; period_end?: number; amount_due?: number };
+  const ts = inv.next_payment_attempt || inv.period_end;
+  const when = ts ? new Date(ts * 1000).toLocaleDateString() : "soon";
+  const amount = typeof inv.amount_due === "number" ? `$${(inv.amount_due / 100).toFixed(2)}` : "your plan";
+  await sendEmail({
+    to,
+    subject: `Your ${t.name} subscription renews ${when}`,
+    html: emailLayout("Upcoming renewal", `
+      <p>Heads up — your subscription for <b>${t.name}</b> renews on <b>${when}</b> for <b>${amount}</b>.</p>
+      <p>No action needed; your card on file will be charged automatically.</p>
     `),
   });
 }

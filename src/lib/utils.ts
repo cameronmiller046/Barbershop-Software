@@ -1,7 +1,12 @@
+// Platform currency + locale are configurable via NEXT_PUBLIC_* (must be public
+// to reach client components); default to USD / en-US.
+const CURRENCY = (process.env.NEXT_PUBLIC_CURRENCY || "USD").toUpperCase();
+const MONEY_LOCALE = process.env.NEXT_PUBLIC_LOCALE || "en-US";
+
 export function formatMoney(cents: number) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(MONEY_LOCALE, {
     style: "currency",
-    currency: "USD",
+    currency: CURRENCY,
   }).format((cents || 0) / 100);
 }
 

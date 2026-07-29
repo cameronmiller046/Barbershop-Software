@@ -1,4 +1,5 @@
 import { sendDueReminders } from "@/lib/reminders";
+import { runDailyMaintenance } from "@/lib/maintenance";
 
 // Built-in scheduler so reminders fire automatically on a long-running server
 // (Railway) with no external cron. Idempotent claiming in sendDueReminders makes
@@ -21,4 +22,8 @@ export function startReminderScheduler() {
 
   setTimeout(tick, 30_000); // first pass ~30s after boot
   setInterval(tick, 5 * 60_000); // then every 5 minutes
+
+  // Daily housekeeping: dunning suspensions + webhook-event pruning.
+  setTimeout(runDailyMaintenance, 60_000);
+  setInterval(runDailyMaintenance, 24 * 60 * 60_000);
 }
