@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireStaffWithPerms } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders, updateTwilio, updateEmailSender, startConnectOnboarding, refreshConnectStatus, updateDepositSettings } from "@/app/portal/actions";
-import { connectEnabled } from "@/lib/connect";
-import { formatMoney } from "@/lib/utils";
+import { updateTenant, setTenantImage, setHeroPosition, updateLoyalty, updateReminders, updateTwilio, updateEmailSender } from "@/app/portal/actions";
 import { smsReady } from "@/lib/sms";
 import { emailReady } from "@/lib/email";
 import { appUrl } from "@/lib/utils";
@@ -236,55 +234,6 @@ export default async function SettingsPage() {
 
         <button className="btn-primary">Save email settings</button>
       </form>
-
-      {/* Payments & deposits (Stripe Connect) */}
-      <div className="card mt-6 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-display text-xl">Online deposits</h2>
-            <p className="mt-1 text-sm text-cream/50">Take a deposit when clients book, paid straight to your own Stripe account. Reduces no-shows.</p>
-          </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${tenant.connectChargesEnabled ? "bg-emerald-500/15 text-emerald-300" : "bg-white/8 text-cream/50"}`}>
-            {tenant.connectChargesEnabled ? "Ready" : tenant.stripeConnectAccountId ? "Setup incomplete" : "Not connected"}
-          </span>
-        </div>
-
-        {!connectEnabled() ? (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">Card payments aren&apos;t configured on this server yet.</p>
-        ) : !tenant.connectChargesEnabled ? (
-          <div className="space-y-3">
-            <p className="text-sm text-cream/60">Connect a Stripe account to start collecting deposits. Stripe handles the payout details and your money goes directly to you.</p>
-            <div className="flex flex-wrap gap-2">
-              <form action={startConnectOnboarding}><button className="btn-gold">{tenant.stripeConnectAccountId ? "Continue Stripe setup" : "Connect with Stripe"}</button></form>
-              {tenant.stripeConnectAccountId && <form action={refreshConnectStatus}><button className="btn-outline-gold">Refresh status</button></form>}
-            </div>
-          </div>
-        ) : (
-          <form action={updateDepositSettings} className="space-y-4">
-            <label className="flex items-center justify-between gap-3">
-              <span className="text-sm text-cream/85">Require a deposit to book</span>
-              <input type="checkbox" name="depositEnabled" defaultChecked={tenant.depositEnabled} className="h-5 w-5 accent-brass" />
-            </label>
-            <div className="grid grid-cols-[140px_1fr] gap-3">
-              <div>
-                <label className="label">Type</label>
-                <select name="depositType" defaultValue={tenant.depositType} className="input">
-                  <option value="PERCENT">Percent</option>
-                  <option value="FIXED">Fixed $</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Amount</label>
-                <input name="depositValue" type="number" min="0" step="1"
-                  defaultValue={tenant.depositType === "FIXED" ? (tenant.depositValue / 100).toFixed(2) : String(tenant.depositValue)}
-                  className="input" />
-                <p className="mt-1 text-xs text-cream/45">Percent of the service price, or a fixed dollar amount. Currently: {tenant.depositType === "FIXED" ? formatMoney(tenant.depositValue) : `${tenant.depositValue}%`}.</p>
-              </div>
-            </div>
-            <button className="btn-primary">Save deposit settings</button>
-          </form>
-        )}
-      </div>
     </div>
   );
 }
