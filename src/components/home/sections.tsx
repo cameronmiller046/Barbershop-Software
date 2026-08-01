@@ -188,9 +188,9 @@ export function Integrations() {
 
 /* ═══ Pricing preview ═══ */
 const PLANS = [
-  { name: "Solo", price: "$29", note: "1 chair", features: ["Branded booking page", "Online booking + QR", "Chair-side portal", "Email confirmations"], featured: false },
-  { name: "Pro", price: "$39", note: "up to 6 barbers", features: ["Everything in Solo", "Owner reports & goals", "Reviews & gallery", "No-show tracking"], featured: true },
-  { name: "Enterprise", price: "$129", note: "unlimited barbers", features: ["Everything in Pro", "Multi-location dashboard", "Advanced analytics", "Dedicated support"], featured: false },
+  { name: "Team", price: "$49", note: "3 barbers · per shop", features: ["Team scheduling", "Advanced reports", "Custom branding", "Loyalty program"], featured: false },
+  { name: "Barbershop", price: "$129", note: "8 barbers · per shop", features: ["Everything in Team", "Advanced scheduling", "Analytics dashboard", "SMS reminders"], featured: true },
+  { name: "Enterprise", price: "Custom", note: "Franchises & multi-location", features: ["Everything in Barbershop", "Multi-location dashboard", "Dedicated onboarding", "SLA support"], featured: false },
 ];
 
 export function Pricing() {
@@ -207,9 +207,9 @@ export function Pricing() {
               <div className="text-sm font-semibold text-brass">{p.name}</div>
               <div className="mt-3 flex items-baseline gap-1.5">
                 <span className="font-display text-5xl font-bold text-cream">{p.price}</span>
-                <span className="text-sm text-cream/45">/mo</span>
+                {p.price.startsWith("$") && <span className="text-sm text-cream/45">/mo</span>}
               </div>
-              <div className="mt-1 text-xs text-cream/50">{p.note} · per shop</div>
+              <div className="mt-1 text-xs text-cream/50">{p.note}</div>
               <ul className="mt-6 flex-1 space-y-3">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm text-cream/70">
