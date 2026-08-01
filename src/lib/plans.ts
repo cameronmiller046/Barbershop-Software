@@ -3,7 +3,7 @@ import type { Plan } from "@prisma/client";
 // Single source of truth for what each plan tier costs and unlocks. Enforced
 // server-side (see planLimits usage in the portal) and surfaced in the UI.
 //
-// Tiers shown to new customers: SOLO (free) · TEAM · BARBERSHOP · ENTERPRISE.
+// Tiers shown to new customers: SOLO ($29) · TEAM · BARBERSHOP · ENTERPRISE.
 // PRO is a legacy tier kept so existing/demo shops keep working; it is not
 // offered at signup.
 export type PlanLimits = {
@@ -26,12 +26,12 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  // NOTE: Solo is temporarily a $0.50 PAID plan with NO trial, so a real charge
-  // processes immediately for testing ($0.50 is Stripe's charge minimum).
-  // To restore the free tier: price "Free", priceCents 0, paid false, drop stripePriceEnv.
+  // Solo is a $29/mo paid entry tier (1 barber), with the standard 14-day trial.
+  // The actual charge amount is set by the Stripe Price behind STRIPE_PRICE_SOLO —
+  // that Price must be $29/mo for checkout to match this display.
   SOLO: {
-    label: "Solo", price: "$0.50", priceCents: 50, paid: true, offeredAtSignup: true, contactSales: false,
-    stripePriceEnv: "STRIPE_PRICE_SOLO", trialDays: 0,
+    label: "Solo", price: "$29", priceCents: 2900, paid: true, offeredAtSignup: true, contactSales: false,
+    stripePriceEnv: "STRIPE_PRICE_SOLO", trialDays: 14,
     includedBarbers: 1, maxBarbers: 1,
     reports: false, reviews: false, noShowTracking: false, multiLocation: false, prioritySupport: false,
   },

@@ -10,11 +10,11 @@ import { jsonLdSafe } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Pricing — flat monthly plans for barbershops",
   description:
-    "Simple pricing that grows with your shop. Solo is free forever, Team is $49/mo (3 barbers), Barbershop is $129/mo (8 barbers), and Enterprise is custom. Unlimited appointments, online booking, and no per-booking fees.",
+    "Simple pricing that grows with your shop. Solo is $29/mo (1 barber), Team is $49/mo (3 barbers), Barbershop is $129/mo (8 barbers), and Enterprise is custom. Unlimited appointments, online booking, and no per-booking fees.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     title: "The Chair — Pricing",
-    description: "Flat monthly plans for barbershops. Free to start, no per-booking fees. Unlock more as you grow.",
+    description: "Flat monthly plans for barbershops. 14-day free trial, no per-booking fees. Unlock more as you grow.",
     url: "/pricing",
     type: "website",
   },
@@ -38,9 +38,9 @@ type Plan = {
 // so the page stays honest (see the "Soon" note under the cards).
 const PLANS: Plan[] = [
   {
-    key: "solo", name: "Solo", icon: "staff", price: "FREE",
+    key: "solo", name: "Solo", icon: "staff", priceNum: 29, per: "/month",
     desc: "Perfect for independent barbers.",
-    cta: { label: "Start Free", href: "/signup?plan=solo" },
+    cta: { label: "Start Trial", href: "/signup?plan=solo" },
     features: [{ t: "1 barber" }, { t: "Unlimited appointments" }, { t: "Online booking" }, { t: "Client CRM" }, { t: "Booking calendar" }, { t: "Works on any device" }],
   },
   {
@@ -85,7 +85,7 @@ const COMPARE: { icon: IconName; label: string; cells: [Cell, Cell, Cell, Cell] 
 ];
 
 const COLS = [
-  { name: "Solo", sub: "Free" },
+  { name: "Solo", sub: "$29/month" },
   { name: "Team", sub: "$49/month" },
   { name: "Barbershop", sub: "$129/month" },
   { name: "Enterprise", sub: "Custom" },
@@ -102,7 +102,7 @@ const WHY: { icon: IconName; title: string; desc: string }[] = [
 const FAQ_COLUMNS: Qa[][] = [
   [
     { q: "Can I change plans later?", a: "Yes — upgrade or downgrade anytime from your dashboard. Changes take effect immediately and we prorate the difference." },
-    { q: "Is there a free trial?", a: "Paid plans include a 14-day free trial, and the Solo plan is free forever. No credit card required to start." },
+    { q: "Is there a free trial?", a: "Every plan includes a 14-day free trial. No credit card required to start." },
     { q: "How does per-barber pricing work?", a: "Team includes 3 barbers (+$10/mo each after) and Barbershop includes 8 barbers (+$8/mo each after). Add or remove seats anytime." },
     { q: "Are there setup fees?", a: "Never. There are no setup fees, onboarding fees, or hidden charges — just one flat monthly price per shop." },
     { q: "Do you charge booking fees?", a: "No. Unlike Squire and Booksy, we never charge per-booking fees. Your online bookings are always free." },
@@ -150,8 +150,8 @@ export default function PricingPage() {
           </Reveal>
           <Reveal delay={0.12}>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-cream/60">
-              Start free and add barbers as you grow. Every plan includes unlimited appointments,
-              online booking, and your client CRM — with no per-booking fees, ever.
+              Start with a free trial and add barbers as you grow. Every plan includes unlimited
+              appointments, online booking, and your client CRM — with no per-booking fees, ever.
             </p>
           </Reveal>
         </section>

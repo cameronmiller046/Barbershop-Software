@@ -166,9 +166,10 @@ export async function provisionTenant(input: {
 
 /**
  * Self-serve signup: a shop owner creates their own account and picks a plan.
- * Free (SOLO) shops go live immediately; paid shops are created in a PENDING /
- * subscriptionStatus=PENDING state and the caller sends the owner to Stripe
- * checkout — the Stripe webhook flips them to ACTIVE once payment succeeds.
+ * Free plans (if any) go live immediately; paid shops (all self-serve tiers
+ * today, incl. Solo) are created in a PENDING / subscriptionStatus=PENDING state
+ * and the caller sends the owner to Stripe checkout — the Stripe webhook flips
+ * them to ACTIVE once payment succeeds.
  *
  * The owner sets their OWN password here (no temporary password is emailed).
  */
