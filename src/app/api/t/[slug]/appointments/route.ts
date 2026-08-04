@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import { addMinutes } from "date-fns";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getTenantBySlug } from "@/lib/tenant";
-import { isSlotFree } from "@/lib/availability";
+import { isWithinWorkingHours } from "@/lib/availability";
 import { limit, clientIp } from "@/lib/ratelimit";
 import { sendEmail, emailLayout } from "@/lib/email";
 import { audit } from "@/lib/audit";
@@ -36,18 +37,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (!parsed.success) return NextResponse.json({ error: "Invalid booking details" }, { status: 400 });
   const { serviceId, barberId, start, name, email, phone, notes, smsConsent } = parsed.data;
 
-  // Validate service + barber belong to THIS tenant (isolation).
+  // Validate service + barber belong to THIS tenant (isolation). Barber must be active.
   const [service, barber] = await Promise.all([
     prisma.service.findFirst({ where: { id: serviceId, tenantId: tenant.id } }),
-    prisma.user.findFirst({ where: { id: barberId, tenantId: tenant.id, role: "BARBER", kioskOnly: false } }),
+    prisma.user.findFirst({ where: { id: barberId, tenantId: tenant.id, role: "BARBER", active: true, kioskOnly: false } }),
   ]);
   if (!service || !barber) return NextResponse.json({ error: "Invalid service or barber" }, { status: 400 });
 
   const startTime = new Date(start);
   const endTime = addMinutes(startTime, service.durationMin);
   if (startTime < new Date()) return NextResponse.json({ error: "That time is in the past" }, { status: 400 });
-  if (!(await isSlotFree(tenant.id, barberId, startTime, endTime))) {
-    return NextResponse.json({ error: "Sorry, that slot was just taken. Pick another time." }, { status: 409 });
+  // Must fall inside the barber's real working hours — the UI enforces this, but
+  // the API has to as well (a direct POST could otherwise book a closed day/time).
+  if (!(await isWithinWorkingHours(tenant.id, barberId, startTime, endTime, tenant.timezone))) {
+    return NextResponse.json({ error: "That time is outside the barber's working hours. Please pick an open time." }, { status: 400 });
   }
 
   const existingClient =
@@ -77,21 +80,38 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     });
   }
 
-  const appointment = await prisma.appointment.create({
-    data: {
-      tenantId: tenant.id,
-      serviceId,
-      barberId,
-      clientId: client.id,
-      startTime,
-      endTime,
-      notes: notes || null,
-      status: "CONFIRMED",
-      // Unguessable manage token (this token is the sole authenticator for the
-      // customer's cancel/reschedule link) — CSPRNG, not the guessable cuid default.
-      manageToken: randomBytes(24).toString("base64url"),
-    },
-  });
+  // Create inside a SERIALIZABLE transaction so two concurrent bookings can't
+  // both pass the overlap check and double-book the barber. Unless the shop has
+  // opted into double-booking, re-check for a clash inside the transaction; a
+  // serialization conflict (P2034) or a detected clash both surface as 409.
+  let appointment;
+  try {
+    appointment = await prisma.$transaction(async (tx) => {
+      if (!tenant.allowDoubleBooking) {
+        const clash = await tx.appointment.findFirst({
+          where: {
+            tenantId: tenant.id, barberId, active: true, status: "CONFIRMED",
+            startTime: { lt: endTime }, endTime: { gt: startTime },
+          },
+          select: { id: true },
+        });
+        if (clash) throw new Error("SLOT_TAKEN");
+      }
+      return tx.appointment.create({
+        data: {
+          tenantId: tenant.id, serviceId, barberId, clientId: client.id,
+          startTime, endTime, notes: notes || null, status: "CONFIRMED",
+          // Unguessable manage token — CSPRNG, not the guessable cuid default.
+          manageToken: randomBytes(24).toString("base64url"),
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (e) {
+    if ((e as Error).message === "SLOT_TAKEN" || (e as { code?: string }).code === "P2034") {
+      return NextResponse.json({ error: "Sorry, that slot was just taken. Pick another time." }, { status: 409 });
+    }
+    throw e;
+  }
 
   await audit({ action: "appointment.created", tenantId: tenant.id, target: appointment.id });
 

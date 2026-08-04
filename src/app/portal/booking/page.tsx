@@ -37,8 +37,14 @@ export default async function BookingSettingsPage() {
           <select name="slotIntervalMin" defaultValue={String(tenant.slotIntervalMin)} className="input w-40">
             {INTERVALS.map((m) => <option key={m} value={m}>{m} minutes</option>)}
           </select>
-          <button className="btn-primary">Save</button>
         </div>
+        <label className="mt-4 flex items-start gap-2.5 text-sm">
+          <input type="checkbox" name="allowDoubleBooking" defaultChecked={tenant.allowDoubleBooking} className="mt-0.5 h-4 w-4 accent-brass" />
+          <span className="text-cream/85">Allow overlapping bookings for the same barber
+            <span className="block text-xs text-cream/45">Off by default — a barber can&apos;t be booked into a time they&apos;re already busy. Turn on only if you intentionally double-book.</span>
+          </span>
+        </label>
+        <button className="btn-primary mt-4">Save</button>
       </form>
 
       {/* Per-barber working hours */}

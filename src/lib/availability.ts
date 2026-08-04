@@ -157,6 +157,28 @@ export async function nextFreeStart(
   return null;
 }
 
+/**
+ * Server-side guard: the requested [start,end) falls entirely within the barber's
+ * configured working hours for that shop-local weekday. Prevents API-level bookings
+ * outside open hours / on days the barber is off (the UI already respects this).
+ */
+export async function isWithinWorkingHours(
+  tenantId: string,
+  barberId: string,
+  start: Date,
+  end: Date,
+  timeZone = "America/New_York",
+): Promise<boolean> {
+  const { year, month0, day, weekday } = zonedYmd(start, timeZone);
+  const wh = await prisma.workingHour.findUnique({
+    where: { barberId_dayOfWeek: { barberId, dayOfWeek: weekday } },
+  });
+  if (!wh || wh.tenantId !== tenantId) return false; // barber is off that day
+  const windowStart = zonedWallToUtc(year, month0, day, wh.startMin, timeZone);
+  const windowEnd = zonedWallToUtc(year, month0, day, wh.endMin, timeZone);
+  return start.getTime() >= windowStart.getTime() && end.getTime() <= windowEnd.getTime();
+}
+
 /** Server-side guard: re-check a slot is still free before committing. */
 export async function isSlotFree(
   tenantId: string,

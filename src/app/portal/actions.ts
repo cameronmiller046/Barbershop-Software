@@ -769,8 +769,9 @@ export async function updateBookingInterval(formData: FormData) {
   const user = await requirePerm("shop.settings");
   if (!user) return;
   const v = Math.max(5, Math.min(120, Number(formData.get("slotIntervalMin") || 30)));
-  await prisma.tenant.update({ where: { id: user.tenantId }, data: { slotIntervalMin: v } });
-  await audit({ action: "booking.interval", tenantId: user.tenantId, userId: user.id, meta: { slotIntervalMin: v } });
+  const allowDoubleBooking = formData.get("allowDoubleBooking") === "on";
+  await prisma.tenant.update({ where: { id: user.tenantId }, data: { slotIntervalMin: v, allowDoubleBooking } });
+  await audit({ action: "booking.interval", tenantId: user.tenantId, userId: user.id, meta: { slotIntervalMin: v, allowDoubleBooking } });
   revalidatePath("/portal/booking");
 }
 

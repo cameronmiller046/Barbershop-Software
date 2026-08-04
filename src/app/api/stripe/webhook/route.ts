@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         // A successful payment clears any past-due flag. If the subscription is
         // expanded/known, re-sync so status + period end reflect the new cycle.
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
-        const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+        const subId = invoiceSubscriptionId(invoice);
         if (subId) {
           const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true } });
           if (tenant) {
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       }
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
-        const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+        const subId = invoiceSubscriptionId(invoice);
         if (subId) {
           const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true, pastDueSince: true } });
           if (tenant) {
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
       case "invoice.upcoming": {
         // ~Renewal reminder to the owner a few days before the next charge.
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null };
-        const subId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+        const subId = invoiceSubscriptionId(invoice);
         if (subId) {
           const tenant = await prisma.tenant.findFirst({ where: { stripeSubscriptionId: subId }, select: { id: true } });
           if (tenant) await sendRenewalReminder(tenant.id, invoice);
@@ -134,9 +134,28 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     console.error("[stripe/webhook] handler error:", err);
+    // Release the idempotency claim and signal failure so Stripe RETRIES this
+    // event — otherwise a transient error would drop it permanently.
+    await prisma.processedWebhookEvent.delete({ where: { id: event.id } }).catch(() => {});
+    return NextResponse.json({ error: "handler error" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
+}
+
+/**
+ * Resolve the subscription id from an invoice across Stripe API-version shapes.
+ * Older versions exposed `invoice.subscription`; newer ones (2026-06-24.dahlia+)
+ * moved it under `invoice.parent.subscription_details.subscription`.
+ */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const inv = invoice as unknown as {
+    subscription?: unknown;
+    parent?: { subscription_details?: { subscription?: unknown } | null } | null;
+  };
+  const pick = (v: unknown): string | null =>
+    typeof v === "string" ? v : v && typeof v === "object" && "id" in v ? String((v as { id: unknown }).id) : null;
+  return pick(inv.subscription) ?? pick(inv.parent?.subscription_details?.subscription);
 }
 
 /** Resolve a tenant id from a subscription: metadata first, then a stored id lookup. */

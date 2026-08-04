@@ -182,6 +182,10 @@ model Tenant {
 
   // Booking config (Admins can customize in the portal)
   slotIntervalMin Int @default(15)
+  // When false (default), a barber can't be booked into an overlapping slot.
+  // A shop that intentionally double-books (e.g. overlapping quick services)
+  // can turn this on.
+  allowDoubleBooking Boolean @default(false)
 
   // First-run setup checklist — dismissed once the owner hides it (it also
   // auto-hides when every step is complete).
