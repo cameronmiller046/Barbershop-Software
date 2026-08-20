@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useDemo } from "@/lib/demo/store";
-import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
+import { PageHeader, Panel, SectionTitle, SandboxNote, Modal, Btn, Field } from "@/components/demo/ui";
 import { Sparkline } from "@/components/demo/charts";
 import { useToast } from "@/components/demo/toast";
 import {
-  StatCard, MoneyDonut, BarList, Select, RANGES, rangeFactor, topWithOther,
-  TableWrap, Th, Td, GOLD, GOLD_DIM, GRAY, GRAY_LT, GREEN, cx, formatMoney,
+  StatCard, MoneyDonut, BarList, Select, RANGES, rangeFactor, topWithOther, ProgressBar,
+  TableWrap, Th, Td, GOLD, GOLD_DIM, GRAY, GRAY_LT, GREEN, cx, formatMoney, downloadCsv, csvMoney,
 } from "@/components/demo/finance";
 import { coreFinancials, chairRentals, transactions } from "@/lib/demo/financials";
 import { Icon, type IconName } from "@/components/home/icons";
@@ -80,10 +80,13 @@ const TX_ICON: Record<string, IconName> = {
 };
 
 export default function FinancialsOverviewPage() {
-  const { state } = useDemo();
+  const { state, actions } = useDemo();
   const { toast } = useToast();
   const [rangeId, setRangeId] = useState("month");
   const [banner, setBanner] = useState(true);
+  const [locFilter, setLocFilter] = useState("all");
+  const [goalOpen, setGoalOpen] = useState(false);
+  const goal = state.settings.revenueGoalCents;
   const factor = rangeFactor(rangeId);
   const $ = (cents: number) => formatMoney(Math.round(cents * factor));
 
@@ -136,6 +139,31 @@ export default function FinancialsOverviewPage() {
     core.expensesByCategory.map((e) => ({ name: e.name, value: Math.round(e.value * factor) })), 5,
   );
   const occupied = rentals.filter((r) => r.occupied).length;
+  const shownLocations = locFilter === "all" ? locations : locations.filter((l) => l.name === locFilter);
+
+  function exportReport() {
+    const rangeLabel = RANGES.find((r) => r.id === rangeId)?.label ?? "This Month";
+    const m = (c: number) => csvMoney(Math.round(c * factor));
+    downloadCsv(`financial-report-${rangeId}.csv`, [
+      ["Financial Report", state.settings.name.replace(" — Flagship", ""), rangeLabel],
+      [],
+      ["Summary"],
+      ["Total Revenue", m(core.revenue)], ["Gross Profit", m(core.grossProfit)],
+      ["Net Profit", m(core.net)], ["Expenses", m(core.expenses)],
+      ["Net Profit Margin %", core.margin.toFixed(1)],
+      ["Cash In", m(core.cashIn)], ["Cash Out", m(core.cashOut)],
+      [],
+      ["Revenue by Category"],
+      ...core.revenueLines.map((l) => [l.name, m(l.value)]),
+      [],
+      ["Expenses by Category"],
+      ...core.expensesByCategory.map((e) => [e.name, m(e.value)]),
+      [],
+      ["Location Performance", "Revenue", "Net Profit", "Margin %"],
+      ...locations.map((l) => [l.name, m(l.revenue), m(l.net), l.margin.toFixed(1)]),
+    ]);
+    toast("Financial report downloaded as CSV", "success");
+  }
 
   return (
     <>
@@ -145,7 +173,7 @@ export default function FinancialsOverviewPage() {
         actions={
           <>
             <Select value={rangeId} onChange={setRangeId} options={RANGES.map((r) => ({ id: r.id, label: r.label }))} />
-            <button onClick={() => toast("Sample report exported — real exports ship with the live feature", "success")} className="p-btn-gold">
+            <button onClick={exportReport} className="p-btn-gold">
               <Icon.reports className="h-4 w-4" /> Export Report
             </button>
           </>
@@ -200,14 +228,14 @@ export default function FinancialsOverviewPage() {
             <Panel className="lg:col-span-3">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold text-cream">Location Performance</h2>
-                <Select value="all" onChange={() => {}} options={[{ id: "all", label: "All Locations" }]} />
+                <Select value={locFilter} onChange={setLocFilter} options={[{ id: "all", label: "All Locations" }, ...locations.map((l) => ({ id: l.name, label: l.name }))]} />
               </div>
               <TableWrap min={440}>
                 <thead>
                   <tr><Th>Location</Th><Th right>Revenue</Th><Th right>Net Profit</Th><Th right>Margin</Th><Th right>Trend</Th></tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {locations.map((l) => (
+                  {shownLocations.map((l) => (
                     <tr key={l.name}>
                       <Td className="text-cream/85">{l.name}</Td>
                       <Td right><span className="text-cream">{$(l.revenue)}</span></Td>
@@ -218,7 +246,7 @@ export default function FinancialsOverviewPage() {
                   ))}
                 </tbody>
               </TableWrap>
-              <button onClick={() => toast("Multi-location view is part of the full release", "info")} className="p-btn-ghost mt-4 w-full justify-center text-xs">
+              <button onClick={() => setLocFilter("all")} disabled={locFilter === "all"} className="p-btn-ghost mt-4 w-full justify-center text-xs disabled:opacity-40">
                 View All Locations
               </button>
             </Panel>
@@ -228,11 +256,25 @@ export default function FinancialsOverviewPage() {
             <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brass/25 bg-gradient-to-r from-[#2a2314] via-[#1c1710] to-[#2a2314] px-4 py-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brass/15 text-brass"><Icon.scissors className="h-5 w-5" /></span>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-cream">You&apos;re doing great! 🎉</div>
-                <div className="text-xs text-cream/60">Revenue is up 14.6% compared to last month. Keep the momentum going!</div>
+                {goal ? (
+                  <>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-cream">
+                        {core.revenue >= goal ? "Goal hit! 🎉" : "Monthly revenue goal"}
+                      </span>
+                      <span className="text-xs text-cream/60">{formatMoney(core.revenue)} of {formatMoney(goal)} · {Math.min(999, Math.round((core.revenue / goal) * 100))}%</span>
+                    </div>
+                    <div className="mt-1.5"><ProgressBar pct={(core.revenue / goal) * 100} tone={core.revenue >= goal ? "green" : "gold"} /></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold text-cream">You&apos;re doing great! 🎉</div>
+                    <div className="text-xs text-cream/60">Revenue is up 14.6% compared to last month. Set a monthly goal to track the momentum.</div>
+                  </>
+                )}
               </div>
-              <button onClick={() => toast("Goals & benchmarks are part of the full release", "info")} className="shrink-0 rounded-full border border-brass/40 px-3.5 py-1.5 text-xs font-semibold text-brass transition hover:bg-brass/10">
-                Set Goal
+              <button onClick={() => setGoalOpen(true)} className="shrink-0 rounded-full border border-brass/40 px-3.5 py-1.5 text-xs font-semibold text-brass transition hover:bg-brass/10">
+                {goal ? "Edit Goal" : "Set Goal"}
               </button>
               <button onClick={() => setBanner(false)} aria-label="Dismiss" className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-cream/40 transition hover:bg-white/5 hover:text-cream">✕</button>
             </div>
@@ -305,6 +347,59 @@ export default function FinancialsOverviewPage() {
           </Panel>
         </div>
       </div>
+
+      {goalOpen && (
+        <GoalModal
+          current={goal}
+          revenue={core.revenue}
+          onClose={() => setGoalOpen(false)}
+          onSave={(cents) => {
+            actions.updateSettings({ revenueGoalCents: cents });
+            setGoalOpen(false);
+            setBanner(true);
+            toast(cents ? `Monthly goal set to ${formatMoney(cents)}` : "Goal cleared", "success");
+          }}
+        />
+      )}
     </>
+  );
+}
+
+/** Set or clear the monthly revenue goal shown in the banner. */
+function GoalModal({
+  current, revenue, onClose, onSave,
+}: { current: number | undefined; revenue: number; onClose: () => void; onSave: (cents: number | undefined) => void }) {
+  const [value, setValue] = useState(current ? (current / 100).toFixed(2) : "");
+  const parsed = parseFloat(value);
+  const cents = Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * 100) : null;
+
+  return (
+    <Modal
+      open onClose={onClose} title={current ? "Edit monthly goal" : "Set a monthly goal"}
+      footer={
+        <div className="flex w-full items-center justify-between gap-2">
+          {current ? <Btn variant="danger" onClick={() => onSave(undefined)}>Clear goal</Btn> : <span />}
+          <div className="flex gap-2">
+            <Btn onClick={onClose}>Cancel</Btn>
+            <Btn variant="gold" onClick={() => cents && onSave(cents)} disabled={!cents}>Save goal</Btn>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <Field label="Monthly revenue goal" hint={`This month so far: ${formatMoney(revenue)}. The banner tracks your progress.`}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-cream/50">$</span>
+            <input autoFocus inputMode="decimal" className="input" value={value} placeholder="10000.00"
+              onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v)) setValue(v); }} />
+          </div>
+        </Field>
+        {cents != null && (
+          <p className="text-xs text-cream/45">
+            You&apos;re at {Math.min(999, Math.round((revenue / cents) * 100))}% of that today.
+          </p>
+        )}
+      </div>
+    </Modal>
   );
 }

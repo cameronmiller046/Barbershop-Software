@@ -12,7 +12,8 @@
 // revenue share) is the shop's. See `chairRentals` / `shopProfit`.
 // ─────────────────────────────────────────────────────────────────────────
 
-import type { DemoState } from "./types";
+import type { DemoState, Expense, ExpenseAllocation } from "./types";
+export type { Expense, ExpenseAllocation };
 import { totalRevenue, totalTips, isRevenue } from "./metrics";
 
 export type RentFrequency = "Weekly" | "Monthly";
@@ -62,23 +63,6 @@ export type ChairRental = {
   expenseCents: number;
 };
 
-export type ExpenseAllocation = "Equal per occupied chair" | "Based on revenue" | "Manual" | "No allocation";
-
-export type Expense = {
-  id: string;
-  dateISO: string;
-  amountCents: number;
-  category: string;
-  vendor: string;
-  chairId: string | null; // null = shared / shop-wide
-  staffId: string | null;
-  location: string;
-  notes: string;
-  recurring: boolean;
-  allocation: ExpenseAllocation;
-  /** True when this expense belongs to the rental-chair cost pool. */
-  chairRelated: boolean;
-};
 
 export type Txn = {
   id: string;
@@ -269,7 +253,9 @@ export function expenses(state: DemoState): Expense[] {
     { dateISO: d(21), amountCents: 46000, category: "Insurance", vendor: "State Farm", chairId: null, staffId: null, location: MAIN_LOCATION, notes: "General liability", recurring: true, allocation: "No allocation", chairRelated: false },
     { dateISO: d(24), amountCents: 15500, category: "Furniture", vendor: "Takara Belmont", chairId: "Chair 09", staffId: null, location: MAIN_LOCATION, notes: "Replacement station mirror", recurring: false, allocation: "No allocation", chairRelated: true },
   ];
-  return rows.map((r, i) => ({ ...r, id: `exp_${i + 1}` }));
+  const seeded = rows.map((r, i) => ({ ...r, id: `exp_${i + 1}` }));
+  // Anything added this session leads, so a just-saved expense is visible.
+  return [...state.extraExpenses, ...seeded].sort((a, b) => b.dateISO.localeCompare(a.dateISO));
 }
 
 /**

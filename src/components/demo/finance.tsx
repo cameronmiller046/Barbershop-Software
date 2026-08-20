@@ -251,4 +251,22 @@ export function DSection({ title, children }: { title: string; children: React.R
   );
 }
 
+/** Build a CSV and hand it to the browser as a real download. */
+export function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const esc = (v: string | number) => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const blob = new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Cents → "1234.56" for CSV cells (no $ so spreadsheets parse it as a number). */
+export const csvMoney = (cents: number) => (cents / 100).toFixed(2);
+
 export { cx, formatMoney };

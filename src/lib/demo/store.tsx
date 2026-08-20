@@ -17,7 +17,7 @@ import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { seedDemoState } from "./fixtures";
 import type {
   Appointment, ApptStatus, Availability, Campaign, Customer, DayHours, DemoRole, DemoState,
-  InventoryItem, MsgTemplate, PaymentMethod, PhotoSet, SentMessage, Service, ShopSettings, Staff,
+  Expense, InventoryItem, MsgTemplate, PaymentMethod, PhotoSet, SentMessage, Service, ShopSettings, Staff,
 } from "./types";
 
 type Updater = (prev: DemoState) => DemoState;
@@ -74,6 +74,9 @@ export interface DemoActions {
   deleteTemplate(id: string): void;
   /** Record a "sent" message. Nothing leaves the browser — see the file header. */
   logMessage(m: Omit<SentMessage, "id" | "sentISO">): string;
+
+  // expenses
+  addExpense(e: Omit<Expense, "id"> & { id?: string }): string;
 }
 
 interface DemoCtx {
@@ -191,6 +194,12 @@ export function DemoProvider({ role, children }: { role: DemoRole; children: Rea
       logMessage: (m) => {
         const id = nextId("msg");
         update((s) => ({ ...s, sentMessages: [{ ...m, id, sentISO: new Date().toISOString() }, ...s.sentMessages] }));
+        return id;
+      },
+
+      addExpense: (e) => {
+        const id = e.id ?? nextId("exp");
+        update((s) => ({ ...s, extraExpenses: [{ ...e, id }, ...s.extraExpenses] }));
         return id;
       },
     };

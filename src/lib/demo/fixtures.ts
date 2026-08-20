@@ -305,6 +305,7 @@ export function seedDemoState(role: DemoRole): DemoState {
     availability: seedAvailability(),
     templates: seedTemplates(),
     sentMessages: [],
+    extraExpenses: [],
     seq: 1,
   };
 }

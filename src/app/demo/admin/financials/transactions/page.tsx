@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
-import { StatCard, Select, TableWrap, Th, Td, Amount, cx, formatMoney } from "@/components/demo/finance";
+import { StatCard, Select, TableWrap, Th, Td, Amount, cx, formatMoney, downloadCsv, csvMoney } from "@/components/demo/finance";
 import { transactions, LOCATIONS, type Txn } from "@/lib/demo/financials";
 import { Icon, type IconName } from "@/components/home/icons";
 
@@ -58,13 +58,25 @@ export default function TransactionsPage() {
   const onFilter = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
   const filtered = [type, location, method].some((v) => v !== ALL) || !!q.trim();
 
+  function exportLedger() {
+    downloadCsv("transactions.csv", [
+      ["Date", "Description", "Type", "Category", "Barber", "Chair", "Location", "Method", "Amount", "Shop Income"],
+      ...rows.map((t) => [
+        new Date(t.dateISO).toLocaleString(), t.description, t.type, t.category,
+        t.barberName ?? "", t.chairLabel ?? "", t.location, t.method,
+        csvMoney(t.amountCents), t.shopIncome ? "Yes" : "No (renter)",
+      ]),
+    ]);
+    toast(`${rows.length} transactions downloaded as CSV`, "success");
+  }
+
   return (
     <>
       <PageHeader
         title="Transactions"
         subtitle="One ledger for every dollar in and out — sales, rent, expenses and refunds."
         actions={
-          <button onClick={() => toast("Sample ledger exported — real exports ship with the live feature", "success")} className="p-btn-gold">
+          <button onClick={exportLedger} className="p-btn-gold">
             <Icon.reports className="h-4 w-4" /> Export Report
           </button>
         }

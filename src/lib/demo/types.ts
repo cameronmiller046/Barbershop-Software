@@ -133,6 +133,37 @@ export interface PhotoSet {
   afterStyle: string;
 }
 
+export type ExpenseAllocation = "Equal per occupied chair" | "Based on revenue" | "Manual" | "No allocation";
+export type ExpenseApplyTo = "Specific Chair" | "Specific Barber" | "All Rental Chairs" | "Entire Location";
+
+/** A business expense. Seeded rows live in fixtures; ones added during a
+ *  session live in `DemoState.extraExpenses` and merge into the same ledger. */
+export interface Expense {
+  id: string;
+  dateISO: string;
+  amountCents: number;
+  category: string;
+  vendor: string;
+  chairId: string | null; // null = shared / shop-wide
+  staffId: string | null;
+  location: string;
+  notes: string;
+  recurring: boolean;
+  allocation: ExpenseAllocation;
+  /** True when this expense belongs to the rental-chair cost pool. */
+  chairRelated: boolean;
+  // Optional detail captured by the Add Expense form.
+  applyTo?: ExpenseApplyTo;
+  description?: string;
+  paymentMethod?: string;
+  reference?: string;
+  glAccount?: string;
+  taxDeductible?: "Yes" | "No" | "";
+  customerId?: string | null;
+  tags?: string[];
+  receiptName?: string | null;
+}
+
 /** Reusable shop SMS/email copy. Mirrors the real MessageTemplate model, but
  *  the sandbox keeps its own shape (see the note at the top of this file). */
 export interface MsgTemplate {
@@ -177,6 +208,8 @@ export interface ShopSettings {
   notifyEmail: boolean;
   notifySms: boolean;
   onlineBooking: boolean;
+  /** Monthly revenue target set from the Financials banner (unset = no goal). */
+  revenueGoalCents?: number;
 }
 
 /** A barber's own weekly availability (minutes-from-midnight windows). */
@@ -201,6 +234,8 @@ export interface DemoState {
   photos: PhotoSet[];
   templates: MsgTemplate[];
   sentMessages: SentMessage[];
+  /** Expenses added during this session, merged ahead of the seeded ledger. */
+  extraExpenses: Expense[];
   settings: ShopSettings;
   availability: Availability;
   /** Monotonic counter for new entity ids created during the session. */

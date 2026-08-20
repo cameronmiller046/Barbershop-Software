@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useDemo } from "@/lib/demo/store";
-import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
 import {
   StatCard, MoneyDonut, Select, RANGES, rangeFactor, TableWrap, Th, Td,
@@ -16,7 +16,6 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { m
 
 export default function ExpensesPage() {
   const { state } = useDemo();
-  const { toast } = useToast();
   const [rangeId, setRangeId] = useState("month");
   const [location, setLocation] = useState(ALL);
   const [category, setCategory] = useState(ALL);
@@ -65,9 +64,9 @@ export default function ExpensesPage() {
         actions={
           <>
             <Select value={rangeId} onChange={setRangeId} options={RANGES.map((r) => ({ id: r.id, label: r.label }))} />
-            <button onClick={() => toast("Expense entry ships with the live feature", "info")} className="p-btn-gold">
+            <Link href="/demo/admin/financials/expenses/new" className="p-btn-gold">
               <Icon.plus className="h-4 w-4" /> Add Expense
-            </button>
+            </Link>
           </>
         }
       />

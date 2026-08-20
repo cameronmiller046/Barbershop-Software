@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
-import { StatCard, Select, TableWrap, Th, Td, ProgressBar, cx, formatMoney } from "@/components/demo/finance";
+import { StatCard, Select, TableWrap, Th, Td, ProgressBar, cx, formatMoney, downloadCsv, csvMoney } from "@/components/demo/finance";
 import { coreFinancials } from "@/lib/demo/financials";
 import { Icon } from "@/components/home/icons";
 
@@ -74,6 +74,31 @@ export default function ProfitLossPage() {
     return { label, revenue: r, cogs: c, opex: o, gross: r - c, net: r - c - o };
   });
 
+  function exportReport() {
+    downloadCsv(`profit-and-loss-${view.id}.csv`, [
+      ["Profit & Loss", view.label],
+      [],
+      ["Revenue"],
+      ...revenueLines.map((l) => [l.name, csvMoney(l.value)]),
+      ["Total Revenue", csvMoney(revenue)],
+      [],
+      ["Cost of Sales"],
+      ...cogsLines.map((l) => [l.name, csvMoney(-l.value)]),
+      ["Gross Profit", csvMoney(grossProfit)],
+      [],
+      ["Operating Expenses"],
+      ...opLines.map((l) => [l.name, csvMoney(-l.value)]),
+      ["Operating Profit", csvMoney(operatingProfit)],
+      [],
+      ["Net Profit", csvMoney(net)],
+      ["Net Margin %", netMargin.toFixed(1)],
+      [],
+      ["Period", "Revenue", "Gross", "Net", "Margin %"],
+      ...periods.map((pd) => [pd.label, csvMoney(pd.revenue), csvMoney(pd.gross), csvMoney(pd.net), pd.revenue ? ((pd.net / pd.revenue) * 100).toFixed(1) : "0"]),
+    ]);
+    toast("P&L statement downloaded as CSV", "success");
+  }
+
   return (
     <>
       <PageHeader
@@ -82,7 +107,7 @@ export default function ProfitLossPage() {
         actions={
           <>
             <Select value={viewId} onChange={setViewId} options={VIEWS.map((v) => ({ id: v.id, label: v.label }))} />
-            <button onClick={() => toast("Sample P&L exported — real exports ship with the live feature", "success")} className="p-btn-gold">
+            <button onClick={exportReport} className="p-btn-gold">
               <Icon.reports className="h-4 w-4" /> Export Report
             </button>
           </>
