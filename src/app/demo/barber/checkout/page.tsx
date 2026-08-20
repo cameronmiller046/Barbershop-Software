@@ -10,7 +10,7 @@ import { formatMoney } from "@/lib/utils";
 import { todayAppts } from "@/lib/demo/metrics";
 import type { PaymentMethod } from "@/lib/demo/types";
 
-const TIP_OPTIONS = [0, 0.15, 0.18, 0.2, 0.25];
+const TIP_OPTIONS = [0, 0.15, 0.18, 0.2];
 
 export default function CheckoutPage() {
   const { state, actions } = useDemo();
@@ -26,6 +26,8 @@ export default function CheckoutPage() {
   const sel = state.appointments.find((a) => a.id === selId) ?? null;
 
   const [tipPct, setTipPct] = useState(0.2);
+  const [customTip, setCustomTip] = useState(false);
+  const [customTipStr, setCustomTipStr] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [addRetail, setAddRetail] = useState<Record<string, number>>({});
 
@@ -36,7 +38,8 @@ export default function CheckoutPage() {
     const it = state.inventory.find((x) => x.id === id); return sum + (it ? it.retailCents * qty : 0);
   }, 0);
   const svcCents = svc?.priceCents ?? 0;
-  const tipCents = Math.round(svcCents * tipPct);
+  const customTipCents = (() => { const n = parseFloat(customTipStr); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0; })();
+  const tipCents = customTip ? customTipCents : Math.round(svcCents * tipPct);
   const total = svcCents + retailTotal + tipCents;
 
   const take = () => {
@@ -48,6 +51,8 @@ export default function CheckoutPage() {
     setSelId(rest[0]?.id ?? null);
     setAddRetail({});
     setTipPct(0.2);
+    setCustomTip(false);
+    setCustomTipStr("");
   };
 
   return (
@@ -119,11 +124,28 @@ export default function CheckoutPage() {
               <SectionTitle>Tip</SectionTitle>
               <div className="flex gap-2">
                 {TIP_OPTIONS.map((p) => (
-                  <button key={p} onClick={() => setTipPct(p)} className={cx("flex-1 rounded-lg border py-2 text-sm", tipPct === p ? "border-brass bg-brass/15 text-brass" : "border-white/10 text-cream/60")}>
+                  <button key={p} onClick={() => { setCustomTip(false); setTipPct(p); }} className={cx("flex-1 rounded-lg border py-2 text-sm", !customTip && tipPct === p ? "border-brass bg-brass/15 text-brass" : "border-white/10 text-cream/60")}>
                     {p === 0 ? "None" : `${Math.round(p * 100)}%`}
                   </button>
                 ))}
+                <button onClick={() => setCustomTip(true)} className={cx("flex-1 rounded-lg border py-2 text-sm", customTip ? "border-brass bg-brass/15 text-brass" : "border-white/10 text-cream/60")}>
+                  Custom
+                </button>
               </div>
+              {customTip && (
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className="text-sm text-cream/50">$</span>
+                  <input
+                    autoFocus
+                    inputMode="decimal"
+                    value={customTipStr}
+                    onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v)) setCustomTipStr(v); }}
+                    placeholder="0.00"
+                    className="input w-32 !py-2 text-sm"
+                  />
+                  <span className="text-xs text-cream/40">Enter a tip amount</span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-white/8 py-4">
@@ -140,7 +162,7 @@ export default function CheckoutPage() {
             <div className="space-y-1.5 border-t border-white/8 pt-4 text-sm">
               <Row label={svc.name} value={svcCents} />
               {retailTotal > 0 && <Row label="Retail" value={retailTotal} />}
-              <Row label={`Tip (${Math.round(tipPct * 100)}%)`} value={tipCents} />
+              <Row label={customTip ? "Tip (custom)" : `Tip (${Math.round(tipPct * 100)}%)`} value={tipCents} />
               <div className="flex items-center justify-between border-t border-white/8 pt-2 text-base font-semibold">
                 <span className="text-cream">Total</span><span className="text-brass"><Money cents={total} /></span>
               </div>
