@@ -7,8 +7,8 @@
 import { useMemo, useState } from "react";
 import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
-import { PageHeader, Panel, SectionTitle, SandboxNote, Modal, Btn, Field, Avatar, cx } from "@/components/demo/ui";
-import { StatCard, Select, TableWrap, Th, Td, ProgressBar, StatusPill, downloadCsv, csvMoney, GOLD, GRAY_LT, GREEN } from "@/components/demo/finance";
+import { PageHeader, Panel, SectionTitle, SandboxNote, Modal, Btn, Field, cx } from "@/components/demo/ui";
+import { StatCard, Select, TableWrap, Th, Td, ProgressBar, downloadCsv, csvMoney, GOLD, GRAY_LT, GREEN } from "@/components/demo/finance";
 import { Icon } from "@/components/home/icons";
 import { formatMoney } from "@/lib/utils";
 import type { DemoState, PayrollAdjustment, Staff, TimeEntry } from "@/lib/demo/types";
@@ -70,12 +70,15 @@ export default function PayrollPage() {
   const { toast } = useToast();
   const s = state.settings;
 
-  const [tab, setTab] = useState<"breakdown" | "timeclock" | "adjustments" | "history">("breakdown");
-  const [role, setRole] = useState("all");
-  const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"timeclock" | "adjustments" | "history">("timeclock");
+  // Time Clock filters
+  const [tcStaff, setTcStaff] = useState("all");
+  const [tcStatus, setTcStatus] = useState("all");
+  const [tcFrom, setTcFrom] = useState("");
+  const [tcTo, setTcTo] = useState("");
   const [dayEditorStaff, setDayEditorStaff] = useState<string | null>(null);
   const [bulkEdit, setBulkEdit] = useState(false);
-  const [tipEditStaff, setTipEditStaff] = useState<string | null>(null);
+  const [tipOpen, setTipOpen] = useState(false);
   const [addingAdj, setAddingAdj] = useState(false);
   const [addingEntry, setAddingEntry] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -90,10 +93,6 @@ export default function PayrollPage() {
   const payDate = new Date(now + 4 * DAY);
 
   const rows = useMemo(() => buildPayroll(state, from, now), [state, from, now]);
-  const visible = rows.filter((r) =>
-    (role === "all" || r.staff.level === role) &&
-    (!q.trim() || r.staff.name.toLowerCase().includes(q.trim().toLowerCase())));
-
   const totals = rows.reduce((t, r) => ({
     hours: t.hours + r.hours, ot: t.ot + r.overtime, base: t.base + r.baseCents, comm: t.comm + r.commissionCents,
     tips: t.tips + r.tipsCents, adj: t.adj + r.adjCents, gross: t.gross + r.grossCents,
@@ -132,6 +131,23 @@ export default function PayrollPage() {
   ];
   const checkPct = (checklist.filter((c) => c.done).length / checklist.length) * 100;
 
+  // Time Clock rows honour the filter bar; period-wide metrics above stay
+  // unfiltered so the checklist and alerts always describe the whole period.
+  const tcFiltered = tcStaff !== "all" || tcStatus !== "all" || !!tcFrom || !!tcTo;
+  const clearTcFilters = () => { setTcStaff("all"); setTcStatus("all"); setTcFrom(""); setTcTo(""); };
+  const tcRows = periodEntries.filter((e) => {
+    if (tcStaff !== "all" && e.staffId !== tcStaff) return false;
+    const day = e.clockInISO.slice(0, 10);
+    if (tcFrom && day < tcFrom) return false;
+    if (tcTo && day > tcTo) return false;
+    if (tcStatus === "open") return !e.clockOutISO;
+    if (tcStatus === "pending") return !!e.clockOutISO && !e.approved;
+    if (tcStatus === "approved") return !!e.clockOutISO && e.approved;
+    if (tcStatus === "edited") return !!e.edited;
+    return true;
+  });
+  const tcHours = tcRows.reduce((sum, e) => sum + hoursOf(e), 0);
+
   const openTab = (t: typeof tab) => {
     setTab(t);
     if (t === "adjustments") setAdjReviewed(true);
@@ -159,7 +175,6 @@ export default function PayrollPage() {
   };
 
   const editorRow = rows.find((r) => r.staff.id === dayEditorStaff) ?? null;
-  const tipRow = rows.find((r) => r.staff.id === tipEditStaff) ?? null;
   const savePunch = (id: string, inISO: string, outISO: string) => {
     actions.updateTimeEntry(id, { clockInISO: inISO, clockOutISO: outISO, edited: true, approved: false, note: "Edited in payroll — needs re-approval" });
     toast("Punch corrected — entry needs re-approval", "success");
@@ -203,95 +218,50 @@ export default function PayrollPage() {
         <div className="min-w-0 space-y-4">
           <Panel>
             <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-white/10">
-              {([["breakdown", "Pay Period Breakdown"], ["timeclock", "Time Clock"], ["adjustments", "Adjustments"], ["history", "Pay History"]] as const).map(([key, label]) => (
+              {([["timeclock", "Time Clock"], ["adjustments", "Adjustments"], ["history", "Pay History"]] as const).map(([key, label]) => (
                 <button key={key} onClick={() => openTab(key)}
                   className={cx("-mb-px border-b-2 pb-2.5 text-sm transition", tab === key ? "border-brass text-brass" : "border-transparent text-cream/50 hover:text-cream")}>
                   {label}
                 </button>
               ))}
-              {tab === "breakdown" && (
+              {tab === "timeclock" && (
                 <div className="ml-auto flex flex-wrap items-center gap-2 pb-2">
-                  <Select value={role} onChange={setRole} options={[{ id: "all", label: "All Roles" }, { id: "Barber", label: "Barbers" }, { id: "Manager", label: "Managers" }]} />
-                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search employee…" className="input w-40 !py-1.5 text-xs" />
+                  <Select value={tcStaff} onChange={setTcStaff}
+                    options={[{ id: "all", label: "All Employees" }, ...state.staff.filter((x) => x.active).map((x) => ({ id: x.id, label: x.name }))]} />
+                  <Select value={tcStatus} onChange={setTcStatus}
+                    options={[{ id: "all", label: "All Status" }, { id: "pending", label: "Pending" }, { id: "approved", label: "Approved" }, { id: "edited", label: "Edited" }, { id: "open", label: "Open shift" }]} />
+                  <span className="flex items-center gap-1.5">
+                    <input type="date" value={tcFrom} max={tcTo || undefined} onChange={(e) => setTcFrom(e.target.value)} aria-label="From date"
+                      className="rounded-xl border border-white/10 bg-[#17161b] px-2 py-1.5 text-xs text-cream focus:border-brass/50 focus:outline-none" />
+                    <span className="text-cream/30">–</span>
+                    <input type="date" value={tcTo} min={tcFrom || undefined} onChange={(e) => setTcTo(e.target.value)} aria-label="To date"
+                      className="rounded-xl border border-white/10 bg-[#17161b] px-2 py-1.5 text-xs text-cream focus:border-brass/50 focus:outline-none" />
+                  </span>
+                  {tcFiltered && (
+                    <button onClick={clearTcFilters} className="text-xs font-semibold text-brass hover:underline">Clear</button>
+                  )}
                 </div>
               )}
             </div>
 
-            {tab === "breakdown" && (
-              <>
-                <TableWrap min={880}>
-                  <thead>
-                    <tr>
-                      <Th>Employee</Th><Th>Status</Th><Th right>Hours</Th><Th right>Base Wage</Th>
-                      <Th right>Commission</Th><Th right>Tips</Th><Th right>Other Adj.</Th><Th right>Gross Pay</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {visible.map((r) => {
-                      const pending = r.entries.filter((e) => e.clockOutISO && !e.approved).length;
-                      return (
-                        <tr key={r.staff.id} className="transition hover:bg-white/[0.02]">
-                          <Td>
-                            <span className="flex items-center gap-2.5">
-                              <Avatar name={r.staff.name} color={r.staff.color} size={30} />
-                              <span className="min-w-0">
-                                <span className="block truncate text-cream/90">{r.staff.name}</span>
-                                <span className="block text-[11px] text-cream/40">{r.staff.level} · {r.staff.commissionRate}% comm</span>
-                              </span>
-                            </span>
-                          </Td>
-                          <Td>{pending > 0
-                            ? <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[11px] text-sky-200">{pending} pending</span>
-                            : <StatusPill status="Paid" />}</Td>
-                          <Td right>
-                            <button onClick={() => setDayEditorStaff(r.staff.id)} title="Review and correct this employee's shifts"
-                              className="group inline-flex items-center gap-1.5 text-cream/85 transition hover:text-brass">
-                              <span className="tabular-nums">{h1(r.hours)}</span>
-                              {r.overtime > 0 && <span className="text-[10px] text-brass">+{h1(r.overtime)} OT</span>}
-                              <Icon.settings className="h-3.5 w-3.5 text-cream/30 transition group-hover:text-brass" />
-                            </button>
-                          </Td>
-                          <Td right><span className="text-cream/85">{formatMoney(r.baseCents)}</span></Td>
-                          <Td right><span className="text-cream/85">{formatMoney(r.commissionCents)}</span></Td>
-                          <Td right>
-                            <button onClick={() => setTipEditStaff(r.staff.id)} title="Record a tip correction"
-                              className="group inline-flex items-center gap-1.5 text-cream/85 transition hover:text-brass">
-                              {formatMoney(r.tipsCents)}
-                              <Icon.settings className="h-3.5 w-3.5 text-cream/30 transition group-hover:text-brass" />
-                            </button>
-                          </Td>
-                          <Td right><span className={r.adjCents < 0 ? "text-red-300" : r.adjCents > 0 ? "text-emerald-300" : "text-cream/50"}>{formatMoney(r.adjCents)}</span></Td>
-                          <Td right><span className="font-semibold text-brass">{formatMoney(r.grossCents)}</span></Td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-white/10">
-                      <Td className="pt-3 font-semibold text-cream">TOTAL</Td><Td><span /></Td>
-                      <Td right><span className="pt-3 font-semibold tabular-nums text-cream">{h1(totals.hours)}</span></Td>
-                      <Td right><span className="font-semibold text-cream">{formatMoney(totals.base)}</span></Td>
-                      <Td right><span className="font-semibold text-cream">{formatMoney(totals.comm)}</span></Td>
-                      <Td right><span className="font-semibold text-cream">{formatMoney(totals.tips)}</span></Td>
-                      <Td right><span className="font-semibold text-cream">{formatMoney(totals.adj)}</span></Td>
-                      <Td right><span className="text-base font-semibold text-brass">{formatMoney(totals.gross)}</span></Td>
-                    </tr>
-                  </tfoot>
-                </TableWrap>
-                <p className="mt-2 text-[11px] text-cream/40">
-                  Hours come from approved punches — click a total to correct a specific day.
-                  {s.tipPayout === "Same day" && " Tips pay out same-day (Store Settings), so they're excluded from gross."}
-                </p>
-              </>
-            )}
-
             {tab === "timeclock" && (
+              tcRows.length === 0 ? (
+                <div className="grid place-items-center rounded-xl border border-dashed border-white/10 px-6 py-12 text-center">
+                  <span className="text-cream/70">No time entries match these filters</span>
+                  <button onClick={clearTcFilters} className="mt-2 text-sm font-semibold text-brass hover:underline">Clear filters</button>
+                </div>
+              ) : (
+              <>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-xs text-cream/40">
+                <span>{tcRows.length} entr{tcRows.length === 1 ? "y" : "ies"}{tcFiltered ? " (filtered)" : ""} · {h1(tcHours)} hours</span>
+                {tcFiltered && <span>Period totals above are unaffected by filters.</span>}
+              </div>
               <TableWrap min={720}>
                 <thead>
                   <tr><Th>Day</Th><Th>Employee</Th><Th>Clock In</Th><Th>Clock Out</Th><Th right>Hours</Th><Th>Status</Th><Th right>Actions</Th></tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {periodEntries.map((e) => (
+                  {tcRows.map((e) => (
                     <tr key={e.id} className="transition hover:bg-white/[0.02]">
                       <Td className="whitespace-nowrap text-cream/70">{fmtDay(e.clockInISO)}</Td>
                       <Td className="text-cream/85">{staffName(e.staffId)}</Td>
@@ -323,11 +293,14 @@ export default function PayrollPage() {
                   ))}
                 </tbody>
               </TableWrap>
+              </>
+              )
             )}
 
             {tab === "adjustments" && (
               <>
-                <div className="mb-3 flex justify-end">
+                <div className="mb-3 flex flex-wrap justify-end gap-2">
+                  <Btn onClick={() => setTipOpen(true)}><Icon.loyalty className="h-4 w-4" /> Tip Correction</Btn>
                   <Btn variant="gold" onClick={() => setAddingAdj(true)}><Icon.plus className="h-4 w-4" /> Add Adjustment</Btn>
                 </div>
                 {state.payrollAdjustments.length === 0 ? (
@@ -476,12 +449,13 @@ export default function PayrollPage() {
 
       {editorRow && <DayEditor row={editorRow} onClose={() => setDayEditorStaff(null)} onSave={savePunch} />}
       {bulkEdit && <BulkTimeEdit entries={closedEntries} staffName={staffName} onClose={() => setBulkEdit(false)} onSave={savePunch} />}
-      {tipRow && (
-        <TipCorrection row={tipRow} onClose={() => setTipEditStaff(null)}
-          onSave={(amountCents, reason) => {
-            actions.addPayrollAdjustment({ staffId: tipRow.staff.id, kind: "Tip correction", label: reason || "Tip correction", amountCents, dateISO: new Date().toISOString() });
-            setTipEditStaff(null);
-            toast(`Tip correction recorded for ${tipRow.staff.name}`, "success");
+      {tipOpen && (
+        <TipCorrection rows={rows} onClose={() => setTipOpen(false)}
+          onSave={(staffId, amountCents, reason) => {
+            actions.addPayrollAdjustment({ staffId, kind: "Tip correction", label: reason || "Tip correction", amountCents, dateISO: new Date().toISOString() });
+            setTipOpen(false);
+            setAdjReviewed(true);
+            toast(`Tip correction recorded for ${staffName(staffId)}`, "success");
           }} />
       )}
       {addingAdj && (
@@ -621,23 +595,30 @@ function BulkTimeEdit({ entries, staffName, onClose, onSave }: {
   );
 }
 
-function TipCorrection({ row, onClose, onSave }: {
-  row: Row; onClose: () => void; onSave: (amountCents: number, reason: string) => void;
+function TipCorrection({ rows, onClose, onSave }: {
+  rows: Row[]; onClose: () => void; onSave: (staffId: string, amountCents: number, reason: string) => void;
 }) {
+  const [staffId, setStaffId] = useState(rows[0]?.staff.id ?? "");
   const [amount, setAmount] = useState("");
   const [direction, setDirection] = useState<"add" | "subtract">("add");
   const [reason, setReason] = useState("");
   const parsed = parseFloat(amount);
   const cents = Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * 100) * (direction === "add" ? 1 : -1) : 0;
+  const row = rows.find((r) => r.staff.id === staffId);
   return (
-    <Modal open onClose={onClose} title={`Tip correction — ${row.staff.name}`}
+    <Modal open onClose={onClose} title="Tip correction"
       footer={<><Btn onClick={onClose}>Cancel</Btn>
-        <Btn variant="gold" onClick={() => cents && onSave(cents, reason.trim())} disabled={!cents}>Record correction</Btn></>}>
+        <Btn variant="gold" onClick={() => cents && onSave(staffId, cents, reason.trim())} disabled={!cents}>Record correction</Btn></>}>
       <div className="space-y-4">
         <p className="text-xs leading-relaxed text-cream/50">
-          Tips come from checkouts ({formatMoney(row.tipsCents)} this period) and aren&apos;t overwritten —
-          a correction is recorded as its own adjustment so there&apos;s a paper trail.
+          Tips come from checkouts{row ? ` (${formatMoney(row.tipsCents)} for ${row.staff.name} this period)` : ""} and aren&apos;t
+          overwritten — a correction is recorded as its own adjustment so there&apos;s a paper trail.
         </p>
+        <Field label="Employee">
+          <select className="input" value={staffId} onChange={(e) => setStaffId(e.target.value)}>
+            {rows.map((r) => <option key={r.staff.id} value={r.staff.id}>{r.staff.name}</option>)}
+          </select>
+        </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Direction">
             <select className="input" value={direction} onChange={(e) => setDirection(e.target.value as "add" | "subtract")}>
