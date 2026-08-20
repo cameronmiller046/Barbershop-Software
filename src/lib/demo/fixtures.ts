@@ -24,6 +24,8 @@ function at(now: Date, dayOffset: number, hour: number, min: number) {
   return new Date(base.getTime() + dayOffset * DAY + (hour * 60 + min) * 60_000);
 }
 const iso = (d: Date) => d.toISOString();
+const periodLabel = (a: Date, b: Date) =>
+  `${a.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${b.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 
 // ── staff ────────────────────────────────────────────────────────────────
 function seedStaff(now: Date): Staff[] {
@@ -172,24 +174,36 @@ function seedInventory(): InventoryItem[] {
 function seedTimeEntries(now: Date, staff: Staff[]): TimeEntry[] {
   const entries: TimeEntry[] = [];
   const barbers = staff.filter((s) => s.level === "Barber");
-  // Past week: each barber worked 9–17 on weekdays.
-  for (let d = 1; d <= 6; d++) {
+  // A full bi-weekly period of punches per barber (Tue–Sat; closed Sunday,
+  // Monday off). Staggered starts, ~8–9h shifts. The two most recent days for
+  // the first barber are unapproved, and one entry carries a manager edit, so
+  // payroll's approval flow and alerts have something real to chew on.
+  for (let d = 1; d <= 13; d++) {
     const day = at(now, -d, 0, 0);
-    if (day.getDay() === 0) continue; // closed Sunday
+    const dow = day.getDay();
+    if (dow === 0 || dow === 1) continue;
     barbers.forEach((b, bi) => {
+      // Everyone skips one weekday a week, offset per barber, so hours differ.
+      if ((d + bi) % 6 === 0) return;
+      const inMin = 40 + ((d * 7 + bi * 13) % 25); // 9:40–10:05
+      const outMin = 15 + ((d * 11 + bi * 17) % 40); // 18:15–18:55
+      const edited = d === 4 && bi === 1; // Devin's punch was corrected
       entries.push({
         id: `te_${d}_${bi}`,
         staffId: b.id,
-        clockInISO: iso(at(now, -d, 9, bi * 4)),
-        clockOutISO: iso(at(now, -d, 17, 30 + bi * 5)),
-        note: "",
+        clockInISO: iso(at(now, -d, 9, inMin)),
+        clockOutISO: iso(at(now, -d, 18, outMin)),
+        note: edited ? "Forgot to clock out — corrected by Renee" : "",
+        approved: !(bi === 0 && d <= 3), // Andre's latest days await approval
+        edited,
       });
     });
   }
   // Today: the acting barber is currently clocked in (no clock-out yet).
-  entries.push({ id: "te_today", staffId: DEMO_ACTING_BARBER_ID, clockInISO: iso(at(now, 0, 8, 52)), clockOutISO: null, note: "" });
+  entries.push({ id: "te_today", staffId: DEMO_ACTING_BARBER_ID, clockInISO: iso(at(now, 0, 8, 52)), clockOutISO: null, note: "", approved: false });
   return entries;
 }
+
 
 // ── notifications ─────────────────────────────────────────────────────────
 function seedNotifications(now: Date): DemoNotification[] {
@@ -252,6 +266,17 @@ function seedSettings(): ShopSettings {
     notifyEmail: true,
     notifySms: true,
     onlineBooking: true,
+    payFrequency: "Bi-weekly",
+    overtimeAfterHours: 40,
+    overtimeMultiplier: 1.5,
+    defaultCommissionPct: 50,
+    tipPayout: "With payroll",
+    autoConfirmBookings: true,
+    allowWalkIns: true,
+    allowDoubleBooking: false,
+    reminderHoursBefore: 24,
+    salesTaxPct: 8.9,
+    currency: "USD",
   };
 }
 
@@ -319,6 +344,15 @@ export function seedDemoState(role: DemoRole): DemoState {
     sentMessages: [],
     extraExpenses: [],
     coupons: seedCoupons(now),
+    payrollAdjustments: [
+      { id: "adj_1", staffId: "s_bar3", kind: "Bonus", label: "5-star review streak", amountCents: 5000, dateISO: iso(at(now, -3, 12, 0)) },
+      { id: "adj_2", staffId: "s_bar2", kind: "Deduction", label: "Clipper replacement (agreed)", amountCents: -3500, dateISO: iso(at(now, -2, 12, 0)) },
+    ],
+    payrollRuns: [
+      { id: "run_1", periodLabel: periodLabel(at(now, -28, 0, 0), at(now, -15, 0, 0)), ranISO: iso(at(now, -14, 9, 0)), totalCents: 412600, employees: 4 },
+      { id: "run_2", periodLabel: periodLabel(at(now, -42, 0, 0), at(now, -29, 0, 0)), ranISO: iso(at(now, -28, 9, 0)), totalCents: 389450, employees: 4 },
+    ],
+    payrollNotes: "",
     seq: 1,
   };
 }

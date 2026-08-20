@@ -98,6 +98,34 @@ export interface TimeEntry {
   clockInISO: string;
   clockOutISO: string | null;
   note: string;
+  /** Manager sign-off — payroll wants every entry approved before a run. */
+  approved: boolean;
+  /** Set when a manager corrects the punch; surfaces in payroll alerts. */
+  edited?: boolean;
+}
+
+// ── Payroll ────────────────────────────────────────────────────────────────
+
+export type PayFrequency = "Weekly" | "Bi-weekly" | "Semi-monthly" | "Monthly";
+
+/** A one-off pay change for an employee inside the current period. */
+export interface PayrollAdjustment {
+  id: string;
+  staffId: string;
+  kind: "Bonus" | "Deduction" | "Reimbursement" | "Tip correction";
+  label: string;
+  /** Positive adds to pay; deductions are stored negative. */
+  amountCents: number;
+  dateISO: string;
+}
+
+/** A finalized payroll run — the Pay History tab. */
+export interface PayrollRun {
+  id: string;
+  periodLabel: string;
+  ranISO: string;
+  totalCents: number;
+  employees: number;
 }
 
 export interface DemoNotification {
@@ -234,6 +262,25 @@ export interface ShopSettings {
   onlineBooking: boolean;
   /** Monthly revenue target set from the Financials banner (unset = no goal). */
   revenueGoalCents?: number;
+
+  // ── Payroll ──
+  payFrequency: PayFrequency;
+  /** Weekly hours after which overtime pay kicks in. */
+  overtimeAfterHours: number;
+  overtimeMultiplier: number; // e.g. 1.5
+  /** Commission suggested when adding a new barber. */
+  defaultCommissionPct: number;
+  tipPayout: "Same day" | "With payroll";
+
+  // ── Booking extras ──
+  autoConfirmBookings: boolean;
+  allowWalkIns: boolean;
+  allowDoubleBooking: boolean;
+  reminderHoursBefore: number;
+
+  // ── Financial ──
+  salesTaxPct: number;
+  currency: "USD";
 }
 
 /** A barber's own weekly availability (minutes-from-midnight windows). */
@@ -261,6 +308,9 @@ export interface DemoState {
   /** Expenses added during this session, merged ahead of the seeded ledger. */
   extraExpenses: Expense[];
   coupons: Coupon[];
+  payrollAdjustments: PayrollAdjustment[];
+  payrollRuns: PayrollRun[];
+  payrollNotes: string;
   settings: ShopSettings;
   availability: Availability;
   /** Monotonic counter for new entity ids created during the session. */

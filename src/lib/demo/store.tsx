@@ -17,7 +17,7 @@ import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { seedDemoState } from "./fixtures";
 import type {
   Appointment, ApptStatus, Availability, Campaign, Coupon, Customer, DayHours, DemoRole, DemoState,
-  Expense, InventoryItem, MsgTemplate, PaymentMethod, PhotoSet, SentMessage, Service, ShopSettings, Staff,
+  Expense, InventoryItem, MsgTemplate, PaymentMethod, PayrollAdjustment, PayrollRun, PhotoSet, SentMessage, Service, ShopSettings, Staff, TimeEntry,
 } from "./types";
 
 type Updater = (prev: DemoState) => DemoState;
@@ -54,6 +54,16 @@ export interface DemoActions {
   // time clock
   clockIn(staffId: string): void;
   clockOut(entryId: string): void;
+  /** Day-based punch correction: edit one entry's in/out, flagging the edit. */
+  updateTimeEntry(id: string, patch: Partial<TimeEntry>): void;
+  addTimeEntry(e: Omit<TimeEntry, "id"> & { id?: string }): string;
+  approveAllTime(): void;
+
+  // payroll
+  addPayrollAdjustment(a: Omit<PayrollAdjustment, "id"> & { id?: string }): string;
+  deletePayrollAdjustment(id: string): void;
+  runPayroll(run: Omit<PayrollRun, "id"> & { id?: string }): string;
+  setPayrollNotes(text: string): void;
 
   // notifications
   markNotifRead(id: string): void;
@@ -163,9 +173,29 @@ export function DemoProvider({ role, children }: { role: DemoRole; children: Rea
       updateInventory: (id, patch) => update((s) => ({ ...s, inventory: mapItem(s.inventory, id, patch) })),
 
       clockIn: (staffId) =>
-        update((s) => ({ ...s, timeEntries: [...s.timeEntries, { id: nextId("te"), staffId, clockInISO: new Date().toISOString(), clockOutISO: null, note: "" }] })),
+        update((s) => ({ ...s, timeEntries: [...s.timeEntries, { id: nextId("te"), staffId, clockInISO: new Date().toISOString(), clockOutISO: null, note: "", approved: false }] })),
       clockOut: (entryId) =>
         update((s) => ({ ...s, timeEntries: mapItem(s.timeEntries, entryId, { clockOutISO: new Date().toISOString() }) })),
+      updateTimeEntry: (id, patch) => update((s) => ({ ...s, timeEntries: mapItem(s.timeEntries, id, patch) })),
+      addTimeEntry: (e) => {
+        const id = e.id ?? nextId("te");
+        update((s) => ({ ...s, timeEntries: [...s.timeEntries, { ...e, id }] }));
+        return id;
+      },
+      approveAllTime: () => update((s) => ({ ...s, timeEntries: s.timeEntries.map((t) => ({ ...t, approved: true })) })),
+
+      addPayrollAdjustment: (a) => {
+        const id = a.id ?? nextId("adj");
+        update((s) => ({ ...s, payrollAdjustments: [{ ...a, id }, ...s.payrollAdjustments] }));
+        return id;
+      },
+      deletePayrollAdjustment: (id) => update((s) => ({ ...s, payrollAdjustments: s.payrollAdjustments.filter((a) => a.id !== id) })),
+      runPayroll: (run) => {
+        const id = run.id ?? nextId("run");
+        update((s) => ({ ...s, payrollRuns: [{ ...run, id }, ...s.payrollRuns] }));
+        return id;
+      },
+      setPayrollNotes: (text) => update((s) => ({ ...s, payrollNotes: text })),
 
       markNotifRead: (id) => update((s) => ({ ...s, notifications: mapItem(s.notifications, id, { read: true }) })),
       markAllNotifsRead: () => update((s) => ({ ...s, notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
