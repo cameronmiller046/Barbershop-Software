@@ -16,7 +16,7 @@
 import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { seedDemoState } from "./fixtures";
 import type {
-  Appointment, ApptStatus, Availability, Campaign, Customer, DayHours, DemoRole, DemoState,
+  Appointment, ApptStatus, Availability, Campaign, Coupon, Customer, DayHours, DemoRole, DemoState,
   Expense, InventoryItem, MsgTemplate, PaymentMethod, PhotoSet, SentMessage, Service, ShopSettings, Staff,
 } from "./types";
 
@@ -77,6 +77,15 @@ export interface DemoActions {
 
   // expenses
   addExpense(e: Omit<Expense, "id"> & { id?: string }): string;
+
+  // marketing
+  addCoupon(c: Omit<Coupon, "id"> & { id?: string }): string;
+  updateCoupon(id: string, patch: Partial<Coupon>): void;
+  /** Apply a code at checkout: bumps redemptions and attributes the sale to
+   *  the coupon and its campaign. */
+  redeemCoupon(code: string, saleCents: number): void;
+  /** Mark a campaign sent and record its outbound messages in one update. */
+  sendCampaign(id: string, payload: { messages: Omit<SentMessage, "id" | "sentISO">[]; recipients: number; openRate: number }): void;
 }
 
 interface DemoCtx {
@@ -201,6 +210,33 @@ export function DemoProvider({ role, children }: { role: DemoRole; children: Rea
         const id = e.id ?? nextId("exp");
         update((s) => ({ ...s, extraExpenses: [{ ...e, id }, ...s.extraExpenses] }));
         return id;
+      },
+
+      addCoupon: (c) => {
+        const id = c.id ?? nextId("cpn");
+        update((s) => ({ ...s, coupons: [{ ...c, id }, ...s.coupons] }));
+        return id;
+      },
+      updateCoupon: (id, patch) => update((s) => ({ ...s, coupons: mapItem(s.coupons, id, patch) })),
+      redeemCoupon: (code, saleCents) =>
+        update((s) => {
+          const cpn = s.coupons.find((x) => x.code === code.toUpperCase());
+          if (!cpn) return s;
+          return {
+            ...s,
+            coupons: mapItem(s.coupons, cpn.id, { redemptions: cpn.redemptions + 1, revenueCents: cpn.revenueCents + saleCents }),
+            campaigns: cpn.campaignId
+              ? s.campaigns.map((c) => (c.id === cpn.campaignId ? { ...c, revenueCents: c.revenueCents + saleCents } : c))
+              : s.campaigns,
+          };
+        }),
+      sendCampaign: (id, { messages, recipients, openRate }) => {
+        const stamped = messages.map((m) => ({ ...m, id: nextId("msg"), sentISO: new Date().toISOString() }));
+        update((s) => ({
+          ...s,
+          sentMessages: [...stamped, ...s.sentMessages],
+          campaigns: mapItem(s.campaigns, id, { status: "Sent", recipients, openRate, sentISO: new Date().toISOString() }),
+        }));
       },
     };
   }, [role]);

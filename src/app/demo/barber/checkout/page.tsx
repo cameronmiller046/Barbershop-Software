@@ -30,6 +30,9 @@ export default function CheckoutPage() {
   const [customTipStr, setCustomTipStr] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [addRetail, setAddRetail] = useState<Record<string, number>>({});
+  const [couponInput, setCouponInput] = useState("");
+  const [couponCode, setCouponCode] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState("");
 
   const svc = sel ? serviceById(state, sel.serviceId) : null;
   const cust = sel ? customerById(state, sel.customerId) : null;
@@ -40,12 +43,34 @@ export default function CheckoutPage() {
   const svcCents = svc?.priceCents ?? 0;
   const customTipCents = (() => { const n = parseFloat(customTipStr); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0; })();
   const tipCents = customTip ? customTipCents : Math.round(svcCents * tipPct);
-  const total = svcCents + retailTotal + tipCents;
+
+  // Coupon (from Marketing): discounts service + retail, never the tip.
+  const coupon = couponCode ? state.coupons.find((x) => x.code === couponCode) ?? null : null;
+  const discountable = svcCents + retailTotal;
+  const discountCents = coupon
+    ? Math.min(discountable, coupon.kind === "percent" ? Math.round(discountable * (coupon.value / 100)) : coupon.value)
+    : 0;
+  const total = svcCents + retailTotal + tipCents - discountCents;
+
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    const found = state.coupons.find((x) => x.code === code);
+    if (!found) { setCouponError("Code not found"); return; }
+    if (!found.active) { setCouponError("That code has been deactivated"); return; }
+    if (found.expiresISO && Date.parse(found.expiresISO) < Date.now()) { setCouponError("That code has expired"); return; }
+    setCouponCode(found.code);
+    setCouponInput("");
+    setCouponError("");
+    toast(`${found.code} applied — ${found.label}`, "success");
+  };
 
   const take = () => {
     if (!sel) return;
     Object.entries(addRetail).forEach(([id, qty]) => qty > 0 && actions.adjustStock(id, -qty));
     actions.checkout(sel.id, tipCents, method);
+    // Attribute the discounted sale back to the coupon and its campaign.
+    if (coupon && discountCents > 0) actions.redeemCoupon(coupon.code, total);
     toast("Payment complete — receipt sent", "success");
     const rest = queue.filter((a) => a.id !== sel.id);
     setSelId(rest[0]?.id ?? null);
@@ -53,6 +78,9 @@ export default function CheckoutPage() {
     setTipPct(0.2);
     setCustomTip(false);
     setCustomTipStr("");
+    setCouponCode(null);
+    setCouponInput("");
+    setCouponError("");
   };
 
   return (
@@ -149,6 +177,34 @@ export default function CheckoutPage() {
             </div>
 
             <div className="border-t border-white/8 py-4">
+              <SectionTitle>Promo code</SectionTitle>
+              {coupon ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-brass/40 bg-brass/[0.08] px-3 py-2.5">
+                  <div className="min-w-0">
+                    <span className="font-mono text-sm font-semibold tracking-wide text-brass">{coupon.code}</span>
+                    <span className="ml-2 text-xs text-cream/60">{coupon.label}</span>
+                  </div>
+                  <button onClick={() => { setCouponCode(null); setCouponError(""); }} aria-label="Remove coupon"
+                    className="shrink-0 text-cream/40 transition hover:text-cream">✕</button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponInput}
+                      onChange={(e) => { setCouponInput(e.target.value); setCouponError(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                      placeholder="Enter code — e.g. FALLFADE"
+                      className="input flex-1 !py-2 font-mono text-sm uppercase"
+                    />
+                    <Btn onClick={applyCoupon} disabled={!couponInput.trim()}>Apply</Btn>
+                  </div>
+                  {couponError && <p className="mt-1.5 text-xs text-red-300">{couponError}</p>}
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-white/8 py-4">
               <SectionTitle>Payment</SectionTitle>
               <div className="grid grid-cols-3 gap-2">
                 {(["card", "cash", "wallet"] as PaymentMethod[]).map((m) => (
@@ -163,6 +219,12 @@ export default function CheckoutPage() {
               <Row label={svc.name} value={svcCents} />
               {retailTotal > 0 && <Row label="Retail" value={retailTotal} />}
               <Row label={customTip ? "Tip (custom)" : `Tip (${Math.round(tipPct * 100)}%)`} value={tipCents} />
+              {coupon && discountCents > 0 && (
+                <div className="flex items-center justify-between text-emerald-300">
+                  <span>Coupon {coupon.code}</span>
+                  <span>-{formatMoney(discountCents)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between border-t border-white/8 pt-2 text-base font-semibold">
                 <span className="text-cream">Total</span><span className="text-brass"><Money cents={total} /></span>
               </div>

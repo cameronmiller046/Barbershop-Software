@@ -11,7 +11,7 @@
 import { SEED_TEMPLATES } from "@/lib/messageTemplates";
 import type {
   Appointment, ApptStatus, Availability, Campaign, Customer, DayHours, DemoNotification, DemoRole,
-  DemoState, InventoryItem, MsgTemplate, PhotoSet, Service, ShopSettings, Staff, TimeEntry,
+  Coupon, DemoState, InventoryItem, MsgTemplate, PhotoSet, Service, ShopSettings, Staff, TimeEntry,
 } from "./types";
 
 export const DEMO_ACTING_BARBER_ID = "s_bar1"; // "you" in the barber sandbox
@@ -80,7 +80,9 @@ function seedCustomers(now: Date): Customer[] {
     notes: notes[i] ?? "",
     tags,
     visits,
-    lastVisitISO: iso(at(now, -(2 + i), 11, 0)),
+    // The last three clients lapsed months ago so win-back audiences have
+    // real people in them; everyone else visited recently.
+    lastVisitISO: iso(at(now, -(i >= CUST_SEED.length - 3 ? 65 + (CUST_SEED.length - i) * 12 : 2 + i), 11, 0)),
     totalSpentCents: spent * 100,
     createdAtISO: iso(at(now, -(30 + i * 9), 9, 0)),
   }));
@@ -208,10 +210,10 @@ function seedNotifications(now: Date): DemoNotification[] {
 // ── campaigns ─────────────────────────────────────────────────────────────
 function seedCampaigns(now: Date): Campaign[] {
   return [
-    { id: "cmp_1", name: "Fall Fade Special", channel: "Email", status: "Sent", audience: "All clients", recipients: 812, openRate: 0.42, revenueCents: 214000, sentISO: iso(at(now, -12, 9, 0)) },
-    { id: "cmp_2", name: "We miss you — 20% off", channel: "SMS", status: "Sent", audience: "Lapsed (60+ days)", recipients: 134, openRate: 0.78, revenueCents: 96500, sentISO: iso(at(now, -5, 10, 0)) },
-    { id: "cmp_3", name: "Holiday Gift Cards", channel: "Email", status: "Scheduled", audience: "VIP", recipients: 96, openRate: 0, revenueCents: 0, sentISO: iso(at(now, 3, 9, 0)) },
-    { id: "cmp_4", name: "Refer-a-friend launch", channel: "Social", status: "Draft", audience: "All clients", recipients: 0, openRate: 0, revenueCents: 0, sentISO: null },
+    { id: "cmp_1", name: "Fall Fade Special", channel: "Email", status: "Sent", audience: "All clients", recipients: 812, openRate: 0.42, revenueCents: 214000, sentISO: iso(at(now, -12, 9, 0)), couponCode: "FALLFADE" },
+    { id: "cmp_2", name: "We miss you — 20% off", channel: "SMS", status: "Sent", audience: "Lapsed (60+ days)", recipients: 134, openRate: 0.78, revenueCents: 96500, sentISO: iso(at(now, -5, 10, 0)), couponCode: "COMEBACK20" },
+    { id: "cmp_3", name: "Holiday Gift Cards", channel: "Email", status: "Scheduled", audience: "VIP", recipients: 96, openRate: 0, revenueCents: 0, sentISO: iso(at(now, 3, 9, 0)), couponCode: null },
+    { id: "cmp_4", name: "Refer-a-friend launch", channel: "Social", status: "Draft", audience: "All clients", recipients: 0, openRate: 0, revenueCents: 0, sentISO: null, couponCode: "FRIEND10" },
   ];
 }
 
@@ -267,6 +269,16 @@ function seedAvailability(): Availability {
   };
 }
 
+// ── coupons ────────────────────────────────────────────────────────────────
+function seedCoupons(now: Date): Coupon[] {
+  return [
+    { id: "cpn_1", code: "FALLFADE", label: "15% off any service", kind: "percent", value: 15, active: true, expiresISO: iso(at(now, 21, 23, 59)), campaignId: "cmp_1", redemptions: 38, revenueCents: 214000 },
+    { id: "cpn_2", code: "COMEBACK20", label: "20% off your next visit", kind: "percent", value: 20, active: true, expiresISO: iso(at(now, 14, 23, 59)), campaignId: "cmp_2", redemptions: 17, revenueCents: 96500 },
+    { id: "cpn_3", code: "FRIEND10", label: "$10 off for referred friends", kind: "amount", value: 1000, active: true, expiresISO: null, campaignId: "cmp_4", redemptions: 0, revenueCents: 0 },
+    { id: "cpn_4", code: "SUMMER5", label: "$5 off — expired promo", kind: "amount", value: 500, active: false, expiresISO: iso(at(now, -30, 23, 59)), campaignId: null, redemptions: 52, revenueCents: 187300 },
+  ];
+}
+
 // ── message templates ────────────────────────────────────────────
 // Shares the real product's starter copy (lib/messageTemplates is pure — no
 // Prisma, no server imports) so the sandbox shows exactly what a new shop gets.
@@ -306,6 +318,7 @@ export function seedDemoState(role: DemoRole): DemoState {
     templates: seedTemplates(),
     sentMessages: [],
     extraExpenses: [],
+    coupons: seedCoupons(now),
     seq: 1,
   };
 }

@@ -117,8 +117,28 @@ export interface Campaign {
   audience: string;
   recipients: number;
   openRate: number; // 0–1
+  /** Sales rung up at checkout with this campaign's coupon code. */
   revenueCents: number;
   sentISO: string | null;
+  /** Coupon attached to this promotion (redeemable at checkout), if any. */
+  couponCode?: string | null;
+}
+
+/** A promo code a client shows at checkout. Created with a campaign (or on
+ *  its own); redemptions and the revenue they ring up feed Marketing. */
+export interface Coupon {
+  id: string;
+  code: string; // stored uppercase; matched case-insensitively
+  label: string; // "15% off any service"
+  kind: "percent" | "amount";
+  /** Percent (1–100) for `percent`, cents for `amount`. */
+  value: number;
+  active: boolean;
+  expiresISO: string | null;
+  campaignId: string | null;
+  redemptions: number;
+  /** Total sale value of checkouts where this code was applied. */
+  revenueCents: number;
 }
 
 export interface PhotoSet {
@@ -236,6 +256,7 @@ export interface DemoState {
   sentMessages: SentMessage[];
   /** Expenses added during this session, merged ahead of the seeded ledger. */
   extraExpenses: Expense[];
+  coupons: Coupon[];
   settings: ShopSettings;
   availability: Availability;
   /** Monotonic counter for new entity ids created during the session. */
