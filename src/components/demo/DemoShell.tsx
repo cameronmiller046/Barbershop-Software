@@ -10,7 +10,8 @@ import { useToast } from "@/components/demo/toast";
 import { Avatar } from "@/components/demo/ui";
 import type { DemoRole } from "@/lib/demo/types";
 
-type NavItem = { label: string; href: string; icon: IconName; exact?: boolean };
+type NavChild = { label: string; href: string; exact?: boolean };
+type NavItem = { label: string; href: string; icon: IconName; exact?: boolean; children?: NavChild[] };
 type NavGroup = { heading?: string; items: NavItem[] };
 
 const ADMIN_NAV: NavGroup[] = [
@@ -27,7 +28,13 @@ const ADMIN_NAV: NavGroup[] = [
     { label: "Payroll", href: "/demo/admin/payroll", icon: "dollar" },
     { label: "Reports", href: "/demo/admin/reports", icon: "reports" },
     { label: "Analytics", href: "/demo/admin/analytics", icon: "analytics" },
-    { label: "Financials", href: "/demo/admin/financials", icon: "gauge" },
+    { label: "Financials", href: "/demo/admin/financials", icon: "gauge", children: [
+      { label: "Overview", href: "/demo/admin/financials", exact: true },
+      { label: "Chair Rentals", href: "/demo/admin/financials/chair-rentals" },
+      { label: "Expenses", href: "/demo/admin/financials/expenses" },
+      { label: "Profit & Loss", href: "/demo/admin/financials/profit-loss" },
+      { label: "Transactions", href: "/demo/admin/financials/transactions" },
+    ] },
     { label: "Marketing", href: "/demo/admin/marketing", icon: "marketing" },
   ] },
   { heading: "System", items: [
@@ -56,6 +63,56 @@ const BARBER_NAV: NavGroup[] = [
   ] },
 ];
 
+/**
+ * A sidebar item with a nested submenu (Financials). The submenu auto-expands
+ * whenever the route is inside the section — including on refresh and direct
+ * URL access — and the user can still toggle it open on other pages.
+ */
+function NavParent({
+  item, active, matches,
+}: { item: NavItem; active: boolean; matches: (href: string, exact?: boolean) => boolean }) {
+  const I = Icon[item.icon];
+  const [manualOpen, setManualOpen] = useState(false);
+  // Being inside the section always wins, so navigating between children never
+  // collapses the menu even if the user had toggled it shut elsewhere.
+  const open = active || manualOpen;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setManualOpen((o) => (active ? o : !o))}
+        aria-expanded={open}
+        className={cx("p-nav w-full text-left", active && "p-nav-active")}
+      >
+        <I className="h-5 w-5 shrink-0" />
+        <span className="flex-1">{item.label}</span>
+        <Icon.chevron className={cx("h-4 w-4 shrink-0 transition-transform duration-200", open ? "-rotate-90" : "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="relative ml-[26px] mt-0.5 space-y-0.5 border-l border-white/10 pl-2.5">
+          {item.children!.map((c) => {
+            const on = matches(c.href, c.exact);
+            return (
+              <Link
+                key={c.href}
+                href={c.href}
+                className={cx(
+                  "block rounded-lg px-2.5 py-1.5 text-[13px] transition",
+                  on ? "bg-brass/10 font-medium text-brass" : "text-cream/55 hover:bg-white/[0.03] hover:text-cream",
+                )}
+              >
+                {c.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DemoShell({ role, children }: { role: DemoRole; children: React.ReactNode }) {
   const { state, actions } = useDemo();
   const { toast } = useToast();
@@ -69,8 +126,11 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
   const acting = isAdmin ? staffById(state, "s_owner") : staffById(state, state.currentStaffId);
   const unread = state.notifications.filter((n) => !n.read).length;
 
-  const isActive = (i: NavItem) =>
-    i.exact ? pathname === i.href : pathname === i.href || pathname.startsWith(i.href + "/");
+  const matches = (href: string, exact?: boolean) =>
+    exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+  // A parent with children counts as active anywhere in its subtree, so
+  // Financials stays highlighted on /financials/chair-rentals.
+  const isActive = (i: NavItem) => matches(i.href, i.children ? false : i.exact);
 
   const doReset = () => { actions.reset(); toast("Sandbox reset to its starting state", "success"); };
 
@@ -96,6 +156,7 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
               const I = Icon[i.icon];
               const active = isActive(i);
               const showBadge = i.label === "Notifications" && unread > 0;
+              if (i.children) return <NavParent key={i.href} item={i} active={active} matches={matches} />;
               return (
                 <Link key={i.href} href={i.href} className={cx("p-nav", active && "p-nav-active")}>
                   <I className="h-5 w-5 shrink-0" />
