@@ -6,11 +6,13 @@ import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, Btn, Field, Modal, KPI, Money, Tag, SectionTitle, SandboxNote, cx } from "@/components/demo/ui";
 import { Icon } from "@/components/home/icons";
 import { formatMoney } from "@/lib/utils";
-import type { Campaign, Coupon, Customer, DemoState, SentMessage } from "@/lib/demo/types";
+import type { Campaign, CampaignChannel, Coupon, Customer, DemoState, SentMessage } from "@/lib/demo/types";
 
-const CH_TONE: Record<Campaign["channel"], string> = { Email: "#d8b25c", SMS: "#34d399", Social: "#38bdf8" };
+const CH_TONE: Record<CampaignChannel, string> = { Email: "#d8b25c", SMS: "#34d399", Social: "#38bdf8" };
 const ST_TONE: Record<Campaign["status"], "green" | "blue" | "neutral"> = { Sent: "green", Scheduled: "blue", Draft: "neutral" };
 const AUDIENCES = ["All clients", "VIP", "Lapsed (60+ days)", "New clients"] as const;
+const CHANNELS: CampaignChannel[] = ["SMS", "Email", "Social"];
+const SOCIAL_REACH = 480; // simulated followers reached by a social post
 
 /** Who a campaign actually reaches, from real sandbox clients. */
 function audienceOf(state: DemoState, audience: string): Customer[] {
@@ -39,32 +41,36 @@ export default function MarketingPage() {
   const redemptions = state.coupons.reduce((s, c) => s + c.redemptions, 0);
   const shopName = state.settings.name.replace(" — Flagship", "");
 
-  /** The automation: send the promo to every client in the audience over the
-   *  campaign's channel, each message recorded in the sandbox outbox. */
+  /** Per-channel reachable counts for a campaign's audience. */
+  const reachableBy = (audience: string) => {
+    const targets = audienceOf(state, audience);
+    return {
+      SMS: targets.filter((t) => t.phone).length,
+      Email: targets.filter((t) => t.email).length,
+      Social: SOCIAL_REACH,
+    };
+  };
+
+  /** The automation: message every reachable client on every selected channel,
+   *  each send recorded in the sandbox outbox. */
   const sendNow = (c: Campaign) => {
     const coupon = c.couponCode ? state.coupons.find((x) => x.code === c.couponCode) : null;
     const offer = coupon ? ` Show code ${coupon.code} at checkout for ${coupon.label}.` : "";
-
-    if (c.channel === "Social") {
-      // No direct messages for a social post — simulated reach only.
-      actions.sendCampaign(c.id, { messages: [], recipients: 480, openRate: openRateOf(c.id) });
-      toast("Posted to your social channels (simulated) — reach ~480", "success");
-      return;
-    }
-
     const targets = audienceOf(state, c.audience);
+
     const messages: Omit<SentMessage, "id" | "sentISO">[] = [];
     let sms = 0, email = 0;
     for (const cust of targets) {
       const first = cust.name.split(" ")[0];
-      if (c.channel === "SMS" && cust.phone) {
+      if (c.channels.includes("SMS") && cust.phone) {
         sms++;
         messages.push({
           customerId: cust.id, channel: "SMS", toAddress: cust.phone, subject: null,
           body: `${shopName}: ${first}, ${c.name}!${offer} Book: thechair.app/book Reply STOP to opt out.`,
           templateId: null,
         });
-      } else if (c.channel === "Email" && cust.email) {
+      }
+      if (c.channels.includes("Email") && cust.email) {
         email++;
         messages.push({
           customerId: cust.id, channel: "EMAIL", toAddress: cust.email, subject: `${c.name} at ${shopName}`,
@@ -73,18 +79,20 @@ export default function MarketingPage() {
         });
       }
     }
+    const social = c.channels.includes("Social");
+    const recipients = messages.length + (social ? SOCIAL_REACH : 0);
 
-    if (!messages.length) {
-      toast(`No one in “${c.audience}” can receive ${c.channel} — nothing sent`, "info");
+    if (!recipients) {
+      toast(`No one in “${c.audience}” can receive this campaign — nothing sent`, "info");
       return;
     }
-    actions.sendCampaign(c.id, { messages, recipients: messages.length, openRate: openRateOf(c.id) });
-    toast(
-      c.channel === "SMS"
-        ? `Texted ${sms} client${sms === 1 ? "" : "s"}${coupon ? ` with code ${coupon.code}` : ""} (simulated)`
-        : `Emailed ${email} client${email === 1 ? "" : "s"}${coupon ? ` with code ${coupon.code}` : ""} (simulated)`,
-      "success",
-    );
+    actions.sendCampaign(c.id, { messages, recipients, openRate: openRateOf(c.id) });
+    const parts = [
+      sms ? `texted ${sms}` : "",
+      email ? `emailed ${email}` : "",
+      social ? `social reach ~${SOCIAL_REACH}` : "",
+    ].filter(Boolean).join(" · ");
+    toast(`Campaign sent — ${parts}${coupon ? ` · code ${coupon.code}` : ""} (simulated)`, "success");
   };
 
   return (
@@ -108,23 +116,30 @@ export default function MarketingPage() {
           <div className="px-5 pt-4"><SectionTitle>Campaigns</SectionTitle></div>
           <div className="divide-y divide-white/6">
             {state.campaigns.map((c) => {
-              const targets = c.channel === "Social" ? null : audienceOf(state, c.audience);
-              const reachable = targets
-                ? targets.filter((t) => (c.channel === "SMS" ? t.phone : t.email)).length
-                : null;
+              const counts = reachableBy(c.audience);
+              const reachNow = c.channels
+                .map((ch) => ch === "Social" ? `~${SOCIAL_REACH} social` : `${counts[ch]} by ${ch}`)
+                .join(" · ");
+              const tone = CH_TONE[c.channels[0] ?? "Email"];
               return (
                 <div key={c.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${CH_TONE[c.channel]}1f`, color: CH_TONE[c.channel] }}><Icon.marketing className="h-5 w-5" /></span>
+                  <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${tone}1f`, color: tone }}><Icon.marketing className="h-5 w-5" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-cream">{c.name}</span>
                       <Tag tone={ST_TONE[c.status]}>{c.status}</Tag>
                       {c.couponCode && <span className="rounded-md border border-brass/40 bg-brass/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-wide text-brass">{c.couponCode}</span>}
                     </div>
-                    <div className="text-xs text-cream/45">
-                      {c.channel} · {c.audience} · {c.status === "Sent"
-                        ? `${c.recipients.toLocaleString()} sent`
-                        : reachable != null ? `${reachable} reachable now` : "social post"}
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {c.channels.map((ch) => (
+                        <span key={ch} className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                          style={{ borderColor: `${CH_TONE[ch]}4d`, background: `${CH_TONE[ch]}14`, color: CH_TONE[ch] }}>
+                          {ch}
+                        </span>
+                      ))}
+                      <span className="text-xs text-cream/45">
+                        · {c.audience} · {c.status === "Sent" ? `${c.recipients.toLocaleString()} sent` : reachNow}
+                      </span>
                     </div>
                   </div>
                   <div className="hidden text-right sm:block">
@@ -183,7 +198,7 @@ export default function MarketingPage() {
 
   function NewCampaign({ onClose }: { onClose: () => void }) {
     const [name, setName] = useState("");
-    const [channel, setChannel] = useState<Campaign["channel"]>("SMS");
+    const [channels, setChannels] = useState<CampaignChannel[]>(["SMS"]);
     const [audience, setAudience] = useState<string>("All clients");
     const [withCoupon, setWithCoupon] = useState(true);
     const [code, setCode] = useState("");
@@ -195,15 +210,20 @@ export default function MarketingPage() {
     const valueOk = Number.isFinite(parsedValue) && parsedValue > 0 && (kind !== "percent" || parsedValue <= 100);
     const cleanCode = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const codeTaken = withCoupon && state.coupons.some((c) => c.code === cleanCode);
-    const canSave = !!name.trim() && (!withCoupon || (cleanCode.length >= 3 && valueOk && !codeTaken));
+    const canSave = !!name.trim() && channels.length > 0 && (!withCoupon || (cleanCode.length >= 3 && valueOk && !codeTaken));
 
-    const reachable = audienceOf(state, audience)
-      .filter((t) => (channel === "SMS" ? t.phone : channel === "Email" ? t.email : true)).length;
+    const toggleChannel = (ch: CampaignChannel) =>
+      setChannels((cur) => (cur.includes(ch) ? cur.filter((x) => x !== ch) : [...CHANNELS.filter((x) => cur.includes(x) || x === ch)]));
+
+    const counts = reachableBy(audience);
+    const reachHint = channels.length
+      ? channels.map((ch) => (ch === "Social" ? `~${SOCIAL_REACH} social reach` : `${counts[ch]} by ${ch}`)).join(" · ")
+      : "Pick at least one channel";
 
     const save = () => {
       if (!canSave) return;
       const campaignId = actions.addCampaign({
-        name: name.trim(), channel, status: "Draft", audience,
+        name: name.trim(), channels, status: "Draft", audience,
         recipients: 0, openRate: 0, revenueCents: 0, sentISO: null,
         couponCode: withCoupon ? cleanCode : null,
       });
@@ -229,18 +249,27 @@ export default function MarketingPage() {
           <Field label="Campaign name">
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Spring refresh — 15% off" />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Channel">
-              <select className="input" value={channel} onChange={(e) => setChannel(e.target.value as Campaign["channel"])}>
-                {(["SMS", "Email", "Social"] as const).map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="Audience" hint={channel === "Social" ? "Public post — no direct messages" : `${reachable} client${reachable === 1 ? "" : "s"} reachable by ${channel}`}>
-              <select className="input" value={audience} onChange={(e) => setAudience(e.target.value)}>
-                {AUDIENCES.map((a) => <option key={a}>{a}</option>)}
-              </select>
-            </Field>
-          </div>
+
+          <Field label="Channels" hint={reachHint}>
+            <div className="grid grid-cols-3 gap-2">
+              {CHANNELS.map((ch) => {
+                const on = channels.includes(ch);
+                return (
+                  <button key={ch} type="button" onClick={() => toggleChannel(ch)} aria-pressed={on}
+                    className={cx("flex items-center justify-center gap-1.5 rounded-lg border py-2 text-sm transition",
+                      on ? "border-brass bg-brass/15 text-brass" : "border-white/10 text-cream/60 hover:text-cream")}>
+                    {on && <Icon.check className="h-3.5 w-3.5" />}{ch}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <Field label="Audience">
+            <select className="input" value={audience} onChange={(e) => setAudience(e.target.value)}>
+              {AUDIENCES.map((a) => <option key={a}>{a}</option>)}
+            </select>
+          </Field>
 
           <div className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3">
             <div className="min-w-0">

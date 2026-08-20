@@ -109,10 +109,14 @@ export interface DemoNotification {
   read: boolean;
 }
 
+export type CampaignChannel = "Email" | "SMS" | "Social";
+
 export interface Campaign {
   id: string;
   name: string;
-  channel: "Email" | "SMS" | "Social";
+  /** A campaign can go out over several channels at once (SMS + Email + a
+   *  social post); each reachable client gets a message per channel. */
+  channels: CampaignChannel[];
   status: "Draft" | "Scheduled" | "Sent";
   audience: string;
   recipients: number;

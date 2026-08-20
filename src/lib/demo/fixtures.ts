@@ -210,10 +210,10 @@ function seedNotifications(now: Date): DemoNotification[] {
 // ── campaigns ─────────────────────────────────────────────────────────────
 function seedCampaigns(now: Date): Campaign[] {
   return [
-    { id: "cmp_1", name: "Fall Fade Special", channel: "Email", status: "Sent", audience: "All clients", recipients: 812, openRate: 0.42, revenueCents: 214000, sentISO: iso(at(now, -12, 9, 0)), couponCode: "FALLFADE" },
-    { id: "cmp_2", name: "We miss you — 20% off", channel: "SMS", status: "Sent", audience: "Lapsed (60+ days)", recipients: 134, openRate: 0.78, revenueCents: 96500, sentISO: iso(at(now, -5, 10, 0)), couponCode: "COMEBACK20" },
-    { id: "cmp_3", name: "Holiday Gift Cards", channel: "Email", status: "Scheduled", audience: "VIP", recipients: 96, openRate: 0, revenueCents: 0, sentISO: iso(at(now, 3, 9, 0)), couponCode: null },
-    { id: "cmp_4", name: "Refer-a-friend launch", channel: "Social", status: "Draft", audience: "All clients", recipients: 0, openRate: 0, revenueCents: 0, sentISO: null, couponCode: "FRIEND10" },
+    { id: "cmp_1", name: "Fall Fade Special", channels: ["Email", "SMS"], status: "Sent", audience: "All clients", recipients: 812, openRate: 0.42, revenueCents: 214000, sentISO: iso(at(now, -12, 9, 0)), couponCode: "FALLFADE" },
+    { id: "cmp_2", name: "We miss you — 20% off", channels: ["SMS"], status: "Sent", audience: "Lapsed (60+ days)", recipients: 134, openRate: 0.78, revenueCents: 96500, sentISO: iso(at(now, -5, 10, 0)), couponCode: "COMEBACK20" },
+    { id: "cmp_3", name: "Holiday Gift Cards", channels: ["Email"], status: "Scheduled", audience: "VIP", recipients: 96, openRate: 0, revenueCents: 0, sentISO: iso(at(now, 3, 9, 0)), couponCode: null },
+    { id: "cmp_4", name: "Refer-a-friend launch", channels: ["Social"], status: "Draft", audience: "All clients", recipients: 0, openRate: 0, revenueCents: 0, sentISO: null, couponCode: "FRIEND10" },
   ];
 }
 
