@@ -6,7 +6,7 @@ import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
 import {
   StatCard, MoneyDonut, Select, RANGES, rangeFactor, TableWrap, Th, Td,
-  DONUT_COLORS, cx, formatMoney,
+  topWithOther, cx, formatMoney,
 } from "@/components/demo/finance";
 import { expenses, chairRentals, coreFinancials, LOCATIONS } from "@/lib/demo/financials";
 import { Icon } from "@/components/home/icons";
@@ -51,8 +51,7 @@ export default function ExpensesPage() {
   const byCategory = useMemo(() => {
     const m = new Map<string, number>();
     for (const e of rows) m.set(e.category, (m.get(e.category) ?? 0) + e.amountCents);
-    return [...m.entries()].sort((a, b) => b[1] - a[1])
-      .map(([label, value], i) => ({ label, value: Math.round(value * factor), color: DONUT_COLORS[i % DONUT_COLORS.length] }));
+    return topWithOther([...m.entries()].map(([name, value]) => ({ name, value: Math.round(value * factor) })), 6);
   }, [rows, factor]);
 
   const resetFilters = () => { setLocation(ALL); setCategory(ALL); setChair(ALL); setBarber(ALL); setVendor(ALL); };

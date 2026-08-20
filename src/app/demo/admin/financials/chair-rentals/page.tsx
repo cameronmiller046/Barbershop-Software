@@ -6,7 +6,7 @@ import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
 import {
   StatCard, MoneyDonut, ProgressBar, StatusPill, Select, RANGES, rangeFactor,
-  TableWrap, Th, Td, Drawer, DRow, DSection, DONUT_COLORS, cx, formatMoney,
+  TableWrap, Th, Td, Drawer, DRow, DSection, topWithOther, cx, formatMoney,
 } from "@/components/demo/finance";
 import { chairRentals, rentCollection, shopProfit, expenses, LOCATIONS, type ChairRental } from "@/lib/demo/financials";
 import { Icon } from "@/components/home/icons";
@@ -397,9 +397,7 @@ export default function ChairRentalsPage() {
     const rows = expenses(state).filter((e) => e.chairRelated);
     const byCat = new Map<string, number>();
     for (const e of rows) byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.amountCents);
-    const segments = [...byCat.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([label, value], i) => ({ label, value: Math.round(value * factor), color: DONUT_COLORS[i % DONUT_COLORS.length] }));
+    const segments = topWithOther([...byCat.entries()].map(([name, value]) => ({ name, value: Math.round(value * factor) })), 5);
     const total = segments.reduce((s, x) => s + x.value, 0);
     return (
       <MoneyDonut

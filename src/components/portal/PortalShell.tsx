@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Icon, type IconName } from "@/components/home/icons";
+import { useCloseDrawerOnDesktop } from "@/lib/useDrawerBreakpoint";
 import { approveTimeEdit, rejectTimeEdit } from "@/app/portal/timeclock/actions";
 
 type NavItem = { label: string; href: string; icon: IconName; exact?: boolean; perm?: string; plan?: boolean; soon?: boolean; demoHidden?: boolean };
@@ -88,6 +89,7 @@ export function PortalShell({
   }, []);
   const toggleCollapse = () => setCollapsed((c) => { localStorage.setItem("portalNavCollapsed", c ? "0" : "1"); return !c; });
   useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useCloseDrawerOnDesktop(mobileOpen, setMobileOpen);
 
   const canSee = (i: NavItem) => (!i.perm || perms[i.perm]) && (!i.plan || reports) && (!i.demoHidden || !demo);
   const primary = PRIMARY.filter(canSee);

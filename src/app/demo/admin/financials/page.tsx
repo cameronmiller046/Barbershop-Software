@@ -6,8 +6,8 @@ import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/
 import { Sparkline } from "@/components/demo/charts";
 import { useToast } from "@/components/demo/toast";
 import {
-  StatCard, MoneyDonut, BarList, Select, RANGES, rangeFactor,
-  TableWrap, Th, Td, GOLD, GOLD_DIM, GRAY, GRAY_LT, GREEN, DONUT_COLORS, cx, formatMoney,
+  StatCard, MoneyDonut, BarList, Select, RANGES, rangeFactor, topWithOther,
+  TableWrap, Th, Td, GOLD, GOLD_DIM, GRAY, GRAY_LT, GREEN, cx, formatMoney,
 } from "@/components/demo/finance";
 import { coreFinancials, chairRentals, transactions } from "@/lib/demo/financials";
 import { Icon, type IconName } from "@/components/home/icons";
@@ -131,8 +131,10 @@ export default function FinancialsOverviewPage() {
     }));
   }, [core, state.settings.name]);
 
-  const expenseSegments = core.expensesByCategory.slice(0, 6)
-    .map((e, i) => ({ label: e.name, value: Math.round(e.value * factor), color: DONUT_COLORS[i % DONUT_COLORS.length] }));
+  // Roll the long tail into "Other" so the ring sums to the total in its centre.
+  const expenseSegments = topWithOther(
+    core.expensesByCategory.map((e) => ({ name: e.name, value: Math.round(e.value * factor) })), 5,
+  );
   const occupied = rentals.filter((r) => r.occupied).length;
 
   return (

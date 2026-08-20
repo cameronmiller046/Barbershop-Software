@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/home/icons";
 import { classNames as cx } from "@/lib/utils";
+import { useCloseDrawerOnDesktop } from "@/lib/useDrawerBreakpoint";
 import { useDemo, staffById } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
 import { Avatar } from "@/components/demo/ui";
@@ -119,6 +120,7 @@ export function DemoShell({ role, children }: { role: DemoRole; children: React.
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useCloseDrawerOnDesktop(mobileOpen, setMobileOpen);
 
   const isAdmin = role === "demo_admin";
   const groups = isAdmin ? ADMIN_NAV : BARBER_NAV;

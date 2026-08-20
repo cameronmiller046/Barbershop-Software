@@ -93,18 +93,37 @@ export function MoneyDonut({
         </svg>
         <div className="absolute inset-0 grid place-items-center text-center">{center}</div>
       </div>
-      <ul className="min-w-0 flex-1 space-y-2 text-[13px]">
+      {/* min-w forces the legend onto its own line in a narrow rail rather than
+          letting flex crush the labels away to "C…" / "M…". */}
+      <ul className="w-full min-w-[190px] flex-1 space-y-2 text-[13px] sm:w-auto">
         {segments.map((s) => (
-          <li key={s.label} className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+          <li key={s.label} className="flex items-baseline gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 translate-y-[1px] rounded-full" style={{ background: s.color }} />
             <span className="min-w-0 flex-1 truncate text-cream/70">{s.label}</span>
-            <span className="font-medium text-cream">{formatMoney(s.value)}</span>
-            <span className="w-11 text-right text-cream/45">{((s.value / total) * 100).toFixed(1)}%</span>
+            <span className="shrink-0 font-medium tabular-nums text-cream">{formatMoney(s.value)}</span>
+            <span className="w-12 shrink-0 text-right tabular-nums text-cream/45">{((s.value / total) * 100).toFixed(1)}%</span>
           </li>
         ))}
       </ul>
     </div>
   );
+}
+
+/**
+ * Take the biggest `n` items and roll everything else into a single "Other"
+ * slice. Without this a truncated top-N donut silently drops the tail: the ring
+ * no longer adds up to the total printed in its centre, and every percentage is
+ * computed against the wrong base.
+ */
+export function topWithOther(
+  items: { name: string; value: number }[], n = 5, otherLabel = "Other",
+): { label: string; value: number; color: string }[] {
+  const sorted = [...items].filter((i) => i.value > 0).sort((a, b) => b.value - a.value);
+  const head = sorted.slice(0, n);
+  const rest = sorted.slice(n).reduce((s, i) => s + i.value, 0);
+  const out = head.map((i, idx) => ({ label: i.name, value: i.value, color: DONUT_COLORS[idx % DONUT_COLORS.length] }));
+  if (rest > 0) out.push({ label: otherLabel, value: rest, color: DONUT_COLORS[Math.min(head.length, DONUT_COLORS.length - 1)] });
+  return out;
 }
 
 /** Horizontal gold bar list — used for income categories and expense rankings. */
