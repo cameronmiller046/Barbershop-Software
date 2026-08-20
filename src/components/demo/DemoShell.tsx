@@ -37,6 +37,7 @@ const ADMIN_NAV: NavGroup[] = [
       { label: "Transactions", href: "/demo/admin/financials/transactions" },
     ] },
     { label: "Marketing", href: "/demo/admin/marketing", icon: "marketing" },
+    { label: "Templates", href: "/demo/admin/templates", icon: "messages" },
   ] },
   { heading: "System", items: [
     { label: "Notifications", href: "/demo/admin/notifications", icon: "bell" },
@@ -55,6 +56,7 @@ const BARBER_NAV: NavGroup[] = [
     { label: "Customers", href: "/demo/barber/customers", icon: "customers" },
     { label: "Checkout", href: "/demo/barber/checkout", icon: "dollar" },
     { label: "Before / After", href: "/demo/barber/photos", icon: "star" },
+    { label: "Templates", href: "/demo/barber/templates", icon: "messages" },
     { label: "Time Clock", href: "/demo/barber/timeclock", icon: "clock" },
   ] },
   { heading: "Earnings", items: [

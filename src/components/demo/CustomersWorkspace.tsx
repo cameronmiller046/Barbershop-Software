@@ -5,6 +5,7 @@ import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
 import { PageHeader, Panel, Btn, Field, Modal, Avatar, Tag, EmptyState } from "@/components/demo/ui";
 import { ClientProfileBody } from "@/components/demo/ClientProfile";
+import { MessageComposer } from "@/components/demo/MessageComposer";
 import { Icon } from "@/components/home/icons";
 import { formatMoney } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ export function CustomersWorkspace({ mode }: { mode: "admin" | "barber" }) {
   const [q, setQ] = useState("");
   const [selId, setSelId] = useState<string | null>(state.customers[0]?.id ?? null);
   const [adding, setAdding] = useState(false);
+  const [messaging, setMessaging] = useState(false);
 
   const list = useMemo(
     () => state.customers.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.email.toLowerCase().includes(q.toLowerCase())),
@@ -57,11 +59,15 @@ export function CustomersWorkspace({ mode }: { mode: "admin" | "barber" }) {
 
         {sel ? (
           <Panel key={sel.id}>
+            <div className="mb-4 flex justify-end">
+              <Btn onClick={() => setMessaging(true)}><Icon.messages className="h-4 w-4" /> Message</Btn>
+            </div>
             <ClientProfileBody customer={sel} notesHint={mode === "barber" ? "only you and the team see these" : undefined} />
           </Panel>
         ) : <EmptyState title="No clients found" hint="Try a different search." />}
       </div>
 
+      {messaging && sel && <MessageComposer customer={sel} onClose={() => setMessaging(false)} />}
       {adding && <AddCustomer onClose={() => setAdding(false)} onCreated={(id) => { setSelId(id); setAdding(false); }} />}
     </>
   );

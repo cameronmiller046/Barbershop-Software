@@ -17,7 +17,7 @@ import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { seedDemoState } from "./fixtures";
 import type {
   Appointment, ApptStatus, Availability, Campaign, Customer, DayHours, DemoRole, DemoState,
-  InventoryItem, PaymentMethod, PhotoSet, Service, ShopSettings, Staff,
+  InventoryItem, MsgTemplate, PaymentMethod, PhotoSet, SentMessage, Service, ShopSettings, Staff,
 } from "./types";
 
 type Updater = (prev: DemoState) => DemoState;
@@ -67,6 +67,13 @@ export interface DemoActions {
   addCampaign(c: Omit<Campaign, "id"> & { id?: string }): string;
   updateCampaign(id: string, patch: Partial<Campaign>): void;
   addPhoto(p: Omit<PhotoSet, "id"> & { id?: string }): string;
+
+  // message templates
+  addTemplate(t: Omit<MsgTemplate, "id"> & { id?: string }): string;
+  updateTemplate(id: string, patch: Partial<MsgTemplate>): void;
+  deleteTemplate(id: string): void;
+  /** Record a "sent" message. Nothing leaves the browser — see the file header. */
+  logMessage(m: Omit<SentMessage, "id" | "sentISO">): string;
 }
 
 interface DemoCtx {
@@ -171,6 +178,19 @@ export function DemoProvider({ role, children }: { role: DemoRole; children: Rea
       addPhoto: (p) => {
         const id = p.id ?? nextId("ph");
         update((s) => ({ ...s, photos: [{ ...p, id }, ...s.photos] }));
+        return id;
+      },
+
+      addTemplate: (t) => {
+        const id = t.id ?? nextId("tpl");
+        update((s) => ({ ...s, templates: [...s.templates, { ...t, id }] }));
+        return id;
+      },
+      updateTemplate: (id, patch) => update((s) => ({ ...s, templates: mapItem(s.templates, id, patch) })),
+      deleteTemplate: (id) => update((s) => ({ ...s, templates: s.templates.filter((t) => t.id !== id) })),
+      logMessage: (m) => {
+        const id = nextId("msg");
+        update((s) => ({ ...s, sentMessages: [{ ...m, id, sentISO: new Date().toISOString() }, ...s.sentMessages] }));
         return id;
       },
     };

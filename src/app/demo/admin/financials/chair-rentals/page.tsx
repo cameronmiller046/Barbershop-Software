@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useDemo } from "@/lib/demo/store";
 import { useToast } from "@/components/demo/toast";
-import { PageHeader, Panel, SectionTitle, SandboxNote } from "@/components/demo/ui";
+import { PageHeader, Panel, SectionTitle, SandboxNote, Modal, Btn, Field } from "@/components/demo/ui";
 import {
   StatCard, MoneyDonut, ProgressBar, StatusPill, Select, RANGES, rangeFactor,
   TableWrap, Th, Td, Drawer, DRow, DSection, topWithOther, cx, formatMoney,
@@ -23,6 +23,9 @@ export default function ChairRentalsPage() {
   // Rent recorded during this sandbox session, layered on top of the derived
   // figures so "Record Payment" visibly moves the collection numbers.
   const [extraPaid, setExtraPaid] = useState<Record<string, number>>({});
+  // Per-cycle rent changed during this session, keyed by chair.
+  const [rentOverride, setRentOverride] = useState<Record<string, number>>({});
+  const [editingRent, setEditingRent] = useState<string | null>(null);
 
   const factor = rangeFactor(rangeId);
   const $ = (cents: number) => formatMoney(Math.round(cents * factor));
@@ -30,16 +33,28 @@ export default function ChairRentalsPage() {
   const rentals = useMemo(() => {
     const base = chairRentals(state);
     return base.map((r) => {
+      const override = rentOverride[r.chairId];
       const extra = extraPaid[r.chairId] ?? 0;
-      if (!extra) return r;
-      const paidCents = Math.min(r.periodRentCents, r.paidCents + extra);
+      if (override == null && !extra) return r;
+
+      // A rent change rescales the period total; what's already been paid
+      // stands, so the status is re-derived against the new amount.
+      const rentCents = override ?? r.rentCents;
+      const cycles = r.frequency === "Weekly" ? 4 : 1;
+      const periodRentCents = r.occupied ? rentCents * cycles : 0;
+      const paidCents = Math.min(periodRentCents, r.paidCents + extra);
+      const status = periodRentCents === 0
+        ? r.status
+        : paidCents >= periodRentCents ? "Paid" as const
+        : paidCents > 0 ? "Partial" as const
+        : r.status === "Paid" ? "Overdue" as const : r.status;
+
       return {
-        ...r, paidCents,
-        status: paidCents >= r.periodRentCents ? "Paid" as const : paidCents > 0 ? "Partial" as const : r.status,
-        lastPaymentISO: new Date().toISOString(),
+        ...r, rentCents, periodRentCents, paidCents, status,
+        lastPaymentISO: extra ? new Date().toISOString() : r.lastPaymentISO,
       };
     });
-  }, [state, extraPaid]);
+  }, [state, extraPaid, rentOverride]);
 
   const collection = useMemo(() => rentCollection(rentals), [rentals]);
   const occupied = rentals.filter((r) => r.occupied);
@@ -225,10 +240,11 @@ export default function ChairRentalsPage() {
             </SectionTitle>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
               {rentals.map((r) => (
-                <button key={r.chairId} onClick={() => r.occupied && r.isRental && setOpenChair(r.chairId)}
+                <button key={r.chairId} onClick={() => setEditingRent(r.chairId)}
+                  title={`Set rent for ${r.chairLabel}`}
                   className={cx(
                     "rounded-xl border p-3 text-left transition",
-                    r.occupied ? "border-white/8 bg-white/[0.02] hover:border-brass/30" : "border-dashed border-white/12 bg-transparent",
+                    r.occupied ? "border-white/8 bg-white/[0.02] hover:border-brass/30" : "border-dashed border-white/12 bg-transparent hover:border-brass/30",
                   )}>
                   <div className="text-sm font-semibold text-cream">{r.chairLabel}</div>
                   <div className="mt-1 truncate text-xs text-cream/55">{r.occupied ? r.barberName : "Vacant"}</div>
@@ -241,8 +257,9 @@ export default function ChairRentalsPage() {
                 </button>
               ))}
             </div>
+            <p className="mt-3 text-[11px] text-cream/40">Click a chair to change its rent.</p>
             {vacant.length > 0 && (
-              <p className="mt-3 text-[11px] text-cream/40">
+              <p className="mt-1 text-[11px] text-cream/40">
                 {vacant.length} vacant chair{vacant.length === 1 ? "" : "s"} — roughly{" "}
                 <span className="text-red-300/80">{formatMoney(vacant.reduce((s, r) => s + (CHAIR_VACANT_RENT[r.chairId] ?? 25000) * (r.frequency === "Weekly" ? 4 : 1), 0))}</span>{" "}
                 of monthly rent left on the table.
@@ -312,6 +329,22 @@ export default function ChairRentalsPage() {
           </Panel>
         </div>
       </div>
+
+      {editingRent && (
+        <RentEditor
+          chair={rentals.find((r) => r.chairId === editingRent)!}
+          onClose={() => setEditingRent(null)}
+          onSave={(cents) => {
+            const r = rentals.find((x) => x.chairId === editingRent)!;
+            setRentOverride((s) => ({ ...s, [r.chairId]: cents }));
+            setEditingRent(null);
+            toast(
+              `${r.chairLabel} rent set to ${formatMoney(cents)}/${r.frequency === "Weekly" ? "week" : "month"}`,
+              "success",
+            );
+          }}
+        />
+      )}
 
       {/* Detail drawer */}
       <Drawer
@@ -411,6 +444,115 @@ export default function ChairRentalsPage() {
 
 // Asking rent for the vacant chairs — what the shop is losing while empty.
 const CHAIR_VACANT_RENT: Record<string, number> = { "Chair 09": 25000, "Chair 10": 90000 };
+
+/**
+ * Set a chair's rent. Two steps on purpose: changing rent re-bills the renter
+ * and moves the collection figures, so the second screen spells out exactly
+ * what will change before it's applied.
+ */
+function RentEditor({
+  chair, onClose, onSave,
+}: { chair: ChairRental; onClose: () => void; onSave: (cents: number) => void }) {
+  const per = chair.frequency === "Weekly" ? "week" : "month";
+  const cycles = chair.frequency === "Weekly" ? 4 : 1;
+  const [value, setValue] = useState((chair.rentCents / 100).toFixed(2));
+  const [confirming, setConfirming] = useState(false);
+
+  const parsed = parseFloat(value);
+  const cents = Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : null;
+  const valid = cents != null && cents !== chair.rentCents;
+  const newPeriod = (cents ?? 0) * cycles;
+  const delta = newPeriod - chair.periodRentCents;
+  const stillOwed = Math.max(0, newPeriod - chair.paidCents);
+
+  return (
+    <Modal
+      open onClose={onClose}
+      title={confirming ? "Confirm rent change" : `${chair.chairLabel} rent`}
+      footer={
+        confirming ? (
+          <>
+            <Btn onClick={() => setConfirming(false)}>Back</Btn>
+            <Btn variant="gold" onClick={() => onSave(cents!)}>Confirm change</Btn>
+          </>
+        ) : (
+          <>
+            <Btn onClick={onClose}>Cancel</Btn>
+            <Btn variant="gold" onClick={() => setConfirming(true)} disabled={!valid}>Review change</Btn>
+          </>
+        )
+      }
+    >
+      {confirming ? (
+        <div className="space-y-4">
+          <p className="text-sm text-cream/70">
+            {chair.occupied
+              ? <>This changes what <span className="text-cream">{chair.barberName}</span> is billed for {chair.chairLabel}.</>
+              : <>This sets the asking rent for the vacant {chair.chairLabel}.</>}
+          </p>
+          <div className="divide-y divide-white/5 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-1">
+            <DRow label={`Rent per ${per}`} value={
+              <span className="flex items-baseline gap-2">
+                <span className="text-cream/40 line-through">{formatMoney(chair.rentCents)}</span>
+                <span className="font-semibold text-brass">{formatMoney(cents!)}</span>
+              </span>
+            } />
+            <DRow label="Billed this month" value={
+              <span className="flex items-baseline gap-2">
+                <span className="text-cream/40 line-through">{formatMoney(chair.periodRentCents)}</span>
+                <span className="text-cream">{formatMoney(newPeriod)}</span>
+              </span>
+            } />
+            <DRow label="Change" value={
+              <span className={delta >= 0 ? "text-emerald-300" : "text-red-300"}>
+                {delta >= 0 ? "+" : "-"}{formatMoney(Math.abs(delta))}/month
+              </span>
+            } />
+            {chair.occupied && <DRow label="Already paid" value={formatMoney(chair.paidCents)} />}
+            {chair.occupied && <DRow label="Still owed" value={
+              <span className={stillOwed > 0 ? "text-red-300" : "text-emerald-300"}>{formatMoney(stillOwed)}</span>
+            } strong />}
+          </div>
+          {chair.occupied && chair.paidCents > newPeriod && (
+            <p className="rounded-xl border border-brass/25 bg-brass/[0.07] px-3.5 py-2.5 text-xs text-brass/90">
+              {chair.barberName} has already paid {formatMoney(chair.paidCents)}, more than the new monthly total.
+              The overpayment would carry forward as credit.
+            </p>
+          )}
+          <p className="text-[11px] text-cream/40">
+            Sandbox only — this changes nothing outside your demo session and resets on refresh.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brass/15 text-brass"><Icon.staff className="h-4 w-4" /></span>
+            <div className="min-w-0">
+              <div className="truncate text-sm text-cream">{chair.occupied ? chair.barberName : "Vacant"}</div>
+              <div className="text-xs text-cream/45">{chair.chairLabel} · billed {chair.frequency.toLowerCase()}</div>
+            </div>
+          </div>
+
+          <Field label={`Rent per ${per}`} hint={`Billed ${cycles}× a month — ${formatMoney(newPeriod)} per month.`}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-cream/50">$</span>
+              <input
+                autoFocus inputMode="decimal" className="input"
+                value={value}
+                onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v)) setValue(v); }}
+                placeholder="0.00"
+              />
+            </div>
+          </Field>
+
+          {cents != null && cents === chair.rentCents && (
+            <p className="text-xs text-cream/40">That&apos;s the current rent — change the amount to continue.</p>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 function Line({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
   return (

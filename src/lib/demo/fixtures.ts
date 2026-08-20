@@ -8,9 +8,10 @@
 // and "today" screens always look live.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { SEED_TEMPLATES } from "@/lib/messageTemplates";
 import type {
   Appointment, ApptStatus, Availability, Campaign, Customer, DayHours, DemoNotification, DemoRole,
-  DemoState, InventoryItem, PhotoSet, Service, ShopSettings, Staff, TimeEntry,
+  DemoState, InventoryItem, MsgTemplate, PhotoSet, Service, ShopSettings, Staff, TimeEntry,
 } from "./types";
 
 export const DEMO_ACTING_BARBER_ID = "s_bar1"; // "you" in the barber sandbox
@@ -266,6 +267,21 @@ function seedAvailability(): Availability {
   };
 }
 
+// ── message templates ────────────────────────────────────────────
+// Shares the real product's starter copy (lib/messageTemplates is pure — no
+// Prisma, no server imports) so the sandbox shows exactly what a new shop gets.
+function seedTemplates(): MsgTemplate[] {
+  return SEED_TEMPLATES.map((t) => ({
+    id: `tpl_${t.seedKey}`,
+    name: t.name,
+    channel: t.channel,
+    category: t.category,
+    subject: t.subject ?? null,
+    body: t.body,
+    active: true,
+  }));
+}
+
 /** Build a complete, fresh sandbox state. Called once per demo session mount. */
 export function seedDemoState(role: DemoRole): DemoState {
   const now = new Date();
@@ -287,6 +303,8 @@ export function seedDemoState(role: DemoRole): DemoState {
     photos: seedPhotos(now),
     settings: seedSettings(),
     availability: seedAvailability(),
+    templates: seedTemplates(),
+    sentMessages: [],
     seq: 1,
   };
 }

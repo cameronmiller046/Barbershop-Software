@@ -133,6 +133,31 @@ export interface PhotoSet {
   afterStyle: string;
 }
 
+/** Reusable shop SMS/email copy. Mirrors the real MessageTemplate model, but
+ *  the sandbox keeps its own shape (see the note at the top of this file). */
+export interface MsgTemplate {
+  id: string;
+  name: string;
+  channel: "SMS" | "EMAIL";
+  /** "Follow-up" | "Feedback" | "Reminder" | "Win-back" | "Promotion" | "General" */
+  category: string;
+  subject: string | null; // email only
+  body: string;
+  active: boolean;
+}
+
+/** A message "sent" from the sandbox — recorded, never actually delivered. */
+export interface SentMessage {
+  id: string;
+  customerId: string;
+  channel: "SMS" | "EMAIL";
+  toAddress: string;
+  subject: string | null;
+  body: string;
+  templateId: string | null;
+  sentISO: string;
+}
+
 export interface DayHours {
   open: number | null; // minutes from midnight, null = closed
   close: number | null;
@@ -174,6 +199,8 @@ export interface DemoState {
   notifications: DemoNotification[];
   campaigns: Campaign[];
   photos: PhotoSet[];
+  templates: MsgTemplate[];
+  sentMessages: SentMessage[];
   settings: ShopSettings;
   availability: Availability;
   /** Monotonic counter for new entity ids created during the session. */
