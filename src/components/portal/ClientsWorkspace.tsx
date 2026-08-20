@@ -8,6 +8,7 @@ import { clientDetail, createClient, updateClient, saveClientNotes, redeemLoyalt
 import type { ClientDetail, Appt, LoyaltyDetail } from "@/lib/clientDetail";
 import { formatMoney } from "@/lib/utils";
 import { Icon, type IconName } from "@/components/home/icons";
+import { MessageComposer, type ComposerTemplate } from "@/components/portal/MessageComposer";
 
 export type ClientRow = {
   id: string; name: string; phone: string | null; email: string | null; initials: string;
@@ -23,7 +24,14 @@ type Tint = "brass" | "emerald" | "blue" | "purple" | "cyan";
 // Shared column template so the table header and every row line up exactly.
 const COLS = "grid-cols-[minmax(0,2.4fr)_minmax(0,2fr)_80px_120px_140px_110px_32px]";
 
-export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: ClientRow[]; counts: Counts; initialDetail: ClientDetail | null }) {
+export function ClientsWorkspace({
+  rows, counts, initialDetail, templates = [], providers = { sms: false, email: false }, optedOutIds = [],
+}: {
+  rows: ClientRow[]; counts: Counts; initialDetail: ClientDetail | null;
+  templates?: ComposerTemplate[]; providers?: { sms: boolean; email: boolean }; optedOutIds?: string[];
+}) {
+  const [composing, setComposing] = useState(false);
+  const optedOut = useMemo(() => new Set(optedOutIds), [optedOutIds]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>({ key: "last", dir: "desc" });
@@ -218,7 +226,7 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
                   <button onClick={closeDrawer} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-cream/60 transition hover:border-brass/40 hover:text-brass">✕</button>
                 </div>
                 {detail ? (
-                  <Detail d={detail} tab={tab} setTab={setTab} pending={pending} onEdit={() => setModal("edit")} onRedeem={() => redeem(detail.id)} redeeming={redeeming} />
+                  <Detail d={detail} tab={tab} setTab={setTab} pending={pending} onEdit={() => setModal("edit")} onRedeem={() => redeem(detail.id)} redeeming={redeeming} onMessage={() => setComposing(true)} />
                 ) : (
                   <div className="p-panel h-[560px] animate-pulse" />
                 )}
@@ -227,6 +235,15 @@ export function ClientsWorkspace({ rows, counts, initialDetail }: { rows: Client
           )}
         </AnimatePresence>,
         document.body,
+      )}
+
+      {composing && detail && (
+        <MessageComposer
+          client={{ id: detail.id, name: detail.name, phone: detail.phone, email: detail.email, smsOptOut: optedOut.has(detail.id) }}
+          templates={templates}
+          providers={providers}
+          onClose={() => setComposing(false)}
+        />
       )}
 
       {modal === "add" && <ClientModal title="Add client" onClose={() => setModal(null)} action={createClient} />}
@@ -369,7 +386,7 @@ function pageWindow(page: number, total: number): (number | string)[] {
 }
 
 /* ── Detail panel ── */
-function Detail({ d, tab, setTab, pending, onEdit, onRedeem, redeeming }: { d: ClientDetail; tab: string; setTab: (t: string) => void; pending: boolean; onEdit: () => void; onRedeem: () => void; redeeming: boolean }) {
+function Detail({ d, tab, setTab, pending, onEdit, onRedeem, redeeming, onMessage }: { d: ClientDetail; tab: string; setTab: (t: string) => void; pending: boolean; onEdit: () => void; onRedeem: () => void; redeeming: boolean; onMessage: () => void }) {
   const TABS = ["Overview", "History", "Notes", "Appointments", "Photos"];
   return (
     <div className={`p-panel p-5 transition ${pending ? "opacity-60" : ""}`}>
@@ -422,7 +439,7 @@ function Detail({ d, tab, setTab, pending, onEdit, onRedeem, redeeming }: { d: C
       {/* bottom buttons */}
       <div className="mt-6 grid grid-cols-2 gap-3">
         <Link href="/portal/appointments" className="p-btn-gold w-full"><Icon.calendar className="h-4 w-4" /> Book Appointment</Link>
-        <a href={d.email ? `mailto:${d.email}` : d.phone ? `sms:${d.phone}` : "#"} className="p-btn-ghost w-full"><Icon.messages className="h-4 w-4" /> Message</a>
+        <button onClick={onMessage} disabled={!d.phone && !d.email} className="p-btn-ghost w-full disabled:cursor-not-allowed disabled:opacity-40"><Icon.messages className="h-4 w-4" /> Message</button>
       </div>
     </div>
   );

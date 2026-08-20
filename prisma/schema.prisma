@@ -267,6 +267,8 @@ model Tenant {
   timeEditRequests TimeEditRequest[]
   timeBreaks       TimeBreak[]
   tickets          Ticket[]
+  messageTemplates MessageTemplate[]
+  clientMessages   ClientMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -420,12 +422,79 @@ model Client {
   tenantId String
 
   appointments Appointment[]
+  messages     ClientMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, email])
   @@index([tenantId, phone])
+}
+
+// ───────────────────── Client messaging ─────────────────────
+
+enum MessageChannel {
+  SMS
+  EMAIL
+}
+
+enum MessageStatus {
+  SENT // handed to the provider successfully
+  LOGGED // no provider configured — written to the server log instead
+  FAILED
+}
+
+// A reusable shop message (SMS or email) a barber can drop into the composer.
+// Bodies may contain {{variables}} — see lib/messageTemplates.ts for the list
+// and the renderer. Templates are per shop; every shop is seeded with a default
+// set on first use so the picker is never empty.
+model MessageTemplate {
+  id       String         @id @default(cuid())
+  tenantId String
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+  channel  MessageChannel
+  // Free-text grouping shown as a section in the templates UI
+  // ("Follow-up", "Feedback", "Reminder", "Win-back", "Promotion", "General").
+  category String         @default("General")
+  subject  String? // email only — ignored for SMS
+  body     String
+  active   Boolean        @default(true)
+  // Marks a row created by the default seed, so re-seeding stays idempotent and
+  // never duplicates or overwrites a shop's own edits.
+  seedKey  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, seedKey])
+  @@index([tenantId, channel])
+}
+
+// Audit trail of every one-to-one message sent to a client from the portal.
+// Kept separate from MessageTemplate so edits or deletes upstream never rewrite
+// what was actually sent.
+model ClientMessage {
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  channel   MessageChannel
+  // Snapshot of what actually went out, and where.
+  toAddress String
+  subject   String?
+  body      String
+  status    MessageStatus
+  error     String?
+  // Who sent it — the name snapshot survives the staff account being deleted.
+  sentById   String?
+  sentByName String
+  templateId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, clientId, createdAt])
 }
 
 // A single loyalty earning. The live balance is the sum of (points - redeemed)

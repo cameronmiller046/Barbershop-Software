@@ -5,6 +5,8 @@ import { can } from "@/lib/permissions";
 import { segmentOf, initialsOf } from "@/lib/clientSegments";
 import { computeClientDetail, CLIENT_DETAIL_INCLUDE } from "@/lib/clientDetail";
 import { loyaltyConfigOf, liveLoyaltyBalance, LOYALTY_SELECT } from "@/lib/loyalty";
+import { smsReady } from "@/lib/sms";
+import { emailReady } from "@/lib/email";
 import { ClientsWorkspace, type ClientRow } from "@/components/portal/ClientsWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,7 @@ export default async function ClientsPage() {
   const now = Date.now();
 
   const [clients, agg] = await Promise.all([
-    prisma.client.findMany({ where: { tenantId }, select: { id: true, name: true, phone: true, email: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 3000 }),
+    prisma.client.findMany({ where: { tenantId }, select: { id: true, name: true, phone: true, email: true, smsOptOut: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 3000 }),
     prisma.appointment.groupBy({ by: ["clientId"], where: { tenantId, active: true, status: "COMPLETED" }, _count: { _all: true }, _sum: { collectedCents: true }, _max: { startTime: true } }),
   ]);
   const aggMap = new Map(agg.map((a) => [a.clientId, { visits: a._count._all, spent: a._sum.collectedCents ?? 0, last: a._max.startTime }]));
@@ -41,12 +43,33 @@ export default async function ClientsPage() {
   };
 
   const firstId = rows[0]?.id;
-  const [first, tenant] = await Promise.all([
+  const [first, tenant, templates, providerTenant] = await Promise.all([
     firstId ? prisma.client.findFirst({ where: { id: firstId, tenantId }, include: CLIENT_DETAIL_INCLUDE }) : null,
     prisma.tenant.findUnique({ where: { id: tenantId }, select: LOYALTY_SELECT }),
+    prisma.messageTemplate.findMany({
+      where: { tenantId, active: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, channel: true, category: true, subject: true, body: true },
+    }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { twilioAccountSid: true, twilioAuthToken: true, twilioFromNumber: true, sendgridApiKey: true, emailFromAddress: true },
+    }),
   ]);
   const loyalty = first && tenant?.loyaltyEnabled ? { config: loyaltyConfigOf(tenant), points: await liveLoyaltyBalance(first.id) } : undefined;
   const initialDetail = first ? computeClientDetail(first, now, loyalty) : null;
 
-  return <ClientsWorkspace rows={rows} counts={counts} initialDetail={initialDetail} />;
+  return (
+    <ClientsWorkspace
+      rows={rows}
+      counts={counts}
+      initialDetail={initialDetail}
+      templates={templates}
+      providers={{
+        sms: smsReady({ accountSid: providerTenant?.twilioAccountSid, authToken: providerTenant?.twilioAuthToken, from: providerTenant?.twilioFromNumber }),
+        email: emailReady({ sendgridApiKey: providerTenant?.sendgridApiKey, from: providerTenant?.emailFromAddress }),
+      }}
+      optedOutIds={clients.filter((c) => c.smsOptOut).map((c) => c.id)}
+    />
+  );
 }

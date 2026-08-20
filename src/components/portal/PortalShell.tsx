@@ -25,6 +25,7 @@ const PRIMARY: NavItem[] = [
 ];
 
 const MANAGEMENT: NavItem[] = [
+  { label: "Templates", href: "/portal/templates", icon: "messages", perm: "shop.clients" },
   { label: "Services", href: "/portal/services", icon: "scissors", perm: "shop.services" },
   { label: "Staff", href: "/portal/team", icon: "staff", perm: "shop.team" },
   { label: "Analytics", href: "/portal/reports", icon: "analytics", perm: "shop.viewAll", plan: true },
